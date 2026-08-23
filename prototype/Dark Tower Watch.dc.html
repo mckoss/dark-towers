@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_ds/modernist-59c92941-68e0-46dc-95d5-d2d0df74655c/styles.css">
+<script src="_ds/modernist-59c92941-68e0-46dc-95d5-d2d0df74655c/_ds_bundle.js"></script>
+<style>
+  html, body { margin: 0; padding: 0; background: #f3f2f2; color: #201e1d; font-family: "Archivo", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  * { box-sizing: border-box; }
+  a { color: #ae1800; text-decoration: none; border-bottom: 1px solid rgba(174,24,0,0.4); }
+  a:hover { color: #ec3013; border-bottom-color: #ec3013; }
+  button { font-family: inherit; }
+  ::selection { background: #ffc4b8; }
+  :focus-visible { outline: 2px solid #ec3013; outline-offset: 2px; }
+  .leaflet-container { font-family: "Archivo", sans-serif !important; background: transparent !important; }
+</style>
+<script src="https://unpkg.com/d3@7.9.0/dist/d3.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js" integrity="sha384-Ukv1p/xTma6P4/2bY5KzWBw+ydSpXmhCMtyciIQVDJ1RmOxtCYNMF1uXT9T63H67" crossorigin="anonymous"></script>
+<script src="./pae-data.js"></script>
+</helmet>
+
+<div style="min-height: 100vh; background: #f3f2f2;">
+
+  <div style="display: flex; align-items: stretch; justify-content: space-between; border-bottom: 2px solid #201e1d; background: #f3f2f2; position: sticky; top: 0; z-index: 500;">
+    <button onClick="{{ goHome }}" style="display: flex; align-items: baseline; gap: 10px; padding: 18px 24px; background: none; border: none; border-right: 2px solid #201e1d; cursor: pointer; text-align: left;">
+      <span style="font-size: 20px; font-weight: 900; letter-spacing: -0.02em; color: #201e1d;">DARK TOWER WATCH</span>
+      <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #7d7979;">Flights with no tower on duty</span>
+    </button>
+    <div style="display: flex; align-items: stretch;">
+      <button onClick="{{ goHome }}" style="padding: 0 20px; background: none; border: none; border-left: 1px solid #d7d3d3; cursor: pointer; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #201e1d;">Home</button>
+      <button onClick="{{ goAirports }}" style="padding: 0 20px; background: none; border: none; border-left: 1px solid #d7d3d3; cursor: pointer; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #201e1d;">Airports</button>
+      <button onClick="{{ goAbout }}" style="padding: 0 20px; background: none; border: none; border-left: 1px solid #d7d3d3; cursor: pointer; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #201e1d;">Method</button>
+      <button onClick="{{ toggleHome }}" title="Switch home page layout" style="padding: 0 16px; background: none; border: none; border-left: 2px solid #201e1d; cursor: pointer; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #7d7979;">Layout {{ homeLetter }}</button>
+    </div>
+  </div>
+
+  <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+    <div>
+
+      <sc-if value="{{ homeLedger }}" hint-placeholder-val="{{ false }}">
+        <div style="border-bottom: 2px solid #201e1d;">
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr);">
+            <div style="padding: 40px 24px 32px; border-right: 1px solid #d7d3d3;">
+              <div style="font-size: 64px; font-weight: 900; line-height: 0.9; letter-spacing: -0.03em;">{{ netOps }}</div>
+              <div style="margin-top: 12px; font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #605d5d;">Flights with no tower on duty</div>
+            </div>
+            <div style="padding: 40px 24px 32px; border-right: 1px solid #d7d3d3;">
+              <div style="font-size: 64px; font-weight: 900; line-height: 0.9; letter-spacing: -0.03em;">{{ netAirline }}</div>
+              <div style="margin-top: 12px; font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #605d5d;">Flown by passenger airlines</div>
+            </div>
+            <div style="padding: 40px 24px 32px; border-right: 1px solid #d7d3d3;">
+              <div style="font-size: 64px; font-weight: 900; line-height: 0.9; letter-spacing: -0.03em; color: #ec3013;">{{ netIncidents }}</div>
+              <div style="margin-top: 12px; font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #605d5d;">Came closer than a controller would allow</div>
+            </div>
+            <div style="padding: 40px 24px 32px;">
+              <div style="font-size: 64px; font-weight: 900; line-height: 0.9; letter-spacing: -0.03em;">{{ trackedCount }}</div>
+              <div style="margin-top: 12px; font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #605d5d;">Airports tracked every night</div>
+            </div>
+          </div>
+          <div style="padding: 0 24px 20px; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #7d7979;">Data from last 30 days</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 5fr 7fr; border-bottom: 2px solid #201e1d;">
+          <div style="padding: 48px 24px; border-right: 2px solid #201e1d;">
+            <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #ec3013;">{{ trackedCount }} airports tracked every night</div>
+            <h1 style="margin: 20px 0 0; font-size: 46px; font-weight: 900; line-height: 1.02; letter-spacing: -0.03em; text-wrap: pretty;">Airliners are landing at airports where nobody is in the tower — or there is no tower at all.</h1>
+            <p style="margin: 24px 0 0; max-width: 46ch; font-size: 16px; line-height: 1.55; color: #444141;">Across the country, airports with regular passenger service have control towers that close for the night — and some have no tower at all. The flights keep coming. With nobody in the tower, no one is directing traffic: pilots announce themselves on a shared radio channel and are expected to see each other to avoid collisions. This site counts those flights and publishes every pair of aircraft that came closer than a controller would have allowed.</p>
+            <div style="display: flex; gap: 12px; margin-top: 32px;">
+              <button onClick="{{ goList }}" style="padding: 14px 20px; background: #ec3013; color: #fff; border: none; cursor: pointer; font-size: 14px; font-weight: 700; letter-spacing: 0.04em; text-align: left;" style-hover="{ background: '#dd2b0f' }">Browse the airport records</button>
+              <button onClick="{{ goAbout }}" style="padding: 14px 20px; background: none; color: #201e1d; border: 2px solid #201e1d; cursor: pointer; font-size: 14px; font-weight: 700; letter-spacing: 0.04em; text-align: left;" style-hover="{ background: '#eae9e9' }">How this is measured</button>
+            </div>
+          </div>
+          <div style="position: relative; background: #f3f2f2;">
+            <x-import component-from-global-scope="us-airport-map" from="./us-map.js" selected="{{ selectedCode }}" height="560" hint-size="100%,520px"></x-import>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ homeMapFirst }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <div style="display: grid; grid-template-columns: 7fr 5fr; border-bottom: 2px solid #201e1d;">
+            <div style="padding: 56px 24px 48px; border-right: 2px solid #201e1d;">
+              <h1 style="margin: 0; font-size: 58px; font-weight: 900; line-height: 0.98; letter-spacing: -0.035em; text-wrap: pretty; max-width: 18ch;">Airliners are landing at airports where nobody is in the tower — or there is no tower at all.</h1>
+              <p style="margin: 28px 0 0; max-width: 54ch; font-size: 17px; line-height: 1.55; color: #444141;">Dozens of airports with regular passenger service have part-time or no-time control tower service: a tower that closes for the night, or no tower at all. The airline flights arrive and depart regardless. With no controller on duty, nothing is directing the traffic — airline and small-plane pilots announce themselves on a shared radio channel and are left to spot each other to avoid collisions. This site records what happens during those hours.</p>
+            </div>
+            <div style="display: grid; grid-template-rows: 1fr 1fr 1fr auto;">
+              <div style="padding: 24px; border-bottom: 1px solid #d7d3d3; display: flex; align-items: center; gap: 16px;">
+                <div style="font-size: 52px; font-weight: 900; line-height: 0.9; letter-spacing: -0.03em; min-width: 100px;">{{ netOps }}</div>
+                <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #605d5d;">Flights in and out with the tower closed</div>
+              </div>
+              <div style="padding: 24px; border-bottom: 1px solid #d7d3d3; display: flex; align-items: center; gap: 16px;">
+                <div style="font-size: 52px; font-weight: 900; line-height: 0.9; letter-spacing: -0.03em; min-width: 100px;">{{ netAirline }}</div>
+                <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #605d5d;">Flown by passenger airlines</div>
+              </div>
+              <div style="padding: 24px; display: flex; align-items: center; gap: 16px;">
+                <div style="font-size: 52px; font-weight: 900; line-height: 0.9; letter-spacing: -0.03em; min-width: 100px; color: #ec3013;">{{ netIncidents }}</div>
+                <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #605d5d;">Pairs of aircraft that came closer than a controller would allow</div>
+              </div>
+              <div style="padding: 0 24px 20px; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #7d7979;">Data from last 30 days</div>
+            </div>
+          </div>
+          <div style="border-bottom: 2px solid #201e1d; position: relative;">
+            <x-import component-from-global-scope="us-airport-map" from="./us-map.js" selected="{{ selectedCode }}" height="640" hint-size="100%,600px"></x-import>
+            <div style="position: absolute; left: 24px; bottom: 24px; display: flex; flex-direction: column; gap: 10px; background: #f3f2f2; border: 2px solid #201e1d; padding: 16px 20px;">
+              <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #201e1d;">Close approaches, last 30 days</div>
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: #444141;"><span style="width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid #ec3013; background: rgba(236,48,19,0.22); display: block; flex-shrink: 0;"></span> Tracked airport — circle grows with the count</div>
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: #444141;"><span style="width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #201e1d; background: rgba(32,30,29,0.12); display: block; flex-shrink: 0;"></span> Tracked airport — none found</div>
+              <div style="font-size: 12px; color: #7d7979; max-width: 30ch; line-height: 1.4;">Airports still under review are listed on the Airports page, not shown here.</div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <div style="padding: 44px 24px 52px; display: flex; align-items: center; justify-content: space-between; gap: 32px; border-bottom: 2px solid #201e1d;">
+        <div style="max-width: 62ch; font-size: 17px; line-height: 1.55; color: #444141;">Not seeing your airport? Ask us to start tracking it.</div>
+        <button onClick="{{ goAirports }}" style="padding: 14px 20px; background: #ec3013; color: #fff; border: none; cursor: pointer; font-size: 14px; font-weight: 700; letter-spacing: 0.04em; text-align: left; white-space: nowrap;" style-hover="{ background: '#dd2b0f' }">Airport list and submissions</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isAirports }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <div style="display: grid; grid-template-columns: 7fr 5fr; border-bottom: 2px solid #201e1d;">
+        <div style="padding: 48px 24px; border-right: 2px solid #201e1d;">
+          <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #ec3013;">Coverage</div>
+          <h1 style="margin: 18px 0 0; font-size: 42px; font-weight: 900; line-height: 1.02; letter-spacing: -0.03em; max-width: 20ch;">Airports tracked</h1>
+          <p style="margin: 20px 0 0; max-width: 58ch; font-size: 16px; line-height: 1.55; color: #444141;">We track airports with regular passenger service and part-time or no-time control tower service: a tower that closes while those flights are still arriving and leaving, or no tower at all.</p>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr;">
+          <div style="padding: 24px; border-bottom: 1px solid #d7d3d3; border-right: 1px solid #d7d3d3;">
+            <div style="font-size: 40px; font-weight: 900; letter-spacing: -0.03em;">{{ trackedCount }}</div>
+            <div style="margin-top: 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #605d5d;">Airports tracked</div>
+          </div>
+          <div style="padding: 24px; border-bottom: 1px solid #d7d3d3;">
+            <div style="font-size: 40px; font-weight: 900; letter-spacing: -0.03em; color: #ec3013;">{{ netIncidents }}</div>
+            <div style="margin-top: 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #605d5d;">Close approaches<br>last 30 days</div>
+          </div>
+          <div style="padding: 24px; border-right: 1px solid #d7d3d3;">
+            <div style="font-size: 40px; font-weight: 900; letter-spacing: -0.03em;">{{ pendingCount }}</div>
+            <div style="margin-top: 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #605d5d;">Requested</div>
+          </div>
+          <div style="padding: 24px;">
+            <div style="font-size: 40px; font-weight: 900; letter-spacing: -0.03em;">{{ totalNightsLabel }}</div>
+            <div style="margin-top: 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #605d5d;">Nights covered</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="airport-list" style="border-bottom: 2px solid #201e1d;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 32px 24px 20px;">
+          <h2 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.02em;">All airports</h2>
+          <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #7d7979;">Counts from last 30 days</div>
+        </div>
+        <div style="padding: 0 24px 40px;">
+          <div style="display: grid; grid-template-columns: 80px 1.5fr 1fr 1fr 100px 120px 128px 36px; gap: 0; border-top: 2px solid #201e1d; border-bottom: 1px solid #d7d3d3; padding: 10px 0; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7d7979;">
+            <div>Code</div><div>Airport</div><div>City</div><div>Tower hours</div><div>Flights</div><div>Close approaches</div><div>Status</div><div></div>
+          </div>
+          <sc-for list="{{ airportRows }}" as="a" hint-placeholder-count="6">
+            <div onClick="{{ a.open }}" title="{{ a.hint }}" style="display: grid; grid-template-columns: 80px 1.5fr 1fr 1fr 100px 120px 128px 36px; align-items: center; border-bottom: 1px solid #d7d3d3; padding: 14px 0; cursor: {{ a.cursor }}; opacity: {{ a.opacity }};" style-hover="{ background: '#eae9e9' }">
+              <div style="font-size: 17px; font-weight: 800; letter-spacing: 0.02em; color: {{ a.codeColor }};">{{ a.code }}</div>
+              <div style="font-size: 14px; font-weight: 500;">{{ a.name }}</div>
+              <div style="font-size: 14px; color: #605d5d;">{{ a.city }}</div>
+              <div style="font-size: 14px; color: #605d5d;">{{ a.towerHours }}</div>
+              <div style="font-size: 15px; font-variant-numeric: tabular-nums;">{{ a.opsLabel }}</div>
+              <div style="font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; color: {{ a.incColor }};">{{ a.incLabel }}</div>
+              <div><span style="display: inline-block; padding: 4px 9px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; background: {{ a.tagBg }}; color: {{ a.tagFg }};">{{ a.statusLabel }}</span></div>
+              <div style="font-size: 18px; font-weight: 700; color: #ae1800; text-align: right;">{{ a.arrow }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="background: #ec3013; color: #fff; border-bottom: 2px solid #201e1d;">
+        <div style="display: grid; grid-template-columns: 7fr 5fr;">
+          <div style="padding: 56px 24px;">
+            <h2 style="margin: 0; font-size: 40px; font-weight: 900; line-height: 1.02; letter-spacing: -0.03em; max-width: 20ch;">If your airport has passenger flights and part-time or no-time tower service, put it on the map.</h2>
+          </div>
+          <div style="padding: 56px 24px; border-left: 2px solid #fff;">
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+              <label style="display: flex; flex-direction: column; gap: 6px;">
+                <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.85;">Airport code or city, state</span>
+                <input value="{{ addValue }}" onChange="{{ onAddChange }}" placeholder="BLI — or — Bellingham, WA" style="padding: 13px 14px; background: #fff; color: #201e1d; border: none; font-family: Archivo, sans-serif; font-size: 15px;">
+              </label>
+              <label style="display: flex; flex-direction: column; gap: 6px;">
+                <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.85;">Your email</span>
+                <input value="{{ addEmail }}" onChange="{{ onEmailChange }}" placeholder="you@example.org" style="padding: 13px 14px; background: #fff; color: #201e1d; border: none; font-family: Archivo, sans-serif; font-size: 15px;">
+              </label>
+              <button onClick="{{ submitAdd }}" style="padding: 14px 20px; background: #201e1d; color: #fff; border: none; cursor: pointer; font-size: 14px; font-weight: 700; letter-spacing: 0.04em; text-align: left;" style-hover="{ background: '#000' }">Send request</button>
+              <sc-if value="{{ addSubmitted }}" hint-placeholder-val="{{ false }}">
+                <div style="padding: 12px 14px; background: rgba(255,255,255,0.16); font-size: 14px; line-height: 1.5;">{{ addMessage }}</div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isAirport }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <div style="display: grid; grid-template-columns: 7fr 5fr; border-bottom: 2px solid #201e1d;">
+        <div style="padding: 40px 24px; border-right: 2px solid #201e1d;">
+          <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #ec3013;">Tracked nightly · within 10 nautical miles</div>
+          <div style="display: flex; align-items: baseline; gap: 18px; margin-top: 14px;">
+            <div style="font-size: 66px; font-weight: 900; line-height: 0.85; letter-spacing: -0.04em;">{{ apCode }}</div>
+            <div>
+              <div style="font-size: 22px; font-weight: 700; letter-spacing: -0.01em;">{{ apName }}</div>
+              <div style="font-size: 15px; color: #605d5d;">{{ apPlace }}</div>
+            </div>
+          </div>
+          <p style="margin: 22px 0 0; max-width: 60ch; font-size: 16px; line-height: 1.55; color: #444141;">{{ apIntro }}</p>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr;">
+          <div style="padding: 22px 20px; border-bottom: 1px solid #d7d3d3; border-right: 1px solid #d7d3d3;">
+            <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7d7979;">Tower hours</div>
+            <div style="margin-top: 8px; font-size: 20px; font-weight: 700;">{{ apTowerHours }}</div>
+          </div>
+          <div style="padding: 22px 20px; border-bottom: 1px solid #d7d3d3;">
+            <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7d7979;">Hours closed</div>
+            <div style="margin-top: 8px; font-size: 20px; font-weight: 700;">{{ apClosed }}</div>
+          </div>
+          <div style="padding: 22px 20px; border-right: 1px solid #d7d3d3;">
+            <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7d7979;">Airlines serving</div>
+            <div style="margin-top: 8px; font-size: 20px; font-weight: 700;">{{ apCarriers }}</div>
+          </div>
+          <div style="padding: 22px 20px;">
+            <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7d7979;">Detailed data</div>
+            <div style="margin-top: 8px; font-size: 20px; font-weight: 700;">{{ apDetailWindow }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding: 20px 24px 0; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #7d7979;">Over the last 30 days · hours the tower was closed</div>
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 2px solid #201e1d;">
+        <div style="padding: 28px 20px; border-right: 1px solid #d7d3d3;">
+          <div style="font-size: 44px; font-weight: 900; line-height: 0.9; letter-spacing: -0.03em;">{{ totalOps }}</div>
+          <div style="margin-top: 10px; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #605d5d;">Flights in and out</div>
+        </div>
+        <div style="padding: 28px 20px; border-right: 1px solid #d7d3d3;">
+          <div style="font-size: 44px; font-weight: 900; line-height: 0.9; letter-spacing: -0.03em;">{{ totalAirline }}</div>
+          <div style="margin-top: 10px; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #605d5d;">Passenger airline</div>
+        </div>
+        <div style="padding: 28px 20px; border-right: 1px solid #d7d3d3;">
+          <div style="font-size: 44px; font-weight: 900; line-height: 0.9; letter-spacing: -0.03em;">{{ totalGA }}</div>
+          <div style="margin-top: 10px; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #605d5d;">Private and training aircraft</div>
+        </div>
+        <div style="padding: 28px 20px;">
+          <div style="font-size: 44px; font-weight: 900; line-height: 0.9; letter-spacing: -0.03em; color: #ec3013;">{{ totalIncidents }}</div>
+          <div style="margin-top: 10px; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #605d5d;">Close approaches</div>
+        </div>
+      </div>
+
+      <sc-if value="{{ noDetail }}" hint-placeholder-val="{{ false }}">
+        <div style="padding: 48px 24px 64px; border-bottom: 2px solid #201e1d;">
+          <div style="font-size: 20px; font-weight: 800; letter-spacing: -0.01em;">Nightly detail for {{ apCode }} is not published yet.</div>
+          <p style="margin: 12px 0 0; max-width: 60ch; font-size: 16px; line-height: 1.55; color: #605d5d;">The totals above cover the last 30 days. Flight paths and individual close approaches are available for Paine Field.</p>
+          <button onClick="{{ goPAE }}" style="margin-top: 24px; padding: 14px 20px; background: #ec3013; color: #fff; border: none; cursor: pointer; font-size: 14px; font-weight: 700; letter-spacing: 0.04em; text-align: left;" style-hover="{ background: '#dd2b0f' }">See the Paine Field record</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ hasDetail }}" hint-placeholder-val="{{ true }}">
+      <div>
+      <div style="padding: 36px 24px; border-bottom: 2px solid #201e1d;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 20px;">
+          <h2 style="margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.01em;">Last 30 days</h2>
+          <div style="display: flex; align-items: center; gap: 18px; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #7d7979;">
+            <span style="display: flex; align-items: center; gap: 7px;"><span style="width: 12px; height: 12px; background: #d7d3d3; display: block;"></span>Fewer flights</span>
+            <span style="display: flex; align-items: center; gap: 7px;"><span style="width: 12px; height: 12px; background: #444141; display: block;"></span>More flights</span>
+            <span style="display: flex; align-items: center; gap: 7px;"><span style="width: 12px; height: 12px; background: #ec3013; display: block;"></span>Close approach</span>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(15, 1fr); gap: 6px;">
+          <sc-for list="{{ calendar }}" as="c" hint-placeholder-count="30">
+            <button onClick="{{ c.pick }}" title="{{ c.title }}" style="display: block; padding: 0; border: none; background: none; cursor: pointer; text-align: left;">
+              <div style="border: 2px solid {{ c.border }}; padding: 8px 8px 10px; min-height: 78px; display: flex; flex-direction: column; justify-content: space-between; background: {{ c.bg }}; color: {{ c.fg }};">
+                <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7;">{{ c.dow }}</div>
+                <div>
+                  <div style="font-size: 17px; font-weight: 800; line-height: 1;">{{ c.day }}</div>
+                  <div style="font-size: 10px; font-weight: 600; letter-spacing: 0.06em; opacity: 0.8; margin-top: 3px;">{{ c.opsLabel }}</div>
+                </div>
+              </div>
+            </button>
+          </sc-for>
+        </div>
+        <div style="margin-top: 14px; font-size: 12px; color: #7d7979;">Counts cover the last 30 days. The nights of 12–18 August have full flight-path detail; earlier nights in the window contribute flight counts only.</div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 7fr 5fr; border-bottom: 2px solid #201e1d;">
+        <div style="border-right: 2px solid #201e1d;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 20px 24px; border-bottom: 1px solid #d7d3d3;">
+            <div style="min-width: 0;">
+              <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #7d7979;">Flight paths within 10 nautical miles, tower closed</div>
+              <h2 style="margin: 6px 0 0; font-size: 24px; font-weight: 800; letter-spacing: -0.02em;">Night of {{ nightLabel }}</h2>
+            </div>
+          </div>
+          <x-import component-from-global-scope="flight-map" from="./flight-map.js" night="{{ nightKey }}" mode="{{ mapMode }}" interactive="true" height="560" hint-size="100%,560px"></x-import>
+          <div style="display: flex; align-items: center; gap: 24px; padding: 14px 24px; border-top: 1px solid #d7d3d3; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #605d5d;">
+            <span style="display: flex; align-items: center; gap: 8px;"><span style="width: 20px; height: 3px; background: #ec3013; display: block;"></span>Passenger airline</span>
+            <span style="display: flex; align-items: center; gap: 8px;"><span style="width: 20px; height: 2px; background: #201e1d; display: block;"></span>Private and training aircraft</span>
+            <span style="display: flex; align-items: center; gap: 8px;"><span style="width: 10px; height: 10px; border: 1px solid #201e1d; border-radius: 50%; display: block;"></span>10 nautical mile ring</span>
+          </div>
+        </div>
+        <div>
+          <div style="padding: 20px 24px; border-bottom: 1px solid #d7d3d3;">
+            <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #7d7979;">Close approaches this night</div>
+          </div>
+          <sc-if value="{{ hasNightIncidents }}" hint-placeholder-val="{{ true }}">
+            <div>
+              <sc-for list="{{ nightIncidents }}" as="i" hint-placeholder-count="1">
+                <button onClick="{{ i.open }}" style="display: block; width: 100%; text-align: left; padding: 22px 24px; background: #fff2ef; border: none; border-bottom: 1px solid #d7d3d3; border-left: 6px solid #ec3013; cursor: pointer;" style-hover="{ background: '#ffe0d9' }">
+                  <div style="display: flex; align-items: baseline; justify-content: space-between;">
+                    <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #ae1800;">{{ i.severity }}</span>
+                    <span style="font-size: 12px; color: #7d7979;">{{ i.time }}</span>
+                  </div>
+                  <div style="margin-top: 12px; font-size: 20px; font-weight: 800; letter-spacing: -0.01em;">{{ i.pair }}</div>
+                  <div style="display: flex; gap: 24px; margin-top: 14px;">
+                    <div>
+                      <div style="font-size: 26px; font-weight: 900; letter-spacing: -0.02em; color: #ec3013;">{{ i.lateral }}</div>
+                      <div style="font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #605d5d;">Less than 3 NM</div>
+                    </div>
+                    <div>
+                      <div style="font-size: 26px; font-weight: 900; letter-spacing: -0.02em; color: #ec3013;">{{ i.vertical }}</div>
+                      <div style="font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #605d5d;">Less than 1,000'</div>
+                    </div>
+                  </div>
+                  <div style="margin-top: 14px; font-size: 13px; font-weight: 700; color: #ae1800;">See what happened →</div>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ noNightIncidents }}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 24px; font-size: 15px; line-height: 1.55; color: #605d5d; border-bottom: 1px solid #d7d3d3;">No two aircraft came within 3 nautical miles and 1,000 feet of each other this night, across all {{ nightOps }} flights.</div>
+          </sc-if>
+          <div style="padding: 24px;">
+            <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #7d7979;">That night, in total</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1px; margin-top: 16px; background: #d7d3d3; border: 1px solid #d7d3d3;">
+              <div style="background: #f3f2f2; padding: 16px;"><div style="font-size: 30px; font-weight: 900; letter-spacing: -0.02em;">{{ nightOps }}</div><div style="font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #605d5d; margin-top: 6px;">Flights</div></div>
+              <div style="background: #f3f2f2; padding: 16px;"><div style="font-size: 30px; font-weight: 900; letter-spacing: -0.02em;">{{ nightAirline }}</div><div style="font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #605d5d; margin-top: 6px;">Passenger airline</div></div>
+              <div style="background: #f3f2f2; padding: 16px;"><div style="font-size: 30px; font-weight: 900; letter-spacing: -0.02em;">{{ nightGA }}</div><div style="font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #605d5d; margin-top: 6px;">Private and training</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding: 36px 24px 64px;">
+        <h2 style="margin: 0 0 20px; font-size: 20px; font-weight: 800; letter-spacing: -0.01em;">Flight log — {{ nightLabel }}</h2>
+        <div style="display: grid; grid-template-columns: 92px 150px 110px 1fr 90px 1.4fr; border-top: 2px solid #201e1d; border-bottom: 1px solid #d7d3d3; padding: 10px 0; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7d7979;">
+          <div>Time</div><div>Kind of flight</div><div>Arriving or leaving</div><div>Flight</div><div>Aircraft</div><div>Other airport</div>
+        </div>
+        <sc-for list="{{ nightFlights }}" as="f" hint-placeholder-count="12">
+          <div style="display: grid; grid-template-columns: 92px 150px 110px 1fr 90px 1.4fr; align-items: center; border-bottom: 1px solid #d7d3d3; padding: 11px 0; font-size: 14px;">
+            <div style="font-weight: 600; font-variant-numeric: tabular-nums;">{{ f.time }}</div>
+            <div style="display: flex; align-items: center; gap: 8px; color: {{ f.opColor }}; font-weight: {{ f.opWeight }};"><span style="width: 8px; height: 8px; display: block; background: {{ f.dot }};"></span>{{ f.cat }}</div>
+            <div style="color: #605d5d;">{{ f.dir }}</div>
+            <div style="font-weight: 600;">{{ f.name }}</div>
+            <div style="color: #605d5d;">{{ f.type }}</div>
+            <div style="color: #605d5d;">{{ f.other }}</div>
+          </div>
+        </sc-for>
+      </div>
+      </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isIncident }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <div style="padding: 16px 24px; border-bottom: 1px solid #d7d3d3;">
+        <button onClick="{{ goPAE }}" style="background: none; border: none; padding: 0; cursor: pointer; font-size: 13px; font-weight: 600; color: #ae1800;">← Back to the Paine Field record</button>
+      </div>
+      <div style="display: grid; grid-template-columns: 7fr 5fr; border-bottom: 2px solid #201e1d;">
+        <div style="padding: 40px 24px; border-right: 2px solid #201e1d;">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <span style="display: inline-block; padding: 5px 10px; background: #ec3013; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;">{{ incSeverity }}</span>
+            <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #7d7979;">{{ incId }}</span>
+          </div>
+          <h1 style="margin: 20px 0 0; font-size: 44px; font-weight: 900; line-height: 1.02; letter-spacing: -0.03em; max-width: 20ch;">{{ incHeadline }}</h1>
+          <div style="margin-top: 16px; font-size: 16px; color: #605d5d;">{{ incWhen }} · Paine Field, Everett WA · tower closed</div>
+          <p style="margin: 24px 0 0; max-width: 58ch; font-size: 17px; line-height: 1.6; color: #444141;">{{ incNote }}</p>
+        </div>
+        <div style="display: grid; grid-template-rows: 1fr 1fr 1fr;">
+          <div style="padding: 24px; border-bottom: 1px solid #d7d3d3;">
+            <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7d7979;">How close, side to side</div>
+            <div style="display: flex; align-items: baseline; gap: 14px; margin-top: 10px;">
+              <div style="font-size: 48px; font-weight: 900; letter-spacing: -0.03em; color: #ec3013; line-height: 0.9;">{{ incLateral }}</div>
+              <div style="font-size: 14px; color: #605d5d;">a controller would keep them at least 3 NM apart</div>
+            </div>
+          </div>
+          <div style="padding: 24px; border-bottom: 1px solid #d7d3d3;">
+            <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7d7979;">Vertical separation</div>
+            <div style="display: flex; align-items: baseline; gap: 14px; margin-top: 10px;">
+              <div style="font-size: 48px; font-weight: 900; letter-spacing: -0.03em; color: #ec3013; line-height: 0.9;">{{ incVertical }}</div>
+              <div style="font-size: 14px; color: #605d5d;">a controller would keep them at least 1,000' apart</div>
+            </div>
+          </div>
+          <div style="padding: 24px;">
+            <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7d7979;">Distance from the airport</div>
+            <div style="display: flex; align-items: baseline; gap: 14px; margin-top: 10px;">
+              <div style="font-size: 48px; font-weight: 900; letter-spacing: -0.03em; line-height: 0.9;">{{ incDist }}</div>
+              <div style="font-size: 14px; color: #605d5d;">inside the 10 NM ring</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 7fr 5fr; border-bottom: 2px solid #201e1d;">
+        <div style="border-right: 2px solid #201e1d;">
+          <x-import component-from-global-scope="incident-replay" from="./incident-replay.js" incident="{{ incId }}" height="520" hint-size="100%,600px"></x-import>
+          <div style="padding: 14px 24px; border-top: 1px solid #d7d3d3; font-size: 12px; color: #7d7979;">Replay runs in accelerated time. Each aircraft's full path is dashed; the solid trail is where it has flown so far, and the thin line between the two is their separation. Other traffic that night is greyed behind them.</div>
+        </div>
+        <div>
+          <div style="padding: 24px; border-bottom: 1px solid #d7d3d3;">
+            <div style="display: flex; align-items: center; gap: 10px;"><span style="width: 22px; height: 4px; background: #ec3013; display: block;"></span><span style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7d7979;">Aircraft A</span></div>
+            <div style="margin-top: 12px; font-size: 28px; font-weight: 900; letter-spacing: -0.02em;">{{ incAIdent }}</div>
+            <div style="margin-top: 6px; font-size: 15px; color: #605d5d;">{{ incADesc }}</div>
+            <div style="margin-top: 12px; font-size: 15px;">Altitude at closest point: <strong>{{ incAAlt }}</strong></div>
+          </div>
+          <div style="padding: 24px; border-bottom: 1px solid #d7d3d3;">
+            <div style="display: flex; align-items: center; gap: 10px;"><span style="width: 22px; height: 4px; background: #201e1d; display: block;"></span><span style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7d7979;">Aircraft B</span></div>
+            <div style="margin-top: 12px; font-size: 28px; font-weight: 900; letter-spacing: -0.02em;">{{ incBIdent }}</div>
+            <div style="margin-top: 6px; font-size: 15px; color: #605d5d;">{{ incBDesc }}</div>
+            <div style="margin-top: 12px; font-size: 15px;">Altitude at closest point: <strong>{{ incBAlt }}</strong></div>
+          </div>
+          <div style="padding: 24px; background: #eae9e9;">
+            <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7d7979;">What we know, and don't</div>
+            <p style="margin: 12px 0 0; font-size: 15px; line-height: 1.6; color: #444141;">We do not know whether this event was reported to anyone. With the tower closed there was no controller watching to file a report, and a pilot cannot report an aircraft they never saw. What we can show is what the position data recorded.</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding: 36px 24px 64px;">
+        <h2 style="margin: 0 0 16px; font-size: 20px; font-weight: 800;">Other close approaches at Paine Field</h2>
+        <div style="display: grid; grid-template-columns: 200px 1fr 120px 120px; border-top: 2px solid #201e1d; border-bottom: 1px solid #d7d3d3; padding: 10px 0; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7d7979;">
+          <div>Reference</div><div>Aircraft</div><div>Lateral</div><div>Vertical</div>
+        </div>
+        <sc-for list="{{ otherIncidents }}" as="i" hint-placeholder-count="3">
+          <button onClick="{{ i.open }}" style="display: grid; width: 100%; grid-template-columns: 200px 1fr 120px 120px; align-items: center; text-align: left; background: none; border: none; border-bottom: 1px solid #d7d3d3; padding: 16px 0; cursor: pointer;" style-hover="{ background: '#eae9e9' }">
+            <div style="font-size: 13px; font-weight: 700; letter-spacing: 0.06em; color: #7d7979;">{{ i.id }}</div>
+            <div style="font-size: 16px; font-weight: 600;">{{ i.pair }}</div>
+            <div style="font-size: 16px; font-weight: 800; color: #ec3013;">{{ i.lateral }}</div>
+            <div style="font-size: 16px; font-weight: 800; color: #ec3013;">{{ i.vertical }}</div>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isAbout }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <div style="display: grid; grid-template-columns: 7fr 5fr; border-bottom: 2px solid #201e1d;">
+        <div style="padding: 56px 24px; border-right: 2px solid #201e1d;">
+          <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #ec3013;">Method</div>
+          <h1 style="margin: 20px 0 0; font-size: 46px; font-weight: 900; line-height: 1.02; letter-spacing: -0.03em; max-width: 18ch;">What this site counts, and how.</h1>
+          <p style="margin: 24px 0 0; max-width: 58ch; font-size: 17px; line-height: 1.6; color: #444141;">Many smaller airports have control towers that are staffed only part of the day, and some have no tower at all. Those hours, where they exist, were set when the airport had no passenger flights. They have not changed. The passenger flights have arrived. This site does not argue that from anecdote — it counts the flights.</p>
+        </div>
+        <div style="padding: 56px 24px; background: #eae9e9;">
+          <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7d7979;">Sources</div>
+          <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 14px; font-size: 15px; line-height: 1.5; color: #444141;">
+            <div>FlightAware — arrival and departure records, and the position signals each aircraft broadcasts.</div>
+            <div>FAA Chart Supplement — the official published tower hours for each airport.</div>
+            <div>Published airline schedules — to tell passenger flights apart from private ones.</div>
+            <div>OpenStreetMap and CARTO — basemap tiles.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 2px solid #201e1d;">
+        <div style="padding: 36px 24px; border-right: 1px solid #d7d3d3;">
+          <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7d7979;">Step one</div>
+          <h3 style="margin: 14px 0 0; font-size: 22px; font-weight: 800; letter-spacing: -0.01em;">Collect every flight while the tower is closed</h3>
+          <p style="margin: 12px 0 0; font-size: 15px; line-height: 1.6; color: #444141;">For each night we list every arrival and departure between the tower closing and reopening the next morning, in local time. Where an airport has no tower, we use the hours a tower would ordinarily be staffed nearby. Flights are grouped by the evening they belong to, so a 1 a.m. landing is filed under the night before.</p>
+        </div>
+        <div style="padding: 36px 24px; border-right: 1px solid #d7d3d3;">
+          <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7d7979;">Step two</div>
+          <h3 style="margin: 14px 0 0; font-size: 22px; font-weight: 800; letter-spacing: -0.01em;">Keep only the paths close to the airport</h3>
+          <p style="margin: 12px 0 0; font-size: 15px; line-height: 1.6; color: #444141;">Each flight's path is trimmed to the positions within 10 nautical miles of the airport — about 11.5 road miles — and within the hours the tower was closed. Flights that pass nearby at other times are dropped.</p>
+        </div>
+        <div style="padding: 36px 24px;">
+          <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7d7979;">Step three</div>
+          <h3 style="margin: 14px 0 0; font-size: 22px; font-weight: 800; letter-spacing: -0.01em;">Measure how close aircraft came to each other</h3>
+          <p style="margin: 12px 0 0; font-size: 15px; line-height: 1.6; color: #444141;">Positions are lined up to a common clock and every pair of aircraft is measured. When two aircraft are less than 3 nautical miles apart and less than 1,000 feet apart vertically at the same moment, we flag it.</p>
+        </div>
+      </div>
+
+      <div style="background: #ec3013; color: #fff; padding: 56px 24px; border-bottom: 2px solid #201e1d;">
+        <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; opacity: 0.8;">The standard</div>
+        <div style="margin-top: 18px; font-size: 40px; font-weight: 900; line-height: 1.08; letter-spacing: -0.03em; max-width: 26ch;">With a controller on duty, aircraft are kept at least 3 nautical miles apart, or 1,000 feet apart vertically. When the tower is closed, nothing enforces this safety margin.</div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; border-bottom: 2px solid #201e1d;">
+        <div style="padding: 40px 24px; border-right: 2px solid #201e1d;">
+          <h3 style="margin: 0; font-size: 22px; font-weight: 800;">What a flagged event is, and what it is not</h3>
+          <p style="margin: 14px 0 0; font-size: 15px; line-height: 1.6; color: #444141;">A flag means two aircraft were closer than a controller would have allowed. It is not a finding that either pilot did anything wrong, and it is not an official ruling of any kind. When the tower is closed, pilots are legally permitted to fly closer than these distances as long as they see each other to avoid collisions. That is the point: an airliner coming in to land and a training aircraft circling the field share the same air with nothing between them but a radio call and a pair of eyes.</p>
+        </div>
+        <div style="padding: 40px 24px;">
+          <h3 style="margin: 0; font-size: 22px; font-weight: 800;">Known limitations</h3>
+          <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 12px; font-size: 15px; line-height: 1.6; color: #444141;">
+            <div>Aircraft that do not broadcast a position signal do not appear at all, so these counts are a floor, not a total.</div>
+            <div>Broadcast altitude is not corrected for local air pressure, so altitude figures carry roughly ±100 feet.</div>
+            <div>Landing and takeoff times are sometimes estimated rather than measured; where the measured time is missing, the estimate is used.</div>
+            <div>Coverage close to the ground is uneven, so the lowest parts of some flight paths are missing.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 7fr 5fr; border-bottom: 2px solid #201e1d;">
+        <div style="padding: 48px 24px; border-right: 2px solid #201e1d;">
+          <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #ec3013;">Who we are</div>
+          <h2 style="margin: 18px 0 0; font-size: 32px; font-weight: 900; line-height: 1.05; letter-spacing: -0.025em; max-width: 24ch;">A citizen project, built on public data.</h2>
+          <p style="margin: 18px 0 0; max-width: 58ch; font-size: 16px; line-height: 1.6; color: #444141;">Dark Tower Watch is not run by the FAA, an airport, an airline, or any government body. It is the work of two residents who live under these flight paths. Everything on the site is drawn from publicly available ADS-B position data — the same signals aircraft broadcast for anyone to receive — and from published tower hours and airline schedules. Nothing here is confidential, and none of it required special access.</p>
+          <p style="margin: 14px 0 0; max-width: 58ch; font-size: 16px; line-height: 1.6; color: #444141;">If you see something we have wrong, tell us. Corrections improve the record.</p>
+        </div>
+        <div style="padding: 48px 24px; background: #eae9e9;">
+          <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7d7979;">Contact</div>
+          <div style="margin-top: 18px; display: flex; flex-direction: column; gap: 20px;">
+            <div>
+              <div style="font-size: 18px; font-weight: 800; letter-spacing: -0.01em;">Mike Koss</div>
+              <a href="mailto:mckoss@gmail.com?subject=Dark%20Tower%20Watch" style="display: inline-block; margin-top: 4px; font-size: 16px;">mckoss@gmail.com</a>
+            </div>
+            <div>
+              <div style="font-size: 18px; font-weight: 800; letter-spacing: -0.01em;">Kevin Stoltz</div>
+              <a href="mailto:kstoltz@citynetwork.com?subject=Dark%20Tower%20Watch" style="display: inline-block; margin-top: 4px; font-size: 16px;">kstoltz@citynetwork.com</a>
+            </div>
+            <a href="mailto:mckoss@gmail.com,kstoltz@citynetwork.com?subject=Dark%20Tower%20Watch%20feedback" style="padding: 14px 20px; background: #ec3013; color: #fff; border: none; font-size: 14px; font-weight: 700; letter-spacing: 0.04em; text-align: left; border-bottom: none;">Send us feedback</a>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding: 40px 24px 72px; display: flex; align-items: baseline; justify-content: space-between; gap: 24px;">
+        <div style="font-size: 14px; color: #7d7979; max-width: 60ch;">Prototype built on one week of records for Paine Field, 12–18 August 2026. The flight paths drawn on the maps are reconstructed from those records for this prototype.</div>
+        <button onClick="{{ goPAE }}" style="padding: 14px 20px; background: #ec3013; color: #fff; border: none; cursor: pointer; font-size: 14px; font-weight: 700; letter-spacing: 0.04em; text-align: left; white-space: nowrap;" style-hover="{ background: '#dd2b0f' }">See the record</button>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;homeVariant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;map&quot;,&quot;ledger&quot;],&quot;default&quot;:&quot;map&quot;,&quot;tsType&quot;:&quot;'map' | 'ledger'&quot;,&quot;section&quot;:&quot;Layout&quot;}}">
+class Component extends DCLogic {
+  state = {
+    page: 'home',
+    airportCode: 'PAE',
+    nightKey: '2026-08-18',
+    incidentId: null,
+    mapMode: null,
+    homeVariant: null,
+    ready: false,
+    addValue: '',
+    addEmail: '',
+    addSubmitted: false
+  };
+
+  componentDidMount() {
+    const wait = setInterval(() => {
+      if (window.PAE) { clearInterval(wait); this.setState({ ready: true }); }
+    }, 50);
+    this._pick = (e) => {
+      const code = e.detail && e.detail.code;
+      if (!code) return;
+      this.setState({ page: 'airport', airportCode: code });
+      window.scrollTo({ top: 0 });
+    };
+    document.addEventListener('airportpick', this._pick);
+  }
+  componentWillUnmount() { document.removeEventListener('airportpick', this._pick); }
+
+  t12(hhmm) {
+    const [h, m] = hhmm.split(':').map(Number);
+    const ap = h >= 12 ? 'PM' : 'AM';
+    const hr = h % 12 === 0 ? 12 : h % 12;
+    return String(hr).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ' ' + ap;
+  }
+
+  calendarCells(D) {
+    const end = new Date(Date.UTC(2026, 7, 18));
+    const dows = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const cells = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(end.getTime() - i * 86400000);
+      const key = d.toISOString().slice(0, 10);
+      const night = D.nights.find((n) => n.date === key);
+      const sel = this.state.nightKey === key;
+      let bg = '#f3f2f2', fg = '#bab6b6', border = '#eae9e9', opsLabel = '—';
+      if (night) {
+        const ops = night.total;
+        bg = ops >= 20 ? '#444141' : ops >= 15 ? '#7d7979' : ops >= 12 ? '#9b9797' : '#d7d3d3';
+        fg = ops >= 15 ? '#f8f4f4' : '#201e1d';
+        opsLabel = ops + ' flights';
+        border = '#eae9e9';
+        if (night.incidents > 0) { bg = '#ec3013'; fg = '#fff'; }
+      }
+      if (sel) border = '#201e1d';
+      cells.push({
+        key, dow: dows[d.getUTCDay()],
+        day: d.getUTCDate() === 1 || i === 29 ? months[d.getUTCMonth()] + ' ' + d.getUTCDate() : String(d.getUTCDate()),
+        opsLabel, bg, fg, border,
+        title: night ? night.label + ' — ' + night.total + ' flights' : key + ' — no data yet',
+        pick: night ? () => this.setState({ nightKey: key, page: 'airport' }) : () => {}
+      });
+    }
+    return cells;
+  }
+
+  incidentRow(i) {
+    return {
+      id: i.id,
+      pair: i.a.ident + ' × ' + i.b.ident,
+      time: this.t12(i.time.slice(0, 5)),
+      severity: i.severity === 'severe' ? 'Very close' : 'Closer than allowed',
+      lateral: i.lateral.toFixed(1) + ' NM',
+      vertical: i.vertical.toLocaleString() + "'",
+      open: () => this.setState({ page: 'incident', incidentId: i.id })
+    };
+  }
+
+  renderVals() {
+    const D = window.PAE;
+    const s = this.state;
+    const variant = s.homeVariant || this.props.homeVariant || 'map';
+    const mode = 'basemap';
+    const base = {
+      isHome: s.page === 'home',
+      isAirports: s.page === 'airports',
+      isAirport: s.page === 'airport',
+      isIncident: s.page === 'incident',
+      isAbout: s.page === 'about',
+      homeMapFirst: s.page === 'home' && variant === 'map',
+      homeLedger: s.page === 'home' && variant === 'ledger',
+      homeLetter: variant === 'map' ? 'A' : 'B',
+      mapMode: mode,
+      selectedCode: s.airportCode,
+      goHome: () => this.setState({ page: 'home' }),
+      goPAE: () => { this.setState({ page: 'airport', airportCode: 'PAE' }); window.scrollTo({ top: 0 }); },
+      goAbout: () => this.setState({ page: 'about' }),
+      goAirports: () => { this.setState({ page: 'airports' }); window.scrollTo({ top: 0 }); },
+      goList: () => { this.setState({ page: 'airports' }); window.scrollTo({ top: 0 }); },
+      toggleHome: () => this.setState({ page: 'home', homeVariant: variant === 'map' ? 'ledger' : 'map' }),
+      addValue: s.addValue,
+      addEmail: s.addEmail,
+      addSubmitted: s.addSubmitted,
+      addMessage: s.addValue
+        ? 'Thanks — ' + s.addValue + ' has been added to the request list.'
+        : 'Enter an airport code or a city and state.',
+      onAddChange: (e) => this.setState({ addValue: e.target.value, addSubmitted: false }),
+      onEmailChange: (e) => this.setState({ addEmail: e.target.value }),
+      submitAdd: () => this.setState({ addSubmitted: true })
+    };
+    if (!D) return base;
+
+    const night = D.nights.find((n) => n.date === s.nightKey) || D.nights[D.nights.length - 1];
+    const inc = D.incidents.find((i) => i.id === s.incidentId) || D.incidents[D.incidents.length - 1];
+    const nightIncs = D.incidents.filter((i) => i.night === night.date);
+
+    const ap = D.airports.find((a) => a.code === s.airportCode) || D.airports[0];
+    const apStats = ap.stats || { ops: 0, airline: 0, incidents: 0 };
+    const hasDetail = ap.code === 'PAE';
+    const closedLabel = (hours) => {
+      if (!hours || hours.indexOf('–') === -1) return 'No tower';
+      const [open, close] = hours.split('–').map((t) => Number(t.split(':')[0]));
+      return (24 - (close - open)) + ' hours nightly';
+    };
+
+    return Object.assign(base, {
+      apCode: ap.code,
+      apName: ap.name,
+      apPlace: ap.city + (ap.icao ? ' · ' + ap.icao : ''),
+      apTowerHours: ap.towerHours === 'no tower' ? 'No tower' : ap.towerHours,
+      apClosed: closedLabel(ap.towerHours),
+      apCarriers: ap.carriers,
+      apDetailWindow: hasDetail ? '12–18 Aug 2026' : 'Not yet published',
+      apIntro: ap.towerHours === 'no tower'
+        ? ap.name + ' has passenger airline service and no control tower at all. Nobody directs the traffic at any hour: airline pilots and small-plane pilots announce themselves on a shared radio channel and are left to spot each other to avoid collisions.'
+        : 'The tower is staffed from ' + ap.towerHours.replace('–', ' to ') + '. Outside those hours nobody is directing traffic at the airport. Airline flights are still in radio contact with regional controllers, but the small aircraft flying alongside them are only announcing themselves on a shared local channel. No one is putting the two in order, and near the airport it falls to the pilots to spot each other to avoid collisions.',
+      hasDetail: hasDetail,
+      noDetail: !hasDetail,
+      totalOps: hasDetail ? D.thirty.ops : apStats.ops,
+      totalAirline: hasDetail ? D.thirty.airline : apStats.airline,
+      totalGA: hasDetail ? D.thirty.ga : apStats.ops - apStats.airline,
+      totalIncidents: hasDetail ? D.thirty.incidents : apStats.incidents,
+      totalPositions: hasDetail ? D.thirty.positions.toLocaleString() : '—',
+      airportCount: D.airports.length,
+      trackedCount: D.airports.filter((a) => a.status === 'tracking').length,
+      pendingCount: D.airports.filter((a) => a.status === 'requested').length,
+      totalNightsLabel: '30',
+      netOps: D.airports.reduce((s2, a) => s2 + (a.stats ? a.stats.ops : 0), 0),
+      netAirline: D.airports.reduce((s2, a) => s2 + (a.stats ? a.stats.airline : 0), 0),
+      netIncidents: D.airports.reduce((s2, a) => s2 + (a.stats ? a.stats.incidents : 0), 0),
+      airportRows: D.airports.map((a) => ({
+        code: a.code, name: a.name, city: a.city, towerHours: a.towerHours, carriers: a.carriers,
+        opsLabel: a.stats ? String(a.stats.ops) : '—',
+        incLabel: a.stats ? String(a.stats.incidents) : '—',
+        incColor: a.stats && a.stats.incidents > 0 ? '#ec3013' : '#bab6b6',
+        statusLabel: a.status === 'tracking' ? 'Tracking' : a.status === 'queued' ? 'Queued' : 'Requested',
+        tagBg: a.status === 'tracking' ? '#ec3013' : a.status === 'queued' ? '#d7d3d3' : 'transparent',
+        tagFg: a.status === 'tracking' ? '#ffffff' : '#201e1d',
+        arrow: a.status === 'tracking' ? '→' : '',
+        cursor: a.status === 'tracking' ? 'pointer' : 'default',
+        opacity: a.status === 'tracking' ? 1 : 0.6,
+        codeColor: a.status === 'tracking' ? '#201e1d' : '#605d5d',
+        hint: a.status === 'tracking' ? 'Open the ' + a.code + ' record' : a.code + ' is not tracked yet',
+        open: a.status === 'tracking' ? () => { this.setState({ page: 'airport', airportCode: a.code }); window.scrollTo({ top: 0 }); } : () => {}
+      })),
+      calendar: this.calendarCells(D),
+      nightKey: night.date,
+      nightLabel: night.label,
+      nightOps: night.total,
+      nightAirline: night.airlineOps,
+      nightGA: night.gaOps,
+      nightPositions: night.positions.toLocaleString(),
+      nightFlights: night.flights.map((f) => ({
+        time: this.t12(f.time),
+        cat: f.cat === 'GA' ? 'Private / training' : f.cat,
+        dir: f.dir,
+        name: f.ident === f.tail ? f.ident : f.ident + ' (' + f.tail + ')',
+        type: f.type,
+        other: f.from,
+        dot: f.cat === 'GA' ? '#bab6b6' : '#ec3013',
+        opColor: f.cat === 'GA' ? '#605d5d' : '#201e1d',
+        opWeight: f.cat === 'GA' ? 400 : 700
+      })),
+      nightIncidents: nightIncs.map((i) => this.incidentRow(i)),
+      hasNightIncidents: nightIncs.length > 0,
+      noNightIncidents: nightIncs.length === 0,
+      incId: inc.id,
+      incSeverity: inc.severity === 'severe' ? 'Very close' : 'Closer than allowed',
+      incHeadline: inc.a.ident + ' and ' + inc.b.ident + ' came within ' + inc.lateral.toFixed(1) + ' NM and ' + inc.vertical + "' of each other.",
+      incWhen: inc.night_label + ', ' + this.t12(inc.time.slice(0, 5)),
+      incNote: inc.note,
+      incLateral: inc.lateral.toFixed(1) + ' NM',
+      incVertical: inc.vertical.toLocaleString() + "'",
+      incDist: inc.dist.toFixed(1) + ' NM',
+      incAIdent: inc.a.ident + (inc.a.tail !== inc.a.ident ? ' (' + inc.a.tail + ')' : ''),
+      incADesc: (inc.a.cat === 'GA' ? 'Private / training' : inc.a.cat) + ' · ' + inc.a.type,
+      incAAlt: inc.alt[0].toLocaleString() + ' ft',
+      incBIdent: inc.b.ident + (inc.b.tail !== inc.b.ident ? ' (' + inc.b.tail + ')' : ''),
+      incBDesc: (inc.b.cat === 'GA' ? 'Private / training' : inc.b.cat) + ' · ' + inc.b.type,
+      incBAlt: inc.alt[1].toLocaleString() + ' ft',
+      otherIncidents: D.incidents.filter((i) => i.id !== inc.id).map((i) => this.incidentRow(i))
+    });
+  }
+}
+</script>
+</body>
+</html>
