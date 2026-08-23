@@ -29,6 +29,8 @@ export interface AircraftSample {
 	vs: number;
 	/** False before the track starts or after it ends (aircraft on the ground / out of range). */
 	active: boolean;
+	/** 'before' the first report, 'active', or 'after' the last report (held at its last position). */
+	phase: 'before' | 'active' | 'after';
 }
 
 export interface ReplaySample {
@@ -89,7 +91,8 @@ export function buildReplay(origin: LatLon, a: Flight, b: Flight, closestT: numb
 		const vel = spline.velocityAt(t);
 		const [lat, lon] = fromLocalNm(origin, [v[0], v[1]]);
 		const active = t >= spline.t0 && t <= spline.t1;
-		return { lat, lon, alt: v[2], hdg: headingOf(spline, t, () => nearestHdg(flight, t)), gs: v[3] ?? 0, vs: active && vel ? vel[2] * 1000 : 0, active };
+		const phase = t < spline.t0 ? 'before' : t > spline.t1 ? 'after' : 'active';
+		return { lat, lon, alt: v[2], hdg: headingOf(spline, t, () => nearestHdg(flight, t)), gs: v[3] ?? 0, vs: active && vel ? vel[2] * 1000 : 0, active, phase };
 	}
 
 	function sampleAt(t: number): ReplaySample {
@@ -122,8 +125,8 @@ export function buildReplay(origin: LatLon, a: Flight, b: Flight, closestT: numb
 	return { start, end, closestT, sampleAt, path };
 }
 
-export const GLYPH_MIN_PX = 14;
-export const GLYPH_MAX_PX = 34;
+export const GLYPH_MIN_PX = 26;
+export const GLYPH_MAX_PX = 48;
 
 /**
  * Silhouette size from the pair's on-screen pixel separation at the closest
@@ -131,7 +134,7 @@ export const GLYPH_MAX_PX = 34;
  */
 export function glyphSizeFor(pixelSeparation: number): number {
 	if (!Number.isFinite(pixelSeparation)) return GLYPH_MAX_PX;
-	return Math.max(GLYPH_MIN_PX, Math.min(GLYPH_MAX_PX, Math.round(pixelSeparation * 0.52)));
+	return Math.max(GLYPH_MIN_PX, Math.min(GLYPH_MAX_PX, Math.round(pixelSeparation * 0.7)));
 }
 
 export type Silhouette = 'airliner' | 'bizjet' | 'light';
@@ -147,12 +150,14 @@ export function silhouetteFor(category: string, type: string | null): Silhouette
 
 /** Top-down schematic outlines, nose up, in a 40×40 box (from the prototype). */
 export const SILHOUETTE_PATHS: Record<Silhouette, string> = {
+	// Bold top-view silhouettes in a 40×40 box, nose up. Deliberately chunky
+	// (wide fuselage, thick wings) so they read at 26–48 px over a busy basemap.
 	light:
-		'M20 3c1.1 0 1.9 1.2 2 3.2l.2 5.3 15.3 3.4c.6.1 1 .6 1 1.2v1.5c0 .4-.4.7-.8.6L22.4 15l.3 9.6 4.6 1.9c.4.2.7.6.7 1v1.2c0 .4-.4.7-.8.6L20.6 27h-1.2l-6.6 2.3c-.4.1-.8-.2-.8-.6v-1.2c0-.4.3-.8.7-1l4.6-1.9.3-9.6L2.3 18.2c-.4.1-.8-.2-.8-.6V16c0-.6.4-1.1 1-1.2l15.3-3.4.2-5.3C18.1 4.2 18.9 3 20 3z',
+		'M20 1.5c2.6 0 3.6 2.6 3.6 6.2v3.8l15.2 1.5v5.5l-15.2-.3-.4 10 6 2.6v3.7L20 33l-9.2 1.5v-3.7l6-2.6-.4-10-15.2.3V13l15.2-1.5V7.7c0-3.6 1-6.2 3.6-6.2z',
 	bizjet:
-		'M20 2c1.5 0 2.6 1.8 2.8 4.6l.5 8.2 13.4 8.6c.5.3.8.9.8 1.5v2.3c0 .5-.5.8-.9.6l-13.4-5.6.4 6.8 4.3 3c.4.3.6.7.6 1.2v1.4c0 .5-.5.8-.9.6L20 33l-7.6 2.2c-.4.1-.9-.2-.9-.6v-1.4c0-.5.2-.9.6-1.2l4.3-3 .4-6.8L3.4 27.8c-.4.2-.9-.1-.9-.6v-2.3c0-.6.3-1.2.8-1.5l13.4-8.6.5-8.2C17.4 3.8 18.5 2 20 2z',
+		'M20 1c2.3 0 3.4 3 3.4 7v6.5L37 25v5l-13.6-5v5.5l5.4 4v3.5L20 36l-8.8 2v-3.5l5.4-4v-5.5L3 30v-5l13.6-10.5V8c0-4 1.1-7 3.4-7z',
 	airliner:
-		'M20 1.5c1.7 0 3 2.1 3.2 5.4l.5 9.1 14.6 9.4c.5.3.9 1 .9 1.6v2.6c0 .5-.5.9-1 .7l-15-6 .4 7.2 4.7 3.3c.4.3.7.8.7 1.3v1.6c0 .5-.5.9-1 .7L20 36.4l-7.9 2.2c-.5.1-1-.2-1-.7v-1.6c0-.5.3-1 .7-1.3l4.7-3.3.4-7.2-15 6c-.5.2-1-.2-1-.7v-2.6c0-.6.4-1.3.9-1.6l14.6-9.4.5-9.1C17 3.6 18.3 1.5 20 1.5z'
+		'M20 .5c2.8 0 4 3 4 7v5.5l15 10V29l-15-5.5v6l6 4.2V37l-10-2.5L10 37v-3.3l6-4.2v-6L1 29v-6l15-10V7.5c0-4 1.2-7 4-7z'
 };
 
 /**

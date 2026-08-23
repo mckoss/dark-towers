@@ -90,7 +90,7 @@
 	let mapEl: HTMLDivElement;
 	let base: BaseMap | null = null;
 	let L: typeof Leaflet | null = null;
-	let glyph = 30;
+	let glyph = 36;
 	let ready = $state(false);
 	let layers: {
 		trailA: Leaflet.Polyline;
@@ -106,13 +106,14 @@
 		const ring = Math.round(g * 1.3);
 		return (
 			`<div class="replay-ring" style="width:${ring}px;height:${ring}px"></div>` +
-			`<svg class="replay-glyph" viewBox="0 0 40 40" width="${g}" height="${g}"><path fill="${color}" d="${SILHOUETTE_PATHS[shape]}"/></svg>`
+			`<svg class="replay-glyph" viewBox="0 0 40 40" width="${g}" height="${g}"><path fill="${color}" stroke="#f3f2f2" stroke-width="2.5" stroke-linejoin="round" paint-order="stroke" d="${SILHOUETTE_PATHS[shape]}"/></svg>`
 		);
 	}
 	/** ATC-style data block beside each aircraft (label / altitude·trend·speed). */
-	function labelHtml(color: string, text: string, s?: { alt: number; gs: number; vs: number; active: boolean }): string {
+	function labelHtml(color: string, text: string, s?: { alt: number; gs: number; vs: number; active: boolean; phase: 'before' | 'active' | 'after' }): string {
 		if (!s) return `<div class="replay-chip" style="color:${color};border-color:${color}">${text}</div>`;
-		return dataBlockHtml({ label: text + (s.active ? '' : ' · on ground'), altFt: s.alt, gsKt: s.gs, trend: trendOf(s.vs) }, color);
+		const note = s.phase === 'after' ? ' · track ended' : s.phase === 'before' ? ' · not yet reporting' : '';
+		return dataBlockHtml({ label: text + note, altFt: s.alt, gsKt: s.gs, trend: trendOf(s.vs) }, color);
 	}
 
 	onMount(() => {
@@ -202,7 +203,7 @@
 		return pts;
 	}
 
-	function placeLabel(marker: Leaflet.Marker, self: { lat: number; lon: number; alt: number; gs: number; vs: number; active: boolean }, other: { lat: number; lon: number }, color: string, text: string) {
+	function placeLabel(marker: Leaflet.Marker, self: { lat: number; lon: number; alt: number; gs: number; vs: number; active: boolean; phase: 'before' | 'active' | 'after' }, other: { lat: number; lon: number }, color: string, text: string) {
 		if (!base) return;
 		marker.setLatLng([self.lat, self.lon]);
 		const host = marker.getElement();
