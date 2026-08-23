@@ -1,0 +1,248 @@
+/* Dark Tower Watch — "Modernist" design system (see README design tokens).
+   Flat, architectural, single red accent, zero border radius, 2px section rules,
+   everything flush left. */
+
+:root {
+	--ground: #f3f2f2;
+	--ground-alt: #eae9e9;
+	--ink: #201e1d;
+	--ink-80: #444141;
+	--ink-60: #605d5d;
+	--ink-45: #7d7979;
+	--ink-25: #bab6b6;
+	--hairline: #d7d3d3;
+	--accent: #ec3013;
+	--accent-hover: #dd2b0f;
+	--accent-text: #ae1800;
+	--accent-tint: #fff2ef;
+	--selection: #ffc4b8;
+	--rule: 2px solid var(--ink);
+	--row-rule: 1px solid var(--hairline);
+	--font: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+	--gutter: 24px;
+}
+
+* {
+	box-sizing: border-box;
+	border-radius: 0 !important;
+}
+html,
+body {
+	margin: 0;
+	padding: 0;
+	background: var(--ground);
+	color: var(--ink);
+	font-family: var(--font);
+	-webkit-font-smoothing: antialiased;
+	font-size: 16px;
+	line-height: 1.55;
+}
+body {
+	min-height: 100vh;
+}
+a {
+	color: var(--accent-text);
+	text-decoration: none;
+	border-bottom: 1px solid rgba(174, 24, 0, 0.4);
+}
+a:hover {
+	color: var(--accent);
+	border-bottom-color: var(--accent);
+}
+button {
+	font-family: inherit;
+}
+::selection {
+	background: var(--selection);
+}
+:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+h1,
+h2,
+h3,
+p {
+	margin: 0;
+}
+.tabular {
+	font-variant-numeric: tabular-nums;
+}
+
+/* ---- typography roles ---- */
+.kicker {
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+	color: var(--accent);
+}
+.hero-headline {
+	font-size: clamp(34px, 5vw, 58px);
+	font-weight: 900;
+	letter-spacing: -0.035em;
+	line-height: 0.98;
+}
+.page-headline {
+	font-size: clamp(30px, 4vw, 46px);
+	font-weight: 900;
+	letter-spacing: -0.03em;
+	line-height: 1.02;
+}
+.poster {
+	font-size: clamp(26px, 3.5vw, 40px);
+	font-weight: 900;
+	letter-spacing: -0.03em;
+	line-height: 1.08;
+}
+.section-heading {
+	font-size: 22px;
+	font-weight: 800;
+	letter-spacing: -0.02em;
+}
+.big-stat {
+	font-size: clamp(36px, 4.5vw, 52px);
+	font-weight: 900;
+	letter-spacing: -0.03em;
+	line-height: 0.9;
+	font-variant-numeric: tabular-nums;
+}
+.body {
+	font-size: 17px;
+	line-height: 1.6;
+	color: var(--ink-80);
+}
+.stat-label {
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--ink-60);
+}
+.footnote {
+	font-size: 11px;
+	font-weight: 500;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--ink-45);
+}
+.table-header {
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--ink-45);
+}
+.accent {
+	color: var(--accent);
+}
+.muted {
+	color: var(--ink-25);
+}
+
+/* ---- buttons ---- */
+.btn {
+	display: inline-block;
+	padding: 14px 20px;
+	font-size: 14px;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-align: left;
+	border: none;
+	cursor: pointer;
+	color: #fff;
+	background: var(--accent);
+}
+.btn:hover {
+	background: var(--accent-hover);
+	color: #fff;
+}
+.btn-ink {
+	background: var(--ink);
+}
+.btn-ink:hover {
+	background: #000;
+}
+.btn-ghost {
+	background: none;
+	color: var(--ink);
+	border: 2px solid var(--ink);
+}
+.btn-ghost:hover {
+	background: var(--ground-alt);
+	color: var(--ink);
+}
+
+/* ---- layout primitives ---- */
+.section {
+	border-bottom: var(--rule);
+}
+.split {
+	display: grid;
+	grid-template-columns: 7fr 5fr;
+}
+.split > * + * {
+	border-left: var(--rule);
+}
+.cell {
+	padding: 40px var(--gutter);
+}
+.cell-lg {
+	padding: 56px var(--gutter) 48px;
+}
+.pill {
+	display: inline-block;
+	padding: 4px 9px;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+}
+.pill-accent {
+	background: var(--accent);
+	color: #fff;
+}
+.pill-grey {
+	background: var(--hairline);
+	color: var(--ink);
+}
+.pill-ghost {
+	border: 1px solid var(--hairline);
+	color: var(--ink-60);
+}
+.field {
+	background: var(--accent);
+	color: #fff;
+}
+.field .poster,
+.field .kicker {
+	color: #fff;
+}
+.inset {
+	background: var(--ground-alt);
+}
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+	:root {
+		--gutter: 18px;
+	}
+	.split {
+		grid-template-columns: 1fr;
+	}
+	.split > * + * {
+		border-left: none;
+		border-top: var(--rule);
+	}
+	.cell,
+	.cell-lg {
+		padding: 28px var(--gutter);
+	}
+}

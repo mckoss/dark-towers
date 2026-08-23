@@ -1,2 +1,21 @@
+node_modules
 .DS_Store
-node_modules/
+Thumbs.db
+
+# Build output
+/.svelte-kit
+/build
+
+# Secrets & local config
+settings.json
+.env
+.env.*
+!.env.example
+
+# Runtime data (SQLite db, logs). Raw sample data under data/raw is committed.
+/data/db
+/data/*.db*
+/data/logs
+
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*

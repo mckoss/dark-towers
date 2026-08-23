@@ -1,0 +1,47 @@
+{
+	"name": "dark-towers",
+	"private": true,
+	"version": "0.1.0",
+	"type": "module",
+	"engines": {
+		"node": ">=22"
+	},
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"start": "node build",
+		"prepare": "svelte-kit sync || echo ''",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"test": "vitest run",
+		"ingest": "tsx scripts/ingest.ts",
+		"db:rebuild": "tsx scripts/rebuild.ts",
+		"import:colab": "tsx scripts/import-colab.ts",
+		"test:e2e": "playwright test"
+	},
+	"dependencies": {
+		"better-sqlite3": "^12.4.1",
+		"node-cron": "^4.2.1"
+	},
+	"devDependencies": {
+		"@playwright/test": "^1.62.1",
+		"@sveltejs/adapter-node": "^5.3.3",
+		"@sveltejs/kit": "^2.63.0",
+		"@sveltejs/vite-plugin-svelte": "^7.1.2",
+		"@types/better-sqlite3": "^7.6.13",
+		"@types/d3-geo": "^3.1.0",
+		"@types/leaflet": "^1.9.20",
+		"@types/node": "^24.10.1",
+		"@types/topojson-client": "^3.1.5",
+		"d3-geo": "^3.1.1",
+		"leaflet": "^1.9.4",
+		"svelte": "^5.56.1",
+		"svelte-check": "^4.6.0",
+		"topojson-client": "^3.1.0",
+		"tsx": "^4.20.6",
+		"typescript": "^6.0.3",
+		"vite": "^8.0.16",
+		"vitest": "^4.0.0"
+	}
+}
