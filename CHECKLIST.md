@@ -61,6 +61,8 @@ Status key: `[x]` done & verified · `[~]` in progress / partial · `[ ]` to do 
 - [x] `/admin` console: unlinked, `noindex`, robots-disallowed; redirect to sign-in when anonymous, 403 when not an admin; open mode for local dev/e2e via `DTW_NO_AUTH=1`
 - [x] Console features: config status, "Catch up now", ingest a night (with force), live job log, data-on-hand per airport, incomplete nights, recent runs, airport requests (delete)
 - [?] Google OAuth client id/secret — needs creating in Google Cloud Console (QUESTIONS #18)
+- [x] Backfill: `/admin` "Backfill" (airport × N nights, oldest first, skips complete nights, stops on first API error) and `npm run ingest -- BLI --backfill 30`; for newly approved airports and after an API-tier upgrade
+- [x] `aeroapi_history` config flag: routes nights/flights older than 10 days to AeroAPI `/history/` endpoints and makes cached "too old" misses retryable; without it, old windows are refused before any network call
 - [ ] Admin: manage admins from the UI (currently the list lives in config.json) — follow-up if wanted
 - [ ] Admin: edit tracked airports / tower hours from the UI instead of `src/lib/airports.ts`
 

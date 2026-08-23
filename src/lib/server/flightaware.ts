@@ -8,9 +8,23 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { RAW_DIR, flightAwareApiKey } from './config';
+import { RAW_DIR, config, flightAwareApiKey } from './config';
 
 const BASE = 'https://aeroapi.flightaware.com/aeroapi';
+/** Live endpoints reach this far back; beyond it the /history/ variants are needed (paid tiers). */
+const LIVE_WINDOW_MS = 10 * 86_400_000 - 2 * 3_600_000;
+
+function needsHistory(whenUtcMs: number): boolean {
+	return Date.now() - whenUtcMs > LIVE_WINDOW_MS;
+}
+function historyAllowed(): boolean {
+	return config().aeroapi_history;
+}
+/** Unix seconds embedded in a fa_flight_id (e.g. "N11571-1786769330-adhoc-2951p"), or null. */
+export function flightIdTime(faFlightId: string): number | null {
+	const m = /-(\d{9,10})-/.exec(faFlightId);
+	return m ? Number(m[1]) * 1000 : null;
+}
 const MIN_SPACING_MS = Number(process.env.FLIGHTAWARE_SPACING_MS ?? 6500);
 const MAX_PAGES = 10;
 
@@ -173,7 +187,11 @@ export async function fetchFlights(
 		}
 	}
 	const iso = (ms: number) => new Date(ms).toISOString().replace(/\.\d{3}Z$/, 'Z');
-	let url: string | null = `/airports/${icao}/flights?start=${iso(startUtcMs)}&end=${iso(endUtcMs)}&max_pages=1`;
+	const prefix = needsHistory(startUtcMs) ? (historyAllowed() ? '/history' : null) : '';
+	if (prefix === null) {
+		throw new ApiError(400, `${icao} ${night} is older than the live API window; set "aeroapi_history": true once the account tier allows it`);
+	}
+	let url: string | null = `${prefix}/airports/${icao}/flights?start=${iso(startUtcMs)}&end=${iso(endUtcMs)}&max_pages=1`;
 	const out: RawFlight[] = [];
 	for (let page = 0; url && page < MAX_PAGES; page++) {
 		const data = (await apiGet(url, opts.log)) as {
@@ -194,9 +212,12 @@ export async function fetchFlights(
 export async function fetchTrack(icao: string, faFlightId: string, opts: { log?: Logger } = {}): Promise<RawTrack> {
 	const cachePath = trackCachePath(icao, faFlightId);
 	const cached = readJson<RawTrack>(cachePath);
-	if (cached) return cached;
+	// A "too old" miss becomes retryable once the account can use /history/.
+	if (cached && !(cached._error === 'too old' && historyAllowed())) return cached;
+	const when = flightIdTime(faFlightId);
+	const prefix = when != null && needsHistory(when) ? (historyAllowed() ? '/history' : '') : '';
 	try {
-		const data = (await apiGet(`/flights/${encodeURIComponent(faFlightId)}/track`, opts.log)) as RawTrack;
+		const data = (await apiGet(`${prefix}/flights/${encodeURIComponent(faFlightId)}/track`, opts.log)) as RawTrack;
 		const track: RawTrack = { positions: data.positions ?? [] };
 		writeJson(cachePath, track);
 		return track;

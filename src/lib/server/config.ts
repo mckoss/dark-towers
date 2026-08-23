@@ -5,7 +5,7 @@
  *   Railway:    env CONFIG_JSON = the file's contents, verbatim
  *
  * Keys: api_key, admins, google{client_id,client_secret}, session_secret,
- * public_origin, data_dir, db_path, scheduler, history_days.
+ * public_origin, data_dir, db_path, scheduler, history_days, aeroapi_history.
  *
  * A few env vars are honoured as overrides for tests and one-off runs
  * (DATA_DIR, DB_PATH, SCHEDULER, FLIGHTAWARE_API_KEY, DTW_NO_AUTH); they are
@@ -30,6 +30,12 @@ export interface Config {
 	scheduler: boolean;
 	/** How many nights back the scheduler backfills (AeroAPI personal tier reaches 10 days). Default 9. */
 	history_days: number;
+	/**
+	 * True when the AeroAPI account tier (Standard+) allows the /history/
+	 * endpoints. Enables fetching flight lists and tracks older than 10 days and
+	 * makes cached "too old" misses retryable. Default false.
+	 */
+	aeroapi_history: boolean;
 }
 
 let cached: Config | undefined;
@@ -64,7 +70,8 @@ export function config(): Config {
 		data_dir: dataDir,
 		db_path: process.env.DB_PATH ?? s.db_path ?? path.join(dataDir, 'db', 'darktowers.sqlite'),
 		scheduler: process.env.SCHEDULER ? process.env.SCHEDULER !== 'off' : (s.scheduler ?? true),
-		history_days: Number(process.env.HISTORY_DAYS ?? s.history_days ?? 9)
+		history_days: Number(process.env.HISTORY_DAYS ?? s.history_days ?? 9),
+		aeroapi_history: s.aeroapi_history ?? false
 	};
 	if (process.env.NODE_ENV !== 'test') {
 		console.log(`[config] loaded from ${source}; data_dir=${cached.data_dir}; ${cached.admins.length} admin(s); google sign-in ${cached.google ? 'configured' : 'NOT configured'}; scheduler ${cached.scheduler ? 'on' : 'off'}`);

@@ -9,5 +9,6 @@
     "public_origin": "https://your-domain.example",
     "data_dir": "data",
     "scheduler": true,
-    "history_days": 9
+    "history_days": 9,
+    "aeroapi_history": false
 }

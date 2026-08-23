@@ -1,6 +1,6 @@
 import { AIRPORTS } from '$lib/airports';
 import { deleteRequest, incompleteNights, listRequests, nightCounts, recentRuns } from '$lib/server/db';
-import { currentJob, startCatchUp, startIngest } from '$lib/server/jobs';
+import { currentJob, startBackfill, startCatchUp, startIngest } from '$lib/server/jobs';
 import { config, flightAwareApiKey } from '$lib/server/config';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
@@ -11,6 +11,8 @@ export const load: PageServerLoad = ({ locals }) => {
 		user: locals.user!,
 		admins: s.admins,
 		apiKeyPresent: !!flightAwareApiKey(),
+		historyEnabled: s.aeroapi_history,
+		historyDays: s.history_days,
 		googleConfigured: !!s.google,
 		airports: AIRPORTS.map((a) => ({ code: a.code, icao: a.icao, name: a.name, tracked: a.tracked, status: a.status })),
 		counts: nightCounts(),
@@ -35,6 +37,14 @@ export const actions: Actions = {
 		if (!/^\d{4}-\d{2}-\d{2}$/.test(night)) return fail(400, { error: 'Night must be YYYY-MM-DD.' });
 		if (!startIngest(code, night, force)) return fail(409, { error: 'A job is already running.' });
 		return { started: `ingest ${code} ${night}` };
+	},
+	backfill: async ({ request }) => {
+		const f = await request.formData();
+		const code = String(f.get('airport') ?? '').toUpperCase();
+		const nights = Math.min(365, Math.max(1, Number(f.get('nights') ?? 30)));
+		if (!AIRPORTS.some((a) => a.code === code)) return fail(400, { error: 'Unknown airport.' });
+		if (!startBackfill(code, nights)) return fail(409, { error: 'A job is already running.' });
+		return { started: `backfill ${code} × ${nights} nights` };
 	},
 	deleteRequest: async ({ request }) => {
 		const f = await request.formData();

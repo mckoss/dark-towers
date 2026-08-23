@@ -40,6 +40,8 @@
 			<dt>FlightAware key</dt><dd>{data.apiKeyPresent ? 'present' : 'MISSING'}</dd>
 			<dt>Google sign-in</dt><dd>{data.googleConfigured ? 'configured' : 'not configured'}</dd>
 			<dt>Admins</dt><dd>{data.admins.join(', ')}</dd>
+			<dt>AeroAPI history</dt><dd>{data.historyEnabled ? 'enabled (Standard+ tier)' : 'off — live window only (10 days)'}</dd>
+			<dt>Scheduler depth</dt><dd>{data.historyDays} nights</dd>
 			<dt>Tracked airports</dt><dd>{data.airports.filter((a) => a.tracked).map((a) => a.code).join(', ') || 'none'}</dd>
 		</dl>
 	</div>
@@ -66,7 +68,17 @@
 			<label class="check"><input name="force" type="checkbox" /> re-fetch flight list</label>
 			<button class="btn btn-ink" type="submit" disabled={running}>Ingest night</button>
 		</form>
-		<p class="hint">Cached nights cost no API calls. Nights older than 10 days cannot fetch tracks on the personal tier.</p>
+		<form method="POST" action="?/backfill" use:enhance class="row ingest">
+			<label>Airport
+				<select name="airport">
+					{#each data.airports as a (a.code)}<option value={a.code}>{a.code} · {a.name}</option>{/each}
+				</select>
+			</label>
+			<label>Nights <input name="nights" type="number" min="1" max="365" value="30" /></label>
+			<button class="btn btn-ink" type="submit" disabled={running}>Backfill</button>
+			<span class="hint">Oldest first; skips complete nights; stops on the first API error. Use when an airport is newly approved.</span>
+		</form>
+		<p class="hint">Cached nights cost no API calls. {#if !data.historyEnabled}Nights older than 10 days need <code>"aeroapi_history": true</code> (Standard tier or above); until then they are recorded as misses and retried automatically once history is enabled.{/if}</p>
 	</div>
 	<div class="cell">
 		<h2 class="section-heading">Current job</h2>
