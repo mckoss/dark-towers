@@ -142,7 +142,7 @@ test.describe('close approach', () => {
 		await expect(page.getByText(/Nearest approach · \d+:\d\d:\d\d [ap]m/)).toBeVisible();
 		await expect(page.getByTestId('nearest-moment')).toContainText('kt');
 		// Altitudes default to height above the field; the reader can switch to raw reported altitude.
-		await expect(page.getByTestId('alt-note')).toContainText(/AGL = height above the field/);
+		await expect(page.getByTestId('alt-note')).toContainText(/AGL = height above the field: ADS-B altitude, corrected [−+][\d,]+'/);
 		await page.getByRole('button', { name: 'Show ADS-B altitudes' }).click();
 		await expect(page.getByTestId('alt-note')).toContainText(/ADS-B altitude: the figure each aircraft broadcast/);
 		await expect(page.getByTestId('nearest-moment')).toContainText('ft ADS-B');

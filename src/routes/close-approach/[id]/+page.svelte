@@ -3,7 +3,7 @@
 	import { flightLabel, flightSubLabel } from '$lib/flights';
 	import { pairColors } from '$lib/replay';
 	import { localTime, nightLabel } from '$lib/time';
-	import { altimeterAt, offsetAt } from '$lib/altimeter';
+	import { offsetAt } from '$lib/altimeter';
 	import { altView, displayAlt, setAltMode, type AltContext } from '$lib/altview.svelte';
 	import type { Flight } from '$lib/types';
 	import type { PageData } from './$types';
@@ -15,7 +15,6 @@
 	// by the hour's altimeter setting), or raw as reported if the reader asks.
 	const altCtx: AltContext = $derived({ readings: data.night?.altimeter ?? null, elevationFt: airport.elevationFt });
 	const hasReadings = $derived((data.night?.altimeter?.length ?? 0) > 0);
-	const altimeter = $derived(altimeterAt(altCtx.readings, incident.t));
 	const correction = $derived(Math.round(offsetAt(altCtx.readings, incident.t)));
 	const showAlt = (reported: number) => {
 		const d = displayAlt(reported, incident.t, altCtx, altView.mode);
@@ -89,8 +88,8 @@
 			</div>
 			<div class="alt-note" data-testid="alt-note">
 				{#if altView.mode === 'agl'}
-					{#if hasReadings && altimeter != null}
-						AGL = height above the field ({airport.elevationFt.toLocaleString('en-US')}'): ADS-B altitude {signed(-correction)} for the altimeter setting of {altimeter.toFixed(2)} at {localTime(airport.tz, incident.t, true)}.
+					{#if hasReadings}
+						AGL = height above the field: ADS-B altitude, corrected {signed(-correction)} for the air pressure at {localTime(airport.tz, incident.t, true)}, minus the field elevation of {airport.elevationFt.toLocaleString('en-US')}'. Source altitudes come in 100' steps.
 					{:else if data.night?.groundOffsetFt != null}
 						AGL = height above the field ({airport.elevationFt.toLocaleString('en-US')}'), uncorrected: no weather reports for this night, so ADS-B altitudes are taken as true (aircraft on the ground read {signed(data.night.groundOffsetFt)} that night).
 					{:else}
