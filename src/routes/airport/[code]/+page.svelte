@@ -185,7 +185,7 @@
 <style>
 	.title {
 		display: flex;
-		align-items: baseline;
+		align-items: flex-start;
 		gap: 18px;
 		margin-top: 14px;
 		flex-wrap: wrap;
@@ -200,6 +200,12 @@
 		font-size: 22px;
 		font-weight: 700;
 		letter-spacing: -0.01em;
+		line-height: 1;
+		/* Cap height of the 22px name sits level with the cap height of the 66px code. */
+		margin-top: 3px;
+	}
+	.place {
+		margin-top: 6px;
 	}
 	.place {
 		font-size: 15px;
