@@ -18,7 +18,7 @@ describe('settings', () => {
 
 	it('loads from SETTINGS_JSON and normalises admin emails', async () => {
 		const { settings } = await load(base);
-		expect(settings.settings().admins).toEqual(['mckoss@gmail.com', 'second@example.com']);
+		expect(settings.settings().admins).toEqual(['admin@example.com', 'second@example.com']);
 		expect(settings.isAdmin('ADMIN@example.com')).toBe(true);
 		expect(settings.isAdmin('someone@else.com')).toBe(false);
 		expect(settings.isAdmin(null)).toBe(false);
