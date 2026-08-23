@@ -53,7 +53,7 @@
 			<div class="big-stat" class:accent={!empty} class:muted={empty}>
 				{empty ? '—' : fmt(data.totals.incidents)}
 			</div>
-			<div class="stat-label">Pairs of aircraft that came closer than a controller would allow</div>
+			<div class="stat-label">Aircraft that came closer than FAA control standards</div>
 		</div>
 		<div class="footnote period">Data from last 30 days</div>
 	</div>
