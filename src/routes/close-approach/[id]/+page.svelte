@@ -4,7 +4,7 @@
 	import { AIRSPACE_RADIUS_NM } from '$lib/airports';
 	import { flightLabel, flightSubLabel } from '$lib/flights';
 	import { pairColors, WINDOW_AFTER_MS, WINDOW_BEFORE_MS } from '$lib/replay';
-	import { localTime, nightLabel } from '$lib/time';
+	import { localTime, localTimeZoned, nightLabel } from '$lib/time';
 	import { altContextFor, altView, displayAlt, setAltMode, type AltContext } from '$lib/altview.svelte';
 	import type { Flight } from '$lib/types';
 	import type { PageData } from './$types';
@@ -43,7 +43,6 @@
 		const grey = concurrentOthers ? [{ kind: 'grey' as const, label: 'Other aircraft flying at the time' }] : [];
 		return [...items, ...grey, { kind: 'ring' as const, label: `${AIRSPACE_RADIUS_NM} nautical mile ring` }];
 	});
-	const severityLabel = $derived(incident.severity === 'very-close' ? 'Very close' : 'Close approach');
 	const nm = (n: number) => `${n.toFixed(2)} NM`;
 	const ft = (n: number) => `${Math.round(n).toLocaleString('en-US')}'`;
 	const feet = (n: number) => `${Math.round(n).toLocaleString('en-US')} ft`;
@@ -69,11 +68,10 @@
 <section class="section head">
 	<div class="meta">
 		<a class="back" href="/airport/{airport.code}">← {airport.name}</a>
-		<span class="pill" class:pill-accent={incident.severity === 'very-close'} class:pill-grey={incident.severity !== 'very-close'}>{severityLabel}</span>
 		<span class="ref tabular">{incident.id}</span>
 	</div>
 	<h1 class="headline">{flightLabel(a)} and {flightLabel(b)}</h1>
-	<div class="when">{nightLabel(incident.night)} · {localTime(airport.tz, incident.t)} · {airport.name} · tower closed</div>
+	<div class="when"><span class:accent-text={incident.severity === 'very-close'}>{incident.severity === 'very-close' ? 'Very close approach' : 'Close approach'} at {localTimeZoned(airport.tz, incident.t)}</span> · {nightLabel(incident.night)} · {airport.name} · tower closed</div>
 </section>
 
 <section class="section split">
@@ -205,6 +203,10 @@
 		margin-top: 6px;
 		font-size: 14px;
 		color: var(--ink-60);
+	}
+	.when .accent-text {
+		color: var(--accent);
+		font-weight: 700;
 	}
 	.facts {
 		display: grid;
