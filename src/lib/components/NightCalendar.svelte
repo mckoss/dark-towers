@@ -11,6 +11,22 @@
 	}
 	let { calendar, selected, onselect }: Props = $props();
 
+	/** Text for a chip's hover / focus tip and accessible label. */
+	function describe(c: { night: string; summary: NightSummary | null }): string {
+		const s = c.summary;
+		if (!s) return `${nightLabel(c.night)} — no data yet`;
+		const ca = s.incidents ? `, ${s.incidents} close approach${s.incidents === 1 ? '' : 'es'}` : '';
+		return `${nightLabel(c.night)} — ${s.flights} flights${ca}`;
+	}
+	let tip = $state<{ text: string; x: number } | null>(null);
+	let gridEl: HTMLDivElement;
+	function showTip(e: Event, c: { night: string; summary: NightSummary | null }) {
+		const el = e.currentTarget as HTMLElement;
+		const r = el.getBoundingClientRect(),
+			g = gridEl.getBoundingClientRect();
+		tip = { text: describe(c), x: r.left - g.left + r.width / 2 };
+	}
+
 	const max = $derived(Math.max(1, ...calendar.map((c) => c.summary?.flights ?? 0)));
 
 	// Interpolate a mid grey (#d6d3d3) → ink-45 (#8f8b8b) by volume. The low end
@@ -31,7 +47,10 @@
 		<span><i style:background={heat(max)}></i>More flights</span>
 		<span><i style:background="var(--accent)"></i>Close approach</span>
 	</div>
-	<div class="grid">
+	<div class="grid" bind:this={gridEl}>
+		{#if tip}
+			<div class="tip" data-testid="cal-tip" style:left="{tip.x}px">{tip.text}</div>
+		{/if}
 		{#each calendar as c (c.night)}
 			{@const s = c.summary}
 			<button
@@ -39,12 +58,15 @@
 				class:hot={(s?.incidents ?? 0) > 0}
 				class:selected={c.night === selected}
 				class:empty={!s}
-				disabled={!s}
+				aria-disabled={!s}
 				style:background={s && s.incidents === 0 ? heat(s.flights) : undefined}
-				title={s ? `${nightLabel(c.night)} — ${s.flights} flights${s.incidents ? `, ${s.incidents} close approach${s.incidents === 1 ? '' : 'es'}` : ''}` : `${nightLabel(c.night)} — no data yet`}
 				aria-label={`${weekdayShort(c.night)} ${dayOfMonth(c.night)}${s ? ` — ${s.flights} flights` : ' — no data yet'}`}
 				aria-pressed={c.night === selected}
 				onclick={() => s && onselect(c.night)}
+				onmouseenter={(e) => showTip(e, c)}
+				onmouseleave={() => (tip = null)}
+				onfocus={(e) => showTip(e, c)}
+				onblur={() => (tip = null)}
 			>
 				<span class="dow">{weekdayShort(c.night).slice(0, 1)}</span>
 				<span class="day">{dayOfMonth(c.night)}</span>
@@ -60,9 +82,24 @@
 		gap: 8px;
 	}
 	.grid {
+		position: relative;
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(34px, 1fr));
 		gap: 4px;
+	}
+	.tip {
+		position: absolute;
+		top: 100%;
+		margin-top: 6px;
+		transform: translateX(-50%);
+		padding: 5px 8px;
+		background: var(--ink);
+		color: #fff;
+		font-size: 12px;
+		font-weight: 600;
+		white-space: nowrap;
+		pointer-events: none;
+		z-index: 5;
 	}
 	.night {
 		display: flex;
@@ -77,7 +114,7 @@
 		cursor: pointer;
 		font-family: inherit;
 	}
-	.night:hover:not(:disabled) {
+	.night:hover:not(.empty) {
 		border-color: var(--ink-45);
 	}
 	.night.hot {
