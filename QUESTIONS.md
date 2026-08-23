@@ -3,7 +3,7 @@
 Collected overnight while building the app. Decisions I made in the meantime are noted so you can reverse them.
 
 ## Data
-1. **Historical tracks.** AeroAPI's personal tier refuses `/flights/{id}/track` for flights older than 10 days (the `/history/` endpoints need the Standard tier). Nights Aug 12–13 of the sample week therefore have flight lists but no positions. Your Drive file `FlightData/KPAE-2026-08-12-tracks.json` (6.6 MB) has them, but the Drive connector timed out on a file that size three times. Could you drop it into `data/raw/KPAE/` and run `npm run import:colab -- data/raw/KPAE/colab-week-2026-08-12.json data/raw/KPAE/KPAE-2026-08-12-tracks.json && npm run db:rebuild`? (Import overwrites the cached "too old" misses.)
+1. ~~**Historical tracks.**~~ **Resolved 08-23:** you dropped the Drive tracks file in; imported, all 7 nights now have full tracks. (The Drive connector returns files base64-inline and dropped the session on the 6.6 MB file — a tooling limit on my side.)
 2. **API spend.** I fetched tracks live for the sample nights that were still within 10 days (~70 calls). The scheduler will fetch ~15–25 track calls per night for PAE going forward. OK? Any monthly cap you want enforced in code?
 3. **Which airports to actually track.** The prototype showed six airports as "tracking" with invented counts. I set only **PAE** to `tracked: true`; the others are listed as *queued* (BLI, RDM, SUN, HYA, PIH) or *requested*. Flip `tracked` in `src/lib/airports.ts` to start collecting any of them — each costs roughly (flights + 1) API calls per night.
 4. **Tower hours** for the non-PAE airports are copied from the prototype and unverified against the Chart Supplement. Worth checking before any go live.
