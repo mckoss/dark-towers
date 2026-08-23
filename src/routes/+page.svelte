@@ -29,7 +29,7 @@
 <section class="split section hero">
 	<div class="cell-lg">
 		<h1 class="hero-headline">
-			Airliners are landing at airports where nobody is in the tower — or there is no tower at all.
+			Airliners are landing at airports where nobody is in the tower.
 		</h1>
 		<p class="body lede">
 			Dozens of airports with regular passenger service have part-time or no-time control tower service:

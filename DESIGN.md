@@ -111,7 +111,7 @@ stakeholder can toggle — implement map-first first, and treat ledger as option
 **Map-first layout**
 - Row 1, `grid-template-columns: 7fr 5fr`, bottom rule 2px, vertical 2px rule between cells.
   - Left cell, padding 56px 24px 48px: the headline
-    *"Airliners are landing at airports where nobody is in the tower — or there is no tower at all."*
+    *"Airliners are landing at airports where nobody is in the tower."*
     (58px/900, max-width 18ch), then a paragraph (17px, max-width 54ch) describing part-time or
     no-time tower service and that pilots are left to see each other to avoid collisions.
   - Right cell: three stat rows (`1fr 1fr 1fr`), each `display:flex; align-items:center; gap:16px`
