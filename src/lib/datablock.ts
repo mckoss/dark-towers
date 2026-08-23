@@ -14,6 +14,8 @@ export interface DataBlockInput {
 	gsKt: number;
 	/** Vertical rate sign: 1 climbing, -1 descending, 0 level/unknown. */
 	trend?: number;
+	/** Local time at this position, already formatted (e.g. "9:36:50 pm"); shown as a last line when given. */
+	time?: string;
 }
 
 export function altitudeHundreds(altFt: number): string {
@@ -40,7 +42,8 @@ function esc(s: string): string {
 /** HTML for a data block; `color` is the aircraft's colour (accent / ink). */
 export function dataBlockHtml(d: DataBlockInput, color: string): string {
 	const [l1, l2, l3] = dataBlockLines(d);
-	return `<div class="datablock" style="--db-color:${color}"><div class="db-id">${esc(l1)}</div><div class="db-atc">${esc(l2)}</div><div class="db-plain">${esc(l3)}</div></div>`;
+	const time = d.time ? `<div class="db-time">${esc(d.time)}</div>` : '';
+	return `<div class="datablock" style="--db-color:${color}"><div class="db-id">${esc(l1)}</div><div class="db-atc">${esc(l2)}</div><div class="db-plain">${esc(l3)}</div>${time}</div>`;
 }
 
 /** Vertical trend from a vertical speed in ft/s; below ±1.5 ft/s (~±100 fpm) counts as level. */

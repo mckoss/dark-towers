@@ -306,6 +306,14 @@ p {
 	text-transform: uppercase;
 	color: var(--ink-60);
 }
+.datablock .db-time {
+	margin-top: 2px;
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	color: var(--ink-45);
+	font-variant-numeric: tabular-nums;
+}
 .leaflet-tooltip.track-tip {
 	background: none;
 	border: none;

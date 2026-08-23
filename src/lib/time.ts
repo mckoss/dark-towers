@@ -145,3 +145,14 @@ export function localClock(tz: string, utcMs: number, seconds = false): string {
 	const p = localParts(tz, utcMs);
 	return `${pad2(p.hour)}:${pad2(p.minute)}${seconds ? ':' + pad2(p.second) : ''}`;
 }
+
+/** Short zone abbreviation in effect at an instant, e.g. "PDT" / "PST" (falls back to a GMT offset where none is defined). */
+export function zoneAbbr(tz: string, utcMs: number): string {
+	const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' }).formatToParts(new Date(utcMs));
+	return parts.find((p) => p.type === 'timeZoneName')?.value ?? tz;
+}
+
+/** "9:36:50 pm PDT" — local time with the zone abbreviation. */
+export function localTimeZoned(tz: string, utcMs: number, seconds = false): string {
+	return `${localTime(tz, utcMs, seconds)} ${zoneAbbr(tz, utcMs)}`;
+}

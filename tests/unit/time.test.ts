@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, localParts, nightLabel, nightOf, nightWindow, tzOffsetMinutes, zonedToUtc } from '$lib/time';
+import { addDays, localParts, nightLabel, nightOf, nightWindow, tzOffsetMinutes, zonedToUtc, zoneAbbr, localTimeZoned } from '$lib/time';
 
 const LA = 'America/Los_Angeles';
 const PAE_TOWER = { open: 7, close: 21 };
@@ -121,5 +121,13 @@ describe('nightLabel', () => {
 		expect(nightLabel('2026-08-18')).toBe('Tuesday, August 18');
 		expect(nightLabel('2026-08-17')).toBe('Monday, August 17');
 		expect(nightLabel('2026-01-01')).toBe('Thursday, January 1');
+	});
+});
+
+describe('zoneAbbr / localTimeZoned', () => {
+	it('names the zone in effect: PDT in August, PST in January', () => {
+		expect(zoneAbbr('America/Los_Angeles', Date.parse('2026-08-22T04:36:50Z'))).toBe('PDT');
+		expect(zoneAbbr('America/Los_Angeles', Date.parse('2026-01-22T04:36:50Z'))).toBe('PST');
+		expect(localTimeZoned('America/Los_Angeles', Date.parse('2026-08-22T04:36:50Z'), true)).toBe('9:36:50 pm PDT');
 	});
 });
