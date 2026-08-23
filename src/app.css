@@ -550,7 +550,6 @@ p {
 	margin: -4px 0 0 -4px;
 	border-radius: 50% !important;
 	background: var(--accent);
-	box-shadow: 0 0 0 2px var(--ground);
 	pointer-events: none;
 	left: calc(3px + (100% - 6px) * var(--pip));
 }
