@@ -63,17 +63,17 @@
 	</div>
 	<div class="facts">
 		<div class="fact">
-			<div class="table-header">How close, side to side</div>
+			<div class="table-header">Nearest approach</div>
 			<div class="fact-row">
-				<div class="figure accent tabular">{nm(incident.lateralNm)}</div>
-				<div class="caption">a controller would keep them at least 3 NM apart</div>
+				<div class="figure accent tabular">{ft(incident.verticalFt)} <span class="at">at</span> {nm(incident.lateralNm)}</div>
+				<div class="caption">{ft(incident.verticalFt)} apart vertically while {nm(incident.lateralNm)} apart side to side</div>
 			</div>
 		</div>
 		<div class="fact">
-			<div class="table-header">Vertical separation</div>
+			<div class="table-header">What a controller requires</div>
 			<div class="fact-row">
-				<div class="figure accent tabular">{ft(incident.verticalFt)}</div>
-				<div class="caption">a controller would keep them at least 1,000' apart</div>
+				<div class="figure tabular small">3 NM <span class="at">or</span> 1,000'</div>
+				<div class="caption">aircraft must be kept at least 3 NM apart side to side, or at least 1,000' apart vertically — one is enough. This pair was inside both limits at the same time.</div>
 			</div>
 		</div>
 		<div class="fact">
@@ -185,6 +185,17 @@
 	}
 	.fact:last-child {
 		border-bottom: none;
+	}
+	.at {
+		font-size: 0.5em;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--ink-60);
+		margin: 0 0.15em;
+	}
+	.figure.small {
+		font-size: 32px;
 	}
 	.fact-row {
 		display: flex;

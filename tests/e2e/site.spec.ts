@@ -138,7 +138,8 @@ test.describe('close approach', () => {
 		await page.getByRole('link', { name: /See what happened/ }).first().click();
 		await expect(page).toHaveURL(/\/close-approach\/PAE-/);
 		await expect(page.getByRole('heading', { level: 1 })).toContainText(/came within .* NM and .*' of each other/);
-		await expect(page.getByText(/a controller would keep them at least 3 NM apart/)).toBeVisible();
+		await expect(page.getByText(/one is enough/)).toBeVisible();
+		await expect(page.getByText('Nearest approach')).toBeVisible();
 		await expect(page.getByText("What we know, and don't")).toBeVisible();
 		// Editorial rule: never claim what is or is not in an FAA record.
 		expect(await page.locator('main').textContent()).toMatch(/do not know whether this event was reported/i);
