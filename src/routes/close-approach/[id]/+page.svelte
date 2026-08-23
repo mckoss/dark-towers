@@ -115,12 +115,6 @@
 				<div class="caption">at least 3 NM apart side to side, or at least 1,000' apart vertically — one is enough</div>
 			</div>
 		</div>
-		<div class="fact">
-			<div class="table-header">Distance from the airport</div>
-			<div class="fact-row">
-				<div class="figure tabular">{nm(incident.distNm)}</div>
-			</div>
-		</div>
 	</div>
 </section>
 
@@ -203,7 +197,8 @@
 	}
 	.facts {
 		display: grid;
-		grid-template-rows: 1fr 1fr 1fr;
+		grid-template-rows: auto auto;
+		align-content: start;
 	}
 	.fact {
 		padding: 24px;
@@ -377,9 +372,6 @@
 	@media (max-width: 760px) {
 		.headline {
 			font-size: 22px;
-		}
-		.facts {
-			grid-template-rows: none;
 		}
 		.fact {
 			padding: 20px var(--gutter);
