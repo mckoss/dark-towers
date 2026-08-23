@@ -114,10 +114,14 @@
 	}
 	/** ATC-style data block beside each aircraft (label / altitude·trend·speed). */
 	function labelHtml(color: string, text: string, s?: { alt: number; gs: number; vs: number; active: boolean; phase: 'before' | 'active' | 'after' }, at = t): string {
-		if (!s) return `<div class="replay-chip" style="color:${color};border-color:${color}">${text}</div>`;
-		const note = s.phase === 'after' ? ' · track ended' : s.phase === 'before' ? ' · not yet reporting' : '';
+		// Before its first report or after its last, the aircraft is parked at
+		// that report; its altitude and speed then are not known, so show none.
+		if (!s || s.phase !== 'active') {
+			const note = !s ? '' : s.phase === 'after' ? ' · track ended' : ' · not yet reporting';
+			return `<div class="replay-chip" style="color:${color};border-color:${color}">${text}${note}</div>`;
+		}
 		const shown = displayAlt(s.alt, at, alt, altView.mode);
-		return dataBlockHtml({ label: text + note, altFt: shown.ft, altUnit: shown.mode === 'agl' ? 'AGL' : 'ADS-B', gsKt: s.gs, trend: trendOf(s.vs) }, color);
+		return dataBlockHtml({ label: text, altFt: shown.ft, altUnit: shown.mode === 'agl' ? 'AGL' : 'ADS-B', gsKt: s.gs, trend: trendOf(s.vs) }, color);
 	}
 
 	onMount(() => {
