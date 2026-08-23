@@ -445,8 +445,8 @@
 				<div class="replay-readout-value" data-testid="night-time">{span ? localTimeZoned(tz, started ? t : span.start, true) : "—"}</div>
 			</div>
 			<div>
-				<div class="replay-readout-label">In the air</div>
-				<div class="replay-readout-value figure" data-testid="night-airborne">{started ? airborne : '—'}</div>
+				<div class="replay-readout-label">Aircraft flying now</div>
+				<div class="replay-readout-value figure" data-testid="night-airborne">{started ? airborne : 0}</div>
 			</div>
 		</div>
 	</div>

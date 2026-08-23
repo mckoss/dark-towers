@@ -112,7 +112,7 @@ test.describe('airport detail', () => {
 		const play = page.getByTestId('night-play');
 		await expect(play).toBeVisible();
 		await expect(play).toHaveText(/Replay the night/);
-		await expect(page.getByTestId('night-airborne')).toHaveText('—');
+		await expect(page.getByTestId('night-airborne')).toHaveText('0');
 		// A red pip on the scrubber for every close approach that night.
 		expect(await page.getByTestId('night-pip').count()).toBeGreaterThan(0);
 		const before = await page.getByTestId('night-time').textContent();
