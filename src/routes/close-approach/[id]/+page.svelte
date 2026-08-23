@@ -35,9 +35,13 @@
 	});
 	/** Key for the replay map: the pair's two colours by kind (both accent/ink when they share a kind), other traffic, the ring. */
 	const legend = $derived.by(() => {
-		const kindLabel = (f: Flight) => (aircraftKind(f) === 'military' ? 'Military' : f.category === 'airline' ? 'Passenger airline' : 'Private and training aircraft');
+		const kindLabel = (f: Flight) => {
+			const k = aircraftKind(f);
+			return k === 'military' ? 'Military' : k === 'helicopter' ? 'Helicopter' : f.category === 'airline' ? 'Passenger airline' : 'Private and training aircraft';
+		};
 		const swatch = (f: Flight, c: 'accent' | 'ink') => (aircraftKind(f) === 'military' ? ('military' as const) : c);
-		const same = a.category === b.category && aircraftKind(a) === aircraftKind(b);
+		// Two of a kind are told apart by name; keys must be distinct or the legend fails to render.
+		const same = kindLabel(a) === kindLabel(b);
 		const items = [
 			{ kind: swatch(a, colors[0]), label: same ? flightLabel(a) : kindLabel(a) },
 			{ kind: swatch(b, colors[1]), label: same ? flightLabel(b) : kindLabel(b) }

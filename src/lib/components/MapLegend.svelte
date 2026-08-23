@@ -5,7 +5,7 @@
 </script>
 
 <div class="map-legend" data-testid="map-legend">
-	{#each items as it (it.label)}
+	{#each items as it, i (i)}
 		<span><i class={it.kind}></i>{it.label}</span>
 	{/each}
 </div>
