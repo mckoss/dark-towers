@@ -364,8 +364,7 @@
 		.figure {
 			font-size: 40px;
 		}
-		.card,
-		.know {
+		.card {
 			padding: 20px var(--gutter);
 		}
 		.row {
