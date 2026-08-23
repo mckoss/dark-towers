@@ -169,3 +169,12 @@ export function pairColors(a: Flight, b: Flight): ['accent' | 'ink', 'accent' | 
 	const same = a.category === b.category;
 	return [same || a.category === 'airline' ? 'accent' : 'ink', !same && b.category === 'airline' ? 'accent' : 'ink'];
 }
+
+/** Marker HTML for an aircraft glyph (ring for the alert state + silhouette), nose up; rotated by the caller. */
+export function glyphHtml(color: string, shape: Silhouette, g: number): string {
+	const ring = Math.round(g * 1.3);
+	return (
+		`<div class="replay-ring" style="width:${ring}px;height:${ring}px"></div>` +
+		`<svg class="replay-glyph" viewBox="0 0 40 40" width="${g}" height="${g}"><path fill="${color}" stroke="#f3f2f2" stroke-width="2.5" stroke-linejoin="round" paint-order="stroke" d="${SILHOUETTE_PATHS[shape]}"/></svg>`
+	);
+}

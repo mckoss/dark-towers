@@ -9,7 +9,7 @@
 	 */
 	import { onMount, untrack } from 'svelte';
 	import type { AirportConfig, Flight, Incident } from '$lib/types';
-	import { buildReplay, glyphSizeFor, pairColors, silhouetteFor, SILHOUETTE_PATHS } from '$lib/replay';
+	import { buildReplay, glyphHtml, glyphSizeFor, pairColors, silhouetteFor } from '$lib/replay';
 	import { localClock } from '$lib/time';
 	import type { BaseMap } from '$lib/leaflet';
 	import type * as Leaflet from 'leaflet';
@@ -105,13 +105,6 @@
 		labelB: Leaflet.Marker;
 	} | null = null;
 
-	function glyphHtml(color: string, shape: keyof typeof SILHOUETTE_PATHS, g: number): string {
-		const ring = Math.round(g * 1.3);
-		return (
-			`<div class="replay-ring" style="width:${ring}px;height:${ring}px"></div>` +
-			`<svg class="replay-glyph" viewBox="0 0 40 40" width="${g}" height="${g}"><path fill="${color}" stroke="#f3f2f2" stroke-width="2.5" stroke-linejoin="round" paint-order="stroke" d="${SILHOUETTE_PATHS[shape]}"/></svg>`
-		);
-	}
 	/** ATC-style data block beside each aircraft (label / altitude·trend·speed). */
 	function labelHtml(color: string, text: string, s?: { alt: number; gs: number; vs: number; active: boolean; phase: 'before' | 'active' | 'after' }): string {
 		// Before its first report or after its last, the aircraft is parked at
@@ -278,12 +271,12 @@
 			<div class="unavailable">Replay unavailable — not enough position data for both aircraft.</div>
 		{/if}
 	</div>
-	<div class="controls">
+	<div class="replay-controls">
 		<button class="btn" data-testid="replay-play" onclick={play} disabled={!replay}>
 			{playing ? 'Pause' : atEnd ? 'Replay again' : 'Play replay'}
 		</button>
 		<input
-			class="scrubber"
+			class="replay-scrubber"
 			data-testid="replay-scrubber"
 			type="range"
 			min="0"
@@ -294,25 +287,25 @@
 			aria-label="Replay position"
 			disabled={!replay}
 		/>
-		<div class="speeds" role="group" aria-label="Replay speed">
+		<div class="replay-speeds" role="group" aria-label="Replay speed">
 			{#each SPEEDS as s (s)}
 				<button class:on={speed === s} onclick={() => (speed = s)} aria-pressed={speed === s}>{s}×</button>
 			{/each}
 		</div>
-		<div class="readout tabular">
+		<div class="replay-readout tabular">
 			<div>
-				<div class="readout-label">Local time</div>
-				<div class="readout-value" data-testid="replay-time">{localClock(airport.tz, t, true)}</div>
+				<div class="replay-readout-label">Local time</div>
+				<div class="replay-readout-value" data-testid="replay-time">{localClock(airport.tz, t, true)}</div>
 			</div>
 			<div>
-				<div class="readout-label">Lateral</div>
-				<div class="readout-value figure" class:accent={sample?.inside} data-testid="replay-lateral">
+				<div class="replay-readout-label">Lateral</div>
+				<div class="replay-readout-value figure" class:accent={sample?.inside} data-testid="replay-lateral">
 					{sample ? fmtNm(sample.lateralNm) : '—'}
 				</div>
 			</div>
 			<div>
-				<div class="readout-label">Vertical</div>
-				<div class="readout-value figure" class:accent={sample?.inside} data-testid="replay-vertical">
+				<div class="replay-readout-label">Vertical</div>
+				<div class="replay-readout-value figure" class:accent={sample?.inside} data-testid="replay-vertical">
 					{sample ? fmtFt(sample.verticalFt) : '—'}
 				</div>
 			</div>
@@ -336,153 +329,9 @@
 		font-size: 13px;
 		color: var(--ink-60);
 	}
-	.controls {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 16px;
-		padding: 14px var(--gutter);
-		border-top: var(--rule);
-		background: var(--ground);
-	}
-	.controls .btn {
-		padding: 11px 18px;
-		font-size: 13px;
-		letter-spacing: 0.06em;
-		text-transform: uppercase;
-		min-width: 132px;
-	}
-	.controls .btn:disabled {
-		background: var(--ink-25);
-		cursor: default;
-	}
-	.scrubber {
-		flex: 1;
-		min-width: 160px;
-		accent-color: var(--accent);
-		cursor: pointer;
-		margin: 0;
-	}
-	.speeds {
-		display: flex;
-		border: 2px solid var(--ink);
-	}
-	.speeds button {
-		padding: 9px 13px;
-		border: none;
-		background: transparent;
-		color: var(--ink);
-		cursor: pointer;
-		font-size: 12px;
-		font-weight: 700;
-		letter-spacing: 0.04em;
-		text-align: left;
-	}
-	.speeds button + button {
-		border-left: 2px solid var(--ink);
-	}
-	.speeds button.on {
-		background: var(--ink);
-		color: #fff;
-	}
-	.readout {
-		display: flex;
-		align-items: baseline;
-		gap: 18px;
-		margin-left: auto;
-	}
-	.readout-label {
-		font-size: 10px;
-		font-weight: 600;
-		letter-spacing: 0.12em;
-		text-transform: uppercase;
-		color: var(--ink-45);
-		line-height: 1;
-	}
-	.readout-value {
-		font-size: 16px;
-		font-weight: 700;
-		line-height: 1.3;
-		color: var(--ink);
-		white-space: nowrap;
-	}
-	.readout-value.figure {
-		font-size: 18px;
-		font-weight: 900;
-		line-height: 1.2;
-	}
-	.readout-value.accent {
-		color: var(--accent);
-	}
 	@media (max-width: 760px) {
 		.map {
 			height: 320px;
 		}
-		.controls {
-			gap: 10px;
-			padding: 10px var(--gutter);
-		}
-		.readout {
-			margin-left: 0;
-			width: 100%;
-		}
-	}
-
-	/* Leaflet divIcon content lives outside Svelte's scope. */
-	:global(.replay-marker) {
-		position: relative;
-	}
-	:global(.replay-marker .replay-glyph) {
-		position: absolute;
-		left: 0;
-		top: 0;
-		transform: translate(-50%, -50%);
-		filter: drop-shadow(0 0 2px rgba(243, 242, 242, 0.95));
-	}
-	:global(.replay-marker .replay-ring) {
-		position: absolute;
-		left: 0;
-		top: 0;
-		border: 2px solid #ec3013;
-		border-radius: 50% !important;
-		display: none;
-		transform: translate(-50%, -50%);
-	}
-	:global(.replay-marker.alert .replay-glyph) {
-		animation: dtw-alert 0.5s steps(1, end) infinite;
-	}
-	:global(.replay-marker.alert .replay-ring) {
-		display: block;
-		animation: dtw-ring 0.9s ease-out infinite;
-	}
-	:global(.replay-label .replay-chip) {
-		position: absolute;
-		white-space: nowrap;
-		font: 800 12px/1 var(--font);
-		background: #f3f2f2;
-		padding: 3px 5px;
-		border: 1px solid currentColor;
-	}
-	@keyframes -global-dtw-alert {
-		0%,
-		100% {
-			opacity: 1;
-		}
-		50% {
-			opacity: 0.25;
-		}
-	}
-	@keyframes -global-dtw-ring {
-		0% {
-			transform: translate(-50%, -50%) scale(0.6);
-			opacity: 0.85;
-		}
-		100% {
-			transform: translate(-50%, -50%) scale(2.1);
-			opacity: 0;
-		}
-	}
-	:global(.replay-marker.parked) {
-		opacity: 0.35;
 	}
 </style>

@@ -100,9 +100,26 @@ test.describe('airport detail', () => {
 		await page.getByRole('button', { name: /Mon 17/ }).click();
 		await expect(page).toHaveURL(/night=2026-08-17/);
 		await expect(page.getByText('Night of Monday, August 17')).toBeVisible();
-		const cards = page.getByRole('link', { name: /See what happened/ });
+		const cards = page.getByRole('link', { name: /Replay this close approach/ });
 		await expect(cards.first()).toBeVisible();
 		expect(await cards.count()).toBeGreaterThan(0);
+		// The hours the night covers sit under the title.
+		await expect(page.getByTestId('night-hours')).toContainText(/Tower closed \d+:00 [ap]m to \d+:00 [ap]m/);
+	});
+
+	test('the whole night can be replayed from controls under the map', async ({ page }) => {
+		await page.goto(`/airport/PAE?night=${NIGHT_WITH_INCIDENTS}`);
+		const play = page.getByTestId('night-play');
+		await expect(play).toBeVisible();
+		await expect(play).toHaveText(/Replay the night/);
+		await expect(page.getByTestId('night-airborne')).toHaveText('—');
+		const before = await page.getByTestId('night-time').textContent();
+		await play.click();
+		await page.waitForTimeout(1500);
+		expect(await page.getByTestId('night-time').textContent()).not.toBe(before);
+		await expect(page.getByTestId('night-airborne')).toHaveText(/^\d+$/);
+		await play.click();
+		await expect(play).toHaveText(/Resume/);
 	});
 
 	test('a night without close approaches shows the honest empty state', async ({ page }) => {
@@ -135,7 +152,7 @@ test.describe('airport detail', () => {
 test.describe('close approach', () => {
 	test('opens from a card, shows the figures and plays the replay', async ({ page }) => {
 		await page.goto(`/airport/PAE?night=${NIGHT_WITH_INCIDENTS}`);
-		await page.getByRole('link', { name: /See what happened/ }).first().click();
+		await page.getByRole('link', { name: /Replay this close approach/ }).first().click();
 		await expect(page).toHaveURL(/\/close-approach\/PAE-/);
 		await expect(page.getByRole('heading', { level: 1 })).toContainText(/came within .* NM and .*' of each other/);
 		await expect(page.getByText(/one is enough/)).toBeVisible();

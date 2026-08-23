@@ -2,7 +2,7 @@
 	/* Airport detail (README "Screens / Views → 3. Airport detail"). Every
 	   string comes from the airport record; nothing is hard-coded. */
 	import { goto } from '$app/navigation';
-	import { towerHoursLabel, hoursClosed, hourLabel, AIRSPACE_RADIUS_NM } from '$lib/airports';
+	import { towerHoursLabel, hoursClosed, hourLabel, towerHoursOn, AIRSPACE_RADIUS_NM } from '$lib/airports';
 	import { nightLabel, shortDate } from '$lib/time';
 	import { monthLabel } from '$lib/monthLabel';
 	import FlightMap from '$lib/components/FlightMap.svelte';
@@ -15,6 +15,11 @@
 	let { data } = $props();
 
 	const airport = $derived(data.airport);
+	/** "Tower closed 9:00 pm to 7:00 am" for the selected night, or "No tower at any hour". */
+	function nightHours(night: string): string {
+		const h = towerHoursOn(airport, night);
+		return h ? `Tower closed ${hourLabel(h.close)} to ${hourLabel(h.open)}` : 'No tower at any hour';
+	}
 	// One pressure correction for the whole map, evaluated at the middle of the night's traffic.
 	const altCtx = $derived(altContextFor(data.nightSummary, airport.elevationFt, median(data.flights.map((f) => f.eventTime)) ?? 0));
 	const hasDetail = $derived(data.hasAnyData);
@@ -137,9 +142,10 @@
 				<div class="night-head">
 					<div class="table-header">Flight paths within {AIRSPACE_RADIUS_NM} nautical miles, tower closed</div>
 					<h2 class="night-title">Night of {nightLabel(data.selectedNight)}</h2>
+					<div class="night-hours" data-testid="night-hours">{nightHours(data.selectedNight)}</div>
 				</div>
 				{#if hasTracks}
-					<FlightMap center={airport.pos} flights={data.flights} {focus} height={560} alt={altCtx} tz={airport.tz} onfocus={(id) => (focus = id)} />
+					<FlightMap center={airport.pos} flights={data.flights} {focus} height={560} alt={altCtx} tz={airport.tz} incidents={data.incidents} replay onfocus={(id) => (focus = id)} />
 				{:else}
 					<div class="no-tracks inset">Flight paths for this night are not available.</div>
 				{/if}
@@ -326,6 +332,11 @@
 	.night-head {
 		padding: 20px var(--gutter);
 		border-bottom: var(--row-rule);
+	}
+	.night-hours {
+		margin-top: 4px;
+		font-size: 13px;
+		color: var(--ink-45);
 	}
 	.night-title {
 		margin-top: 6px;

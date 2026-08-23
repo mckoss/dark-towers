@@ -28,7 +28,7 @@
 			<div class="cap">Less than 1,000'</div>
 		</div>
 	</div>
-	<div class="more">See what happened →</div>
+	<span class="btn more">Replay this close approach →</span>
 </a>
 
 <style>
@@ -86,9 +86,11 @@
 		color: var(--ink-60);
 	}
 	.more {
-		margin-top: 14px;
-		font-size: 13px;
-		font-weight: 700;
-		color: var(--accent-text);
+		display: inline-block;
+		margin-top: 16px;
+		padding: 10px 16px;
+		font-size: 12px;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
 	}
 </style>

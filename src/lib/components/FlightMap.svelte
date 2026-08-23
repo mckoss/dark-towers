@@ -2,7 +2,11 @@
 	import { flightLabel } from '$lib/flights';
 	import { dataBlockHtml, trendOf } from '$lib/datablock';
 	import { altView, displayAlt, NO_CORRECTION, type AltContext } from '$lib/altview.svelte';
-	import { localTimeZoned } from '$lib/time';
+	import { localClock, localTimeZoned } from '$lib/time';
+	import { glyphHtml, silhouetteFor } from '$lib/replay';
+	import { SEPARATION_LATERAL_NM, SEPARATION_VERTICAL_FT } from '$lib/airports';
+	import { distanceNm } from '$lib/geo';
+	import type { Incident } from '$lib/types';
 	/*
 	 * Flight-path map (README "Maps → Flight-path map"). Leaflet base map from
 	 * $lib/leaflet (CARTO tiles, 10 NM ring, field marker, fitted bounds); each
@@ -26,12 +30,182 @@
 		alt?: AltContext;
 		/** Airport time zone, for the time shown in the hover block. */
 		tz?: string;
+		/** The night's close approaches; the pair flashes when the replay clock passes each one. */
+		incidents?: Incident[];
+		/** Show the whole-night replay controls under the map. */
+		replay?: boolean;
 		onfocus?: (id: string | null) => void;
 	}
 
-	let { center, flights, focus = null, height = 520, tiles = 'carto', alt = NO_CORRECTION, tz = 'UTC', onfocus }: Props = $props();
+	let { center, flights, focus = null, height = 520, tiles = 'carto', alt = NO_CORRECTION, tz = 'UTC', incidents = [], replay = false, onfocus }: Props = $props();
 
 	const SAMPLE_MS = 2000;
+
+	// ---- whole-night replay ----
+	// One shared clock over the span of every track; each flight's spline is
+	// sampled at that instant, so aircraft that were really in the air
+	// together appear together. Speeds are high because a night is ~10 h.
+	const SPEEDS = [60, 240, 900];
+	const STEPS = 1000;
+	const TRAIL_MS = 180_000;
+	const GLYPH_PX = 30;
+	const ACCENT = '#ec3013';
+	const INK = '#201e1d';
+	const span = $derived.by(() => {
+		let t0 = Infinity,
+			t1 = -Infinity;
+		for (const f of flights) for (const p of f.positions) {
+			if (p.t < t0) t0 = p.t;
+			if (p.t > t1) t1 = p.t;
+		}
+		return t0 < t1 ? { start: t0, end: t1 } : null;
+	});
+	let t = $state(0);
+	let playing = $state(false);
+	let speed = $state(240);
+	let started = $state(false);
+	let airborne = $state(0);
+	const step = $derived(span ? Math.round(((t - span.start) / (span.end - span.start)) * (STEPS - 1)) : 0);
+	const atEnd = $derived(!!span && t >= span.end);
+	let raf = 0;
+	let last = 0;
+	function tick(now: number) {
+		if (!playing || !span) return;
+		const dt = last ? now - last : 0;
+		last = now;
+		t = Math.min(span.end, t + dt * speed);
+		if (t >= span.end) {
+			playing = false;
+			return;
+		}
+		raf = requestAnimationFrame(tick);
+	}
+	function play() {
+		if (!span) return;
+		if (playing) {
+			playing = false;
+			cancelAnimationFrame(raf);
+			return;
+		}
+		if (!started || t >= span.end) t = span.start;
+		started = true;
+		playing = true;
+		last = 0;
+		raf = requestAnimationFrame(tick);
+	}
+	function scrub(e: Event) {
+		if (!span) return;
+		playing = false;
+		cancelAnimationFrame(raf);
+		started = true;
+		const k = Number((e.currentTarget as HTMLInputElement).value);
+		t = span.start + (k / (STEPS - 1)) * (span.end - span.start);
+	}
+	const glyphs = new Map<string, { mark: LeafletNS.Marker; label: LeafletNS.Marker; trail: LeafletNS.Polyline }>();
+	let sepLines: LeafletNS.Polyline[] = [];
+	/** Pairs inside the minima at t (from the recorded incidents, ±90 s, checked live). */
+	function alertPairs(at: number): [Flight, Flight][] {
+		const out: [Flight, Flight][] = [];
+		for (const inc of incidents) {
+			if (Math.abs(inc.t - at) > 90_000) continue;
+			const a = flights.find((f) => f.id === inc.flightA),
+				b = flights.find((f) => f.id === inc.flightB);
+			const ea = a && splines.get(a.id),
+				eb = b && splines.get(b.id);
+			if (!a || !b || !ea || !eb) continue;
+			const va = ea.spline.at(at),
+				vb = eb.spline.at(at);
+			if (!va || !vb) continue;
+			if (at < ea.spline.t0 || at > ea.spline.t1 || at < eb.spline.t0 || at > eb.spline.t1) continue;
+			const lateral = distanceNm([va[0], va[1]], [vb[0], vb[1]]);
+			if (lateral < SEPARATION_LATERAL_NM && Math.abs(va[2] - vb[2]) < SEPARATION_VERTICAL_FT) out.push([a, b]);
+		}
+		return out;
+	}
+	function drawReplay() {
+		if (!base || !L) return;
+		const map = base.map;
+		if (!started) {
+			for (const g of glyphs.values()) {
+				g.mark.remove();
+				g.label.remove();
+				g.trail.remove();
+			}
+			glyphs.clear();
+			for (const l of sepLines) l.remove();
+			sepLines = [];
+			airborne = 0;
+			return;
+		}
+		const alerts = alertPairs(t);
+		const alertIds = new Set(alerts.flatMap(([a, b]) => [a.id, b.id]));
+		let n = 0;
+		for (const f of flights) {
+			const entry = splines.get(f.id);
+			const active = !!entry && t >= entry.spline.t0 && t <= entry.spline.t1;
+			let g = glyphs.get(f.id);
+			if (!active) {
+				if (g) {
+					g.mark.remove();
+					g.label.remove();
+					g.trail.remove();
+					glyphs.delete(f.id);
+				}
+				continue;
+			}
+			n++;
+			const color = f.category === 'airline' ? ACCENT : INK;
+			const v = entry!.spline.at(t)!;
+			const vel = entry!.spline.velocityAt(t);
+			const at: LeafletNS.LatLngExpression = [v[0], v[1]];
+			if (!g) {
+				g = {
+					mark: L.marker(at, { interactive: false, zIndexOffset: 1000, icon: L.divIcon({ className: 'replay-marker', iconSize: [0, 0], iconAnchor: [0, 0], html: glyphHtml(color, silhouetteFor(f.category, f.type), GLYPH_PX) }) }).addTo(map),
+					label: L.marker(at, { interactive: false, zIndexOffset: -500, icon: L.divIcon({ className: 'replay-label', iconSize: [0, 0], iconAnchor: [0, 0], html: '' }) }).addTo(map),
+					trail: L.polyline([], { color, weight: f.category === 'airline' ? 4 : 3, opacity: 0.95, interactive: false }).addTo(map)
+				};
+				glyphs.set(f.id, g);
+			}
+			g.mark.setLatLng(at);
+			const el = g.mark.getElement();
+			if (el) {
+				const hdg = vel && (Math.abs(vel[0]) > 1e-9 || Math.abs(vel[1]) > 1e-9) ? ((Math.atan2(vel[1] * Math.cos((v[0] * Math.PI) / 180), vel[0]) * 180) / Math.PI + 360) % 360 : 0;
+				const svg = el.querySelector('svg') as SVGElement | null;
+				if (svg) svg.style.transform = `translate(-50%, -50%) rotate(${hdg.toFixed(0)}deg)`;
+				el.classList.toggle('alert', alertIds.has(f.id));
+			}
+			// Trail: the last three minutes of flight.
+			const pts: [number, number][] = [];
+			for (let x = Math.max(entry!.spline.t0, t - TRAIL_MS); x < t; x += SAMPLE_MS) {
+				const q = entry!.spline.at(x)!;
+				pts.push([q[0], q[1]]);
+			}
+			pts.push([v[0], v[1]]);
+			g.trail.setLatLngs(pts);
+			// Data block, offset to the right of the glyph.
+			g.label.setLatLng(at);
+			const host = g.label.getElement();
+			if (host) {
+				const shown = displayAlt(v[2], alt, altView.mode);
+				host.innerHTML = dataBlockHtml({ label: flightLabel(f), altFt: shown.ft, altUnit: shown.mode === 'agl' ? 'AGL' : 'ADS-B', gsKt: v[3], trend: trendOf(vel ? vel[2] * 1000 : null) }, color);
+				const inner = host.firstElementChild as HTMLElement | null;
+				if (inner) inner.style.transform = `translate(${Math.round(GLYPH_PX * 0.7)}px, -50%)`;
+			}
+		}
+		airborne = n;
+		for (const l of sepLines) l.remove();
+		sepLines = alerts.map(([a, b]) => {
+			const va = splines.get(a.id)!.spline.at(t)!,
+				vb = splines.get(b.id)!.spline.at(t)!;
+			return L!.polyline(
+				[
+					[va[0], va[1]],
+					[vb[0], vb[1]]
+				],
+				{ color: ACCENT, weight: 1.5, opacity: 0.7, dashArray: '3 4', interactive: false }
+			).addTo(map);
+		});
+	}
 
 	let el: HTMLDivElement;
 	let base: BaseMap | null = $state.raw(null);
@@ -110,6 +284,10 @@
 
 	function draw() {
 		if (!base || !L) return;
+		playing = false;
+		cancelAnimationFrame(raf);
+		started = false;
+		t = span?.start ?? 0;
 		layer?.remove();
 		lines.clear();
 		splines.clear();
@@ -172,9 +350,40 @@
 		void focus;
 		if (base) restyle();
 	});
+	// Advance the replay whenever the clock (or the altitude mode) changes.
+	$effect(() => {
+		void t;
+		void started;
+		void altView.mode;
+		if (base) drawReplay();
+	});
+	onMount(() => () => cancelAnimationFrame(raf));
 </script>
 
 <div class="flight-map" bind:this={el} style:height="{height}px" aria-label="Map of flight paths near the airport"></div>
+{#if replay}
+	<div class="replay-controls" data-testid="night-replay">
+		<button class="btn" data-testid="night-play" onclick={play} disabled={!span}>
+			{playing ? 'Pause' : atEnd ? 'Replay again' : started ? 'Resume' : 'Replay the night'}
+		</button>
+		<input class="replay-scrubber" data-testid="night-scrubber" type="range" min="0" max={STEPS - 1} step="1" value={step} oninput={scrub} aria-label="Replay position" disabled={!span} />
+		<div class="replay-speeds" role="group" aria-label="Replay speed">
+			{#each SPEEDS as sp (sp)}
+				<button class:on={speed === sp} onclick={() => (speed = sp)} aria-pressed={speed === sp}>{sp}×</button>
+			{/each}
+		</div>
+		<div class="replay-readout tabular">
+			<div>
+				<div class="replay-readout-label">Local time</div>
+				<div class="replay-readout-value" data-testid="night-time">{span ? localClock(tz, started ? t : span.start, true) : '—'}</div>
+			</div>
+			<div>
+				<div class="replay-readout-label">In the air</div>
+				<div class="replay-readout-value figure" data-testid="night-airborne">{started ? airborne : '—'}</div>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	.flight-map {

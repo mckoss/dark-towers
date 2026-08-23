@@ -22,7 +22,6 @@
 		const d = displayAlt(reported, altCtx, altView.mode);
 		return `${d.ft.toLocaleString('en-US')} ft ${d.mode === 'reported' ? 'ADS-B' : 'AGL'}`;
 	};
-	const altUnitLabel = $derived(altView.mode === 'agl' ? 'above the field (AGL)' : 'as broadcast (ADS-B altitude)');
 	const signed = (n: number) => `${n < 0 ? '−' : '+'}${Math.abs(n).toLocaleString('en-US')}'`;
 
 	const colors = $derived(pairColors(a, b));
@@ -38,25 +37,11 @@
 		return sub ? `${flightLabel(f)} (${sub})` : flightLabel(f);
 	};
 
-	/** "a Horizon Air passenger flight" / "a private or training aircraft" */
-	function noun(f: Flight): string {
-		if (f.category === 'airline') {
-			const op = f.operatorName;
-			return op ? `a ${op} passenger flight` : 'a passenger airline flight';
-		}
-		return 'a private or training aircraft';
-	}
 	function movement(f: Flight): string {
 		const other = f.otherCity ?? f.otherName ?? f.otherCode;
 		if (f.direction === 'arrival') return other ? `arriving from ${other}` : 'arriving';
 		return other ? `leaving for ${other}` : 'leaving';
 	}
-	const narrative = $derived(
-		`${flightLabel(a)}, ${noun(a)} ${movement(a)}, and ${flightLabel(b)}, ${noun(b)} ${movement(b)}, ` +
-			`came within ${nm(incident.lateralNm)} of each other side to side while only ${ft(incident.verticalFt)} apart vertically. ` +
-			`The closest point was ${nm(incident.distNm)} from the field, at ${showAlt(incident.altA)} and ${showAlt(incident.altB)} ${altUnitLabel}. ` +
-			`With the tower closed, no controller was on duty to keep them apart.`
-	);
 </script>
 
 <svelte:head>
@@ -67,7 +52,7 @@
 	<a href="/airport/{airport.code}">← {airport.name}</a>
 </div>
 
-<section class="section split">
+<section class="section">
 	<div class="cell head">
 		<div class="meta">
 			<span class="pill" class:pill-accent={incident.severity === 'very-close'} class:pill-grey={incident.severity !== 'very-close'}>{severityLabel}</span>
@@ -75,7 +60,17 @@
 		</div>
 		<h1 class="headline">{flightLabel(a)} and {flightLabel(b)} came within {nm(incident.lateralNm)} and {ft(incident.verticalFt)} of each other.</h1>
 		<div class="when">{nightLabel(incident.night)} · {localTime(airport.tz, incident.t)} · {airport.name} · tower closed</div>
-		<p class="body note">{narrative}</p>
+	</div>
+</section>
+
+<section class="section split">
+	<div class="replay-col">
+		{#key incident.id}
+			<Replay {airport} {a} {b} {incident} {others} alt={altCtx} />
+		{/key}
+		<div class="replay-note">
+			Replay runs in accelerated time. Each aircraft's full path is dashed; the solid trail is where it has flown so far, and the thin line between the two is their separation. Other traffic that night is greyed behind them.
+		</div>
 	</div>
 	<div class="facts">
 		<div class="fact">
@@ -124,14 +119,6 @@
 </section>
 
 <section class="section split">
-	<div class="replay-col">
-		{#key incident.id}
-			<Replay {airport} {a} {b} {incident} {others} alt={altCtx} />
-		{/key}
-		<div class="replay-note">
-			Replay runs in accelerated time. Each aircraft's full path is dashed; the solid trail is where it has flown so far, and the thin line between the two is their separation. Other traffic that night is greyed behind them.
-		</div>
-	</div>
 	<div>
 		{#each [{ f: a, label: 'Aircraft A', alt: incident.altA, swatch: colors[0] }, { f: b, label: 'Aircraft B', alt: incident.altB, swatch: colors[1] }] as card (card.label)}
 			<div class="card">
@@ -140,7 +127,7 @@
 					<span class="table-header">{card.label}</span>
 				</div>
 				<div class="ident">{identLabel(card.f)}</div>
-				<div class="desc">{describe(card.f)}</div>
+				<div class="desc">{describe(card.f)} · {movement(card.f)}</div>
 				<div class="alt">{altView.mode === 'agl' ? 'Height AGL' : 'ADS-B altitude'} at closest point: <strong>{showAlt(card.alt)}</strong></div>
 			</div>
 		{/each}
@@ -207,10 +194,6 @@
 		margin-top: 16px;
 		font-size: 16px;
 		color: var(--ink-60);
-	}
-	.note {
-		margin-top: 24px;
-		max-width: 58ch;
 	}
 	.facts {
 		display: grid;
