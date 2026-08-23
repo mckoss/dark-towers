@@ -372,9 +372,14 @@
 </script>
 
 <div class="replay">
-	<div class="map" bind:this={mapEl} style="--replay-h: {height}px" aria-label="Replay map">
-		{#if !replay}
-			<div class="unavailable">Replay unavailable — not enough position data for both aircraft.</div>
+	<div class="replay-map-wrap">
+		<div class="map" bind:this={mapEl} style="--replay-h: {height}px" aria-label="Replay map">
+			{#if !replay}
+				<div class="unavailable">Replay unavailable — not enough position data for both aircraft.</div>
+			{/if}
+		</div>
+		{#if replay}
+			<div class="replay-clock" data-testid="replay-time">{localTimeZoned(airport.tz, t, true)}</div>
 		{/if}
 	</div>
 	<div class="replay-controls">
@@ -406,10 +411,6 @@
 			{/each}
 		</div>
 		<div class="replay-readout tabular">
-			<div>
-				<div class="replay-readout-label">Local time</div>
-				<div class="replay-readout-value" data-testid="replay-time">{localTimeZoned(airport.tz, t, true)}</div>
-			</div>
 			<div>
 				<div class="replay-readout-label">Lateral</div>
 				<div class="replay-readout-value figure" class:accent={sample?.inside} data-testid="replay-lateral">

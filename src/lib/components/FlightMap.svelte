@@ -412,7 +412,12 @@
 	});
 </script>
 
-<div class="flight-map" bind:this={el} style:height="{height}px" aria-label="Map of flight paths near the airport"></div>
+<div class="replay-map-wrap">
+	<div class="flight-map" bind:this={el} style:height="{height}px" aria-label="Map of flight paths near the airport"></div>
+	{#if replay && span}
+		<div class="replay-clock" data-testid="night-time">{localTimeZoned(tz, started ? t : span.start, true)}</div>
+	{/if}
+</div>
 {#if replay}
 	<div class="replay-controls" data-testid="night-replay">
 		<button class="btn play" data-testid="night-play" onclick={play} disabled={!span} aria-label={playing ? 'Pause' : atEnd ? 'Replay' : 'Play'} title={playing ? 'Pause' : atEnd ? 'Replay' : 'Play'}>
@@ -434,12 +439,6 @@
 			{#each SPEEDS as sp (sp)}
 				<button class:on={speed === sp} onclick={() => (speed = sp)} aria-pressed={speed === sp}>{sp}×</button>
 			{/each}
-		</div>
-		<div class="replay-readout tabular">
-			<div>
-				<div class="replay-readout-label">Local time</div>
-				<div class="replay-readout-value" data-testid="night-time">{span ? localTimeZoned(tz, started ? t : span.start, true) : "—"}</div>
-			</div>
 		</div>
 	</div>
 {/if}

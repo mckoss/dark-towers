@@ -328,6 +328,31 @@ p {
 }
 
 /* ---- replay (pair replay and whole-night replay share these) ---- */
+/* Big clock in the top-right corner of a replay map, sized like the night title. */
+.replay-map-wrap {
+	position: relative;
+}
+.replay-clock {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	z-index: 800;
+	padding: 6px 10px;
+	background: var(--ground);
+	border: 2px solid var(--ink);
+	font-size: 24px;
+	font-weight: 800;
+	letter-spacing: -0.02em;
+	line-height: 1;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+	pointer-events: none;
+}
+@media (max-width: 760px) {
+	.replay-clock {
+		font-size: 18px;
+	}
+}
 .replay-controls {
 	display: flex;
 	flex-wrap: wrap;
@@ -492,7 +517,32 @@ p {
 	opacity: 0.35;
 }
 @media (max-width: 760px) {
-	.replay-controls {
+	/* Big clock in the top-right corner of a replay map, sized like the night title. */
+.replay-map-wrap {
+	position: relative;
+}
+.replay-clock {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	z-index: 800;
+	padding: 6px 10px;
+	background: var(--ground);
+	border: 2px solid var(--ink);
+	font-size: 24px;
+	font-weight: 800;
+	letter-spacing: -0.02em;
+	line-height: 1;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+	pointer-events: none;
+}
+@media (max-width: 760px) {
+	.replay-clock {
+		font-size: 18px;
+	}
+}
+.replay-controls {
 		gap: 10px;
 		padding: 10px var(--gutter);
 	}
