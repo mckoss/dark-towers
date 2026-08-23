@@ -215,7 +215,7 @@
 	}
 	.moment-row {
 		display: grid;
-		grid-template-columns: 12px 1fr 96px 56px;
+		grid-template-columns: 12px minmax(0, 1fr) auto auto;
 		gap: 12px;
 		align-items: center;
 		padding: 8px 0;
@@ -224,6 +224,10 @@
 	.moment-row .swatch {
 		width: 12px;
 		height: 12px;
+	}
+	.moment-row .tabular {
+		white-space: nowrap;
+		text-align: right;
 	}
 	.moment-row .who {
 		display: flex;
