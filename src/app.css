@@ -456,6 +456,8 @@ p {
 	width: 100%;
 }
 .replay-scrubber {
+	position: relative;
+	z-index: 2;
 	width: 100%;
 	accent-color: var(--accent);
 	cursor: pointer;
@@ -480,6 +482,7 @@ p {
    half its width in to half its width from the end, so pips are inset the same. */
 .replay-pip {
 	position: absolute;
+	z-index: 1;
 	top: 50%;
 	width: 8px;
 	height: 8px;
