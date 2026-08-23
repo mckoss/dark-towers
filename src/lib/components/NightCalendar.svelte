@@ -24,6 +24,11 @@
 </script>
 
 <div class="cal">
+	<div class="legend">
+		<span><i style:background={heat(0)}></i>Fewer flights</span>
+		<span><i style:background={heat(max)}></i>More flights</span>
+		<span><i style:background="var(--accent)"></i>Close approach</span>
+	</div>
 	<div class="grid">
 		{#each calendar as c (c.night)}
 			{@const s = c.summary}
@@ -34,47 +39,39 @@
 				class:empty={!s}
 				disabled={!s}
 				style:background={s && s.incidents === 0 ? heat(s.flights) : undefined}
-				title={s ? `${nightLabel(c.night)} — ${s.flights} flights` : `${nightLabel(c.night)} — no data yet`}
+				title={s ? `${nightLabel(c.night)} — ${s.flights} flights${s.incidents ? `, ${s.incidents} close approach${s.incidents === 1 ? '' : 'es'}` : ''}` : `${nightLabel(c.night)} — no data yet`}
+				aria-label={`${weekdayShort(c.night)} ${dayOfMonth(c.night)}${s ? ` — ${s.flights} flights` : ' — no data yet'}`}
 				aria-pressed={c.night === selected}
 				onclick={() => s && onselect(c.night)}
 			>
-				<span class="dow">{weekdayShort(c.night)}</span>
-				<span class="bottom">
-					<span class="day">{dayOfMonth(c.night)}</span>
-					<span class="count">{s ? `${s.flights} flights` : '—'}</span>
-				</span>
+				<span class="dow">{weekdayShort(c.night).slice(0, 1)}</span>
+				<span class="day">{dayOfMonth(c.night)}</span>
 			</button>
 		{/each}
-	</div>
-	<div class="legend">
-		<span><i style:background={heat(0)}></i>Fewer flights</span>
-		<span><i style:background={heat(max)}></i>More flights</span>
-		<span><i style:background="var(--accent)"></i>Close approach</span>
 	</div>
 </div>
 
 <style>
 	.cal {
-		display: grid;
-		grid-template-columns: 1fr auto;
-		gap: 24px;
-		align-items: start;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
 	}
 	.grid {
 		display: grid;
-		grid-template-columns: repeat(15, 1fr);
-		gap: 6px;
+		grid-template-columns: repeat(auto-fit, minmax(34px, 1fr));
+		gap: 4px;
 	}
 	.night {
 		display: flex;
 		flex-direction: column;
-		justify-content: space-between;
-		min-height: 78px;
-		padding: 8px 8px 10px;
+		align-items: center;
+		justify-content: center;
+		height: 40px;
+		padding: 0;
 		border: 2px solid var(--hairline);
 		background: var(--ground);
 		color: var(--ink);
-		text-align: left;
 		cursor: pointer;
 		font-family: inherit;
 	}
@@ -94,35 +91,24 @@
 		color: var(--ink-25);
 	}
 	.dow {
-		font-size: 10px;
+		font-size: 9px;
 		font-weight: 700;
+		line-height: 1;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
 		opacity: 0.7;
 	}
-	.bottom {
-		display: block;
-	}
 	.day {
-		display: block;
-		font-size: 17px;
+		margin-top: 2px;
+		font-size: 14px;
 		font-weight: 800;
 		line-height: 1;
 		font-variant-numeric: tabular-nums;
 	}
-	.count {
-		display: block;
-		margin-top: 3px;
-		font-size: 10px;
-		font-weight: 600;
-		letter-spacing: 0.06em;
-		opacity: 0.8;
-		white-space: nowrap;
-	}
 	.legend {
 		display: flex;
-		flex-direction: column;
-		gap: 10px;
+		flex-wrap: wrap;
+		gap: 6px 18px;
 		font-size: 11px;
 		font-weight: 600;
 		letter-spacing: 0.1em;
@@ -140,18 +126,5 @@
 		width: 12px;
 		height: 12px;
 		border: 1px solid var(--hairline);
-	}
-	@media (max-width: 760px) {
-		.cal {
-			grid-template-columns: 1fr;
-		}
-		.grid {
-			grid-template-columns: repeat(6, 1fr);
-		}
-		.legend {
-			flex-direction: row;
-			flex-wrap: wrap;
-			gap: 8px 18px;
-		}
 	}
 </style>

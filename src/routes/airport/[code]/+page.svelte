@@ -52,8 +52,8 @@
 	<title>{airport.code} · {airport.name} — Dark Towers</title>
 </svelte:head>
 
-<section class="section split">
-	<div class="cell">
+<section class="section split hero">
+	<div class="cell hero-cell">
 		<div class="kicker">Tracked nightly · within {AIRSPACE_RADIUS_NM} nautical miles</div>
 		<div class="title">
 			<h1 class="code">{airport.code}</h1>
@@ -161,15 +161,21 @@
 {/if}
 
 <style>
+	.hero {
+		grid-template-columns: 1fr 1.2fr;
+	}
+	.hero-cell {
+		padding: 18px var(--gutter) 20px;
+	}
 	.title {
 		display: flex;
 		align-items: flex-start;
-		gap: 18px;
-		margin-top: 14px;
+		gap: 14px;
+		margin-top: 8px;
 		flex-wrap: wrap;
 	}
 	.code {
-		font-size: 66px;
+		font-size: 44px;
 		font-weight: 900;
 		line-height: 0.85;
 		letter-spacing: -0.04em;
@@ -191,16 +197,13 @@
 	}
 	.facts {
 		display: grid;
-		grid-template-columns: 1fr 1fr;
+		grid-template-columns: 1.15fr 0.85fr 1.3fr 0.8fr;
 	}
 	.fact {
-		padding: 22px 20px;
+		padding: 18px 18px;
 	}
-	.fact:nth-child(-n + 2) {
-		border-bottom: var(--row-rule);
-	}
-	.fact:nth-child(odd) {
-		border-right: var(--row-rule);
+	.fact + .fact {
+		border-left: var(--row-rule);
 	}
 	.fact-label {
 		font-size: 11px;
@@ -210,32 +213,32 @@
 		color: var(--ink-45);
 	}
 	.fact-value {
-		margin-top: 8px;
-		font-size: 20px;
+		margin-top: 6px;
+		font-size: 16px;
 		font-weight: 700;
 	}
 	.stats-kicker {
-		padding: 20px var(--gutter) 0;
+		padding: 12px var(--gutter) 0;
 	}
 	.stats {
 		display: grid;
 		grid-template-columns: repeat(4, 1fr);
 	}
 	.stat {
-		padding: 28px 20px;
+		padding: 12px 20px 16px;
 	}
 	.stat + .stat {
 		border-left: var(--row-rule);
 	}
 	.stat-n {
-		font-size: 44px;
+		font-size: 32px;
 		font-weight: 900;
 		line-height: 0.9;
 		letter-spacing: -0.03em;
 		font-variant-numeric: tabular-nums;
 	}
 	.stat .stat-label {
-		margin-top: 10px;
+		margin-top: 6px;
 		font-size: 11px;
 	}
 	.empty {
@@ -269,8 +272,8 @@
 		gap: 0;
 	}
 	.cal-step {
-		padding: 8px 14px;
-		font-size: 13px;
+		padding: 5px 12px;
+		font-size: 12px;
 		font-weight: 700;
 		letter-spacing: 0.04em;
 		border: 2px solid var(--ink);
@@ -293,11 +296,13 @@
 		border-color: var(--hairline);
 	}
 	.calendar {
-		padding: 36px var(--gutter);
+		padding: 14px var(--gutter) 16px;
+	}
+	.cal-head {
+		margin-bottom: 8px;
 	}
 	.cal-title {
-		margin-bottom: 20px;
-		font-size: 20px;
+		font-size: 15px;
 		font-weight: 800;
 		letter-spacing: -0.01em;
 	}
@@ -372,7 +377,7 @@
 	}
 	@media (max-width: 760px) {
 		.code {
-			font-size: 52px;
+			font-size: 40px;
 		}
 		.stats {
 			grid-template-columns: 1fr 1fr;
@@ -387,7 +392,22 @@
 			border-bottom: var(--row-rule);
 		}
 		.stat-n {
-			font-size: 36px;
+			font-size: 28px;
+		}
+		.hero {
+			grid-template-columns: 1fr;
+		}
+		.facts {
+			grid-template-columns: 1fr 1fr;
+		}
+		.fact + .fact {
+			border-left: none;
+		}
+		.fact:nth-child(even) {
+			border-left: var(--row-rule);
+		}
+		.fact:nth-child(-n + 2) {
+			border-bottom: var(--row-rule);
 		}
 		.calendar,
 		.log {
