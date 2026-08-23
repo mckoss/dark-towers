@@ -1,8 +1,8 @@
 # Dark Tower Watch — project conventions
 
 Data-driven advocacy site: flights and close approaches at airports where airliners operate with no
-tower on duty. Read `README.md` for the full design spec and editorial rules; `CHECKLIST.md` for
-status; `QUESTIONS.md` for open decisions.
+tower on duty. Read `DESIGN.md` for the design spec and editorial rules; `QUESTIONS.md` for open decisions;
+GitHub issues for the backlog. `README.md` is the public front door (purpose, install, deploy).
 
 ## Stack
 - SvelteKit 2, Svelte 5 **runes mode** (`$props/$state/$derived/$effect`, `onclick` not `on:click`), TypeScript strict.
@@ -18,7 +18,7 @@ status; `QUESTIONS.md` for open decisions.
 3. The home page never names a specific airport.
 
 ## Design system
-Tokens and typography roles live in `src/app.css` — use the classes/vars, don't invent colors. Zero border radius, 2px ink section rules, 1px hairline row rules, everything flush left (including button labels). Single accent `#ec3013`.
+Tokens and typography roles live in `src/app.css` (spec in `DESIGN.md`) — use the classes/vars, don't invent colors. Zero border radius, 2px ink section rules, 1px hairline row rules, everything flush left (including button labels). Single accent `#ec3013`.
 
 ## Commands
 - `npm run dev` / `npm run check` / `npm test` (vitest, `tests/unit`) / `npm run test:e2e` (Playwright, `tests/e2e`, builds + previews on :4173)
@@ -27,3 +27,6 @@ Tokens and typography roles live in `src/app.css` — use the classes/vars, don'
 
 ## Pipeline invariants
 Idempotent at every layer: cache hit ⇒ zero API calls; DB writes are upserts keyed by `fa_flight_id` / `(airport, night)` / stable incident id. Personal-tier AeroAPI: 10 queries/min, no tracks older than 10 days (cached as misses).
+
+## Airports
+`airports.json` is the insert-only seed; the `airports` / `tower_schedules` tables are the source of truth once they exist. Edit at `/admin/airports`, then Export JSON and commit it. Tower hours are effective-dated (`towerHoursOn(airport, night)`), so always pass the night's schedule, never a static one.

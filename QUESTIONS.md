@@ -1,6 +1,6 @@
 # Questions & clarifications for Mike
 
-Collected overnight while building the app. Decisions I made in the meantime are noted so you can reverse them.
+Collected while building the app; retired at v1.0. Backlog items have moved to GitHub issues. Decisions I made in the meantime are noted so you can reverse them.
 
 ## Data
 1. ~~**Historical tracks.**~~ **Resolved 08-23:** you dropped the Drive tracks file in; imported, all 7 nights now have full tracks. (The Drive connector returns files base64-inline and dropped the session on the 6.6 MB file — a tooling limit on my side.)
