@@ -69,7 +69,7 @@
 			<Replay {airport} {a} {b} {incident} {others} alt={altCtx} />
 		{/key}
 		<div class="replay-note">
-			Replay runs in accelerated time. Each aircraft's full path is dashed; the solid trail is where it has flown so far, and the thin line between the two is their separation. Other traffic that night is greyed behind them.
+			Replay runs in accelerated time. Each aircraft's full path is dashed; the solid trail is where it has flown so far. Other traffic that night is greyed behind them.
 		</div>
 	</div>
 	<div class="facts">

@@ -151,7 +151,6 @@
 	let layers: {
 		trailA: Leaflet.Polyline;
 		trailB: Leaflet.Polyline;
-		sep: Leaflet.Polyline;
 		markA: Leaflet.Marker;
 		markB: Leaflet.Marker;
 		labelA: Leaflet.Marker;
@@ -211,7 +210,6 @@
 
 			const trailA = L.polyline([], { color: colorA, weight: 4, opacity: 0.95, interactive: false }).addTo(map);
 			const trailB = L.polyline([], { color: colorB, weight: 3, opacity: 0.85, interactive: false }).addTo(map);
-			const sep = L.polyline([], { color: ACCENT, weight: 1.5, opacity: 0.6, dashArray: '3 4', interactive: false }).addTo(map);
 			const mk = (color: string, f: Flight) =>
 				L!.marker([c.a.lat, c.a.lon], {
 					interactive: false,
@@ -224,7 +222,7 @@
 					zIndexOffset: -500,
 					icon: L!.divIcon({ className: 'replay-label', iconSize: [0, 0], iconAnchor: [0, 0], html: labelHtml(color, flightLabel(f)) })
 				}).addTo(map);
-			layers = { trailA, trailB, sep, markA: mk(colorA, a), markB: mk(colorB, b), labelA: lb(colorA, a), labelB: lb(colorB, b) };
+			layers = { trailA, trailB, markA: mk(colorA, a), markB: mk(colorB, b), labelA: lb(colorA, a), labelB: lb(colorB, b) };
 
 			ro = new ResizeObserver(() => {
 				map.invalidateSize();
@@ -295,14 +293,6 @@
 		if (!layers || !sample) return;
 		layers.trailA.setLatLngs(trail('a', t));
 		layers.trailB.setLatLngs(trail('b', t));
-		layers.sep.setLatLngs(
-			sample.a.active && sample.b.active
-				? [
-						[sample.a.lat, sample.a.lon],
-						[sample.b.lat, sample.b.lon]
-					]
-				: []
-		);
 		placeGlyph(layers.markA, sample.a, sample.inside);
 		placeGlyph(layers.markB, sample.b, sample.inside);
 		placeLabel(layers.labelA, sample.a, sample.b, colorA, flightLabel(a));
