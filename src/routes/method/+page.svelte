@@ -1,6 +1,10 @@
 <script lang="ts">
 	const sources = [
-		{ name: 'FlightAware AeroAPI', what: 'arrival and departure records, and the position signals each aircraft broadcasts.' },
+		{
+			name: 'ADS-B',
+			what: 'Automatic Dependent Surveillance–Broadcast. Nearly every aircraft carries a transponder that broadcasts its identity, position, altitude and speed about once a second, for anyone with a receiver to hear. It is how the FAA tracks aircraft today, and the source of every flight path on this site. The altitude it carries is measured against a standard air pressure, so we correct it to height above the field (AGL) using the airport\'s hourly weather reports; the raw figure is labelled "ADS-B altitude".'
+		},
+		{ name: 'FlightAware AeroAPI', what: 'arrival and departure records, and the ADS-B position signals each aircraft broadcast, collected by FlightAware\'s receiver network.' },
 		{ name: 'FAA Chart Supplement', what: 'the official published tower hours for each airport.' },
 		{ name: 'Published airline schedules', what: 'to tell passenger flights apart from private ones.' },
 		{ name: 'OpenStreetMap and CARTO', what: 'basemap tiles.' }
@@ -37,8 +41,8 @@
 	];
 
 	const limitations = [
-		'Aircraft that do not broadcast a position signal do not appear at all, so these counts are a floor, not a total.',
-		'Transponders broadcast altitude against a standard air pressure, not the day\'s actual pressure, and in steps of 100 feet. Heights above the field (AGL) are corrected using the airport\'s hourly weather reports (the altimeter setting), interpolated between reports; a night with no weather report is shown uncorrected and says so. Expect about ±100 feet. The difference between two aircraft is not affected by this correction, so separation figures use the altitudes exactly as reported.',
+		'Aircraft that do not broadcast ADS-B, or whose signal no receiver picked up, do not appear at all, so these counts are a floor, not a total.',
+		'ADS-B altitude is measured against a standard air pressure, not the day\'s actual pressure, and in steps of 100 feet. Heights above the field (AGL) are corrected using the airport\'s hourly weather reports (the altimeter setting), interpolated between reports; a night with no weather report is shown uncorrected and says so. Expect about ±100 feet. The difference between two aircraft is not affected by this correction, so separation figures use the altitudes exactly as reported.',
 		'Landing and takeoff times are sometimes estimated rather than measured; where the measured time is missing, the estimate is used.',
 		'Coverage close to the ground is uneven, so the lowest parts of some flight paths are missing.',
 		'An aircraft on the runway does not count. Any moment when either aircraft was within 150 feet of the field (after the pressure correction), or moving slower than 40 knots, is left out — so a landing roll beneath a passing aircraft is not flagged.'

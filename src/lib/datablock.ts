@@ -8,7 +8,7 @@ export interface DataBlockInput {
 	label: string;
 	/** Feet, already in the unit named by `altUnit`. */
 	altFt: number;
-	/** Suffix for the plain-language line: "AGL" (default; above ground level, i.e. the field) or "reported". */
+	/** Suffix for the plain-language line: "AGL" (default; above ground level, i.e. the field) or "ADS-B" (raw broadcast altitude). */
 	altUnit?: string;
 	/** Knots. */
 	gsKt: number;

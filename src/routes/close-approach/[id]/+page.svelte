@@ -19,9 +19,9 @@
 	const correction = $derived(Math.round(offsetAt(altCtx.readings, incident.t)));
 	const showAlt = (reported: number) => {
 		const d = displayAlt(reported, incident.t, altCtx, altView.mode);
-		return `${d.ft.toLocaleString('en-US')} ft ${d.mode === 'reported' ? 'reported' : 'AGL'}`;
+		return `${d.ft.toLocaleString('en-US')} ft ${d.mode === 'reported' ? 'ADS-B' : 'AGL'}`;
 	};
-	const altUnitLabel = $derived(altView.mode === 'agl' ? 'above the field (AGL)' : 'as reported');
+	const altUnitLabel = $derived(altView.mode === 'agl' ? 'above the field (AGL)' : 'as broadcast (ADS-B altitude)');
 	const signed = (n: number) => `${n < 0 ? '−' : '+'}${Math.abs(n).toLocaleString('en-US')}'`;
 
 	const colors = $derived(pairColors(a, b));
@@ -90,15 +90,15 @@
 			<div class="alt-note" data-testid="alt-note">
 				{#if altView.mode === 'agl'}
 					{#if hasReadings && altimeter != null}
-						AGL = height above the field ({airport.elevationFt.toLocaleString('en-US')}'): reported altitude {signed(-correction)} for the altimeter setting of {altimeter.toFixed(2)} at {localTime(airport.tz, incident.t, true)}.
+						AGL = height above the field ({airport.elevationFt.toLocaleString('en-US')}'): ADS-B altitude {signed(-correction)} for the altimeter setting of {altimeter.toFixed(2)} at {localTime(airport.tz, incident.t, true)}.
 					{:else if data.night?.groundOffsetFt != null}
-						AGL = height above the field ({airport.elevationFt.toLocaleString('en-US')}'), uncorrected: no weather reports for this night, so reported altitudes are taken as true (aircraft on the ground read {signed(data.night.groundOffsetFt)} that night).
+						AGL = height above the field ({airport.elevationFt.toLocaleString('en-US')}'), uncorrected: no weather reports for this night, so ADS-B altitudes are taken as true (aircraft on the ground read {signed(data.night.groundOffsetFt)} that night).
 					{:else}
 						AGL = height above the field ({airport.elevationFt.toLocaleString('en-US')}'), uncorrected: no weather reports for this night.
 					{/if}
-					<button type="button" class="alt-switch" onclick={() => setAltMode('reported')}>Show altitudes as reported</button>
+					<button type="button" class="alt-switch" onclick={() => setAltMode('reported')}>Show ADS-B altitudes</button>
 				{:else}
-					Altitudes as the transponders reported them (standard-pressure altitude, not corrected for the day's weather or the field elevation).
+					ADS-B altitude: the figure each aircraft broadcast, which is measured against a standard air pressure and not corrected for the day's weather or the field elevation.
 					<button type="button" class="alt-switch" onclick={() => setAltMode('agl')}>Show heights AGL</button>
 				{/if}
 			</div>
@@ -138,7 +138,7 @@
 				</div>
 				<div class="ident">{identLabel(card.f)}</div>
 				<div class="desc">{describe(card.f)}</div>
-				<div class="alt">{altView.mode === 'agl' ? 'Height AGL' : 'Reported altitude'} at closest point: <strong>{showAlt(card.alt)}</strong></div>
+				<div class="alt">{altView.mode === 'agl' ? 'Height AGL' : 'ADS-B altitude'} at closest point: <strong>{showAlt(card.alt)}</strong></div>
 			</div>
 		{/each}
 		<div class="inset know">

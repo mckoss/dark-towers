@@ -47,8 +47,8 @@ export function displayAlt(reportedFt: number, t: number, ctx: AltContext, mode:
 	return { ft: Math.max(0, Math.round(aglFt(reportedFt, t, ctx.readings, ctx.elevationFt) / 50) * 50), mode };
 }
 
-/** "650 ft AGL" / "1,100 ft reported". */
+/** "650 ft AGL" / "1,100 ft ADS-B" (the raw broadcast pressure altitude). */
 export function altLabel(reportedFt: number, t: number, ctx: AltContext, mode: AltMode = altView.mode): string {
 	const d = displayAlt(reportedFt, t, ctx, mode);
-	return `${d.ft.toLocaleString('en-US')} ft ${d.mode === 'agl' ? 'AGL' : 'reported'}`;
+	return `${d.ft.toLocaleString('en-US')} ft ${d.mode === 'agl' ? 'AGL' : 'ADS-B'}`;
 }

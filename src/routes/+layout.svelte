@@ -45,7 +45,7 @@
 
 <footer class="site-footer">
 	<span class="footnote">Dark Tower Watch · a citizen project built on public ADS-B data and published tower hours</span>
-	<span class="footnote glossary"><abbr title="Above ground level">AGL</abbr> — height above the airport, not above sea level · <abbr title="Nautical mile">NM</abbr> — nautical mile, 1.15 miles · <abbr title="Knots">kt</abbr> — knots, nautical miles per hour</span>
+	<span class="footnote glossary"><abbr title="Above ground level">AGL</abbr> — height above the airport, not above sea level · <abbr title="Automatic Dependent Surveillance–Broadcast">ADS-B</abbr> — the position and altitude each aircraft broadcasts · <abbr title="Nautical mile">NM</abbr> — nautical mile, 1.15 miles · <abbr title="Knots">kt</abbr> — knots, nautical miles per hour</span>
 	<a href="/method#who-we-are">Who we are</a>
 </footer>
 
