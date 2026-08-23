@@ -68,9 +68,6 @@
 		{#key incident.id}
 			<Replay {airport} {a} {b} {incident} {others} alt={altCtx} />
 		{/key}
-		<div class="replay-note">
-			Replay runs in accelerated time. Each aircraft's full path is dashed; the solid trail is where it has flown so far. Other traffic that night is greyed behind them.
-		</div>
 	</div>
 	<div class="facts">
 		<div class="fact">
@@ -274,12 +271,6 @@
 	}
 	.replay-col {
 		min-width: 0;
-	}
-	.replay-note {
-		padding: 14px var(--gutter);
-		border-top: var(--row-rule);
-		font-size: 12px;
-		color: var(--ink-45);
 	}
 	.card {
 		padding: 24px;
