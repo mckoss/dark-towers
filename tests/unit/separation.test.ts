@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fromLocalNm, type LatLon } from '$lib/geo';
-import { closestApproach, buildTrackSpline, findIncidents, incidentId, sameAircraft, severityOf } from '$lib/separation';
+import { closestApproach, buildTrackSpline, dropGhosts, findIncidents, incidentId, sameAircraft, severityOf } from '$lib/separation';
 import type { Flight, Position } from '$lib/types';
 
 const ORIGIN: LatLon = [47.9079, -122.2816];
@@ -186,5 +186,22 @@ describe('sameAircraft (ghost records)', () => {
 		const ids = findIncidents(origin, 'KPAE', '2026-08-22', [real, ghost, other]).map((i) => [i.flightA, i.flightB].sort().join('+'));
 		expect(ids).not.toContain('GHOST+REAL');
 		expect(ids).toContain('OTHER+REAL');
+	});
+});
+
+describe('dropGhosts', () => {
+	it('keeps the record with tail/type and the most reports, drops its ghost, leaves others alone', () => {
+		const origin: [number, number] = [47.9079, -122.2816];
+		const mk = (id: string, tail: string | null, type: string | null, pts: [number, number, number, number][]): Flight => ({
+			id, airport: 'KPAE', night: '2026-08-22', ident: id, tail, type, category: 'private', operator: null, operatorName: null, operatorShort: null,
+			direction: 'departure', eventTime: 0, otherCode: null, otherName: null, otherCity: null,
+			positions: pts.map(([t, e, n, alt]) => { const [lat, lon] = fromLocalNm(origin, [e, n]); return { t, lat, lon, alt, gs: 200, hdg: 0, dist: Math.hypot(e, n) }; })
+		});
+		const real = mk('SWA8507', 'N247WN', 'B737', Array.from({ length: 20 }, (_, i) => [i * 16_000, 0, i * 0.9, 2000 + i * 400] as [number, number, number, number]));
+		const ghost = mk('OV3510', null, null, [0, 60_000, 120_000, 180_000, 240_000].map((t) => [t, 0.03, (t / 16_000) * 0.9, 2000 + (t / 16_000) * 400 + 40] as [number, number, number, number]));
+		const other = mk('N1', 'N1', 'C172', [0, 60_000, 120_000, 180_000, 240_000].map((t) => [t, 0.5, (t / 16_000) * 0.9, 2000 + (t / 16_000) * 400] as [number, number, number, number]));
+		const r = dropGhosts(origin, [ghost, real, other]);
+		expect(r.dropped.map((f) => f.id)).toEqual(['OV3510']);
+		expect(r.kept.map((f) => f.id)).toEqual(['SWA8507', 'N1']);
 	});
 });

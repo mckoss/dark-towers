@@ -15,12 +15,12 @@
 import { AIRSPACE_EXIT_NM, AIRSPACE_RADIUS_NM, TRACK_GAP_MS, towerHoursOn } from '$lib/airports';
 import { getAirport } from './airports-store';
 import { distanceNm, fromLocalNm, toLocalNm } from '$lib/geo';
-import { findIncidents } from '$lib/separation';
+import { dropGhosts, findIncidents } from '$lib/separation';
 import { correctionOffsetAt, groundOffsetFt, hasCorrection, onFieldPoints, type AltCorrection } from '$lib/altimeter';
 import { fetchAltimeter } from './metar';
 import { nightOf, nightWindow } from '$lib/time';
 import type { AirportConfig, Flight, FlightCategory, NightSummary, Position } from '$lib/types';
-import { recordRunEnd, recordRunStart, replaceIncidents, upsertFlight, upsertNight } from './db';
+import { deleteFlightsExcept, recordRunEnd, recordRunStart, replaceIncidents, upsertFlight, upsertNight } from './db';
 import { fetchFlights, fetchTrack, hasCachedTrack, readCachedFlights, type Logger, type RawFlight, type RawTrack } from './flightaware';
 
 export interface IngestOptions {
@@ -95,6 +95,13 @@ async function ingest(airport: AirportConfig, night: string, opts: IngestOptions
 	}
 	flights.sort((a, b) => a.eventTime - b.eventTime);
 
+	// 3b. One transponder sometimes arrives as two records (a sparse ad-hoc
+	// identity beside the real flight). Keep the richer record, drop the ghost.
+	const { kept, dropped } = dropGhosts(airport.pos, flights);
+	if (dropped.length) log(`${airport.icao} ${night}: dropped ${dropped.length} ghost record(s): ${dropped.map((f) => f.ident).join(', ')}`);
+	flights.length = 0;
+	flights.push(...kept);
+
 	// 4. pressure correction, best source first: reports from aircraft plainly
 	// on the field (direct measurement of the transponders), else the hourly
 	// altimeter settings from the airport's weather reports (cached), else the
@@ -111,6 +118,7 @@ async function ingest(airport: AirportConfig, night: string, opts: IngestOptions
 
 	// 6. store
 	for (const f of flights) upsertFlight(f);
+	deleteFlightsExcept(airport.icao, night, flights.map((f) => f.id));
 	replaceIncidents(airport.icao, night, incidents);
 	const summary: NightSummary = {
 		airport: airport.icao,

@@ -125,6 +125,28 @@ export function closestApproach(a: Spline, b: Spline, opts: ApproachOptions = {}
 	return best;
 }
 
+/**
+ * Split a night's flights into real records and ghosts. Among records that
+ * are the same aircraft, the one with the most identity (tail, type) and the
+ * most reports is kept; the others are dropped.
+ */
+export function dropGhosts(origin: LatLon, flights: Flight[]): { kept: Flight[]; dropped: Flight[] } {
+	const tracks = flights.map((f) => buildTrackSpline(origin, f)).filter((t): t is TrackSpline => !!t);
+	const richness = (f: Flight) => (f.tail ? 2 : 0) + (f.type ? 1 : 0) + f.positions.length / 1000;
+	const ghosts = new Set<string>();
+	for (let i = 0; i < tracks.length; i++) {
+		for (let j = i + 1; j < tracks.length; j++) {
+			const A = tracks[i],
+				B = tracks[j];
+			if (ghosts.has(A.flight.id) || ghosts.has(B.flight.id)) continue;
+			if (A.spline.t1 < B.spline.t0 || B.spline.t1 < A.spline.t0) continue;
+			if (!sameAircraft(A, B, origin)) continue;
+			ghosts.add(richness(A.flight) >= richness(B.flight) ? B.flight.id : A.flight.id);
+		}
+	}
+	return { kept: flights.filter((f) => !ghosts.has(f.id)), dropped: flights.filter((f) => ghosts.has(f.id)) };
+}
+
 export function severityOf(lateralNm: number, verticalFt: number): Severity {
 	return lateralNm < VERY_CLOSE_LATERAL_NM && verticalFt < VERY_CLOSE_VERTICAL_FT ? 'very-close' : 'closer-than-allowed';
 }

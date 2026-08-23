@@ -105,6 +105,15 @@ function migrate(d: Database.Database) {
 
 /* ---------- writes (all upserts → idempotent) ---------- */
 
+/** Remove rows for this night that are no longer part of it (e.g. ghost records dropped on re-ingest). */
+export function deleteFlightsExcept(airport: string, night: string, keepIds: string[]) {
+	const d = db();
+	const rows = d.prepare(`SELECT id FROM flights WHERE airport = ? AND night = ?`).all(airport, night) as { id: string }[];
+	const keep = new Set(keepIds);
+	const del = d.prepare(`DELETE FROM flights WHERE id = ?`);
+	for (const r of rows) if (!keep.has(r.id)) del.run(r.id);
+}
+
 export function upsertFlight(f: Flight) {
 	db()
 		.prepare(
