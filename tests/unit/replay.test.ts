@@ -22,6 +22,9 @@ describe('aircraftKind / silhouetteFor', () => {
 		expect(aircraftKind({ category: 'private', type: 'B738', ident: 'NAVY12' })).toBe('military');
 		expect(aircraftKind({ category: 'private', type: 'C172', ident: 'N12345' })).toBe('private');
 		expect(aircraftKind({ category: 'airline', type: 'E75L', ident: 'QXE2150' })).toBe('airline');
+		expect(aircraftKind({ category: 'airline', type: 'E75L', ident: 'SKW3452' })).toBe('airline');
+		expect(aircraftKind({ category: 'private', type: 'E75L', ident: 'N1' })).toBe('private');
+		expect(aircraftKind({ category: 'airline', type: 'B738', ident: 'SAM204' })).toBe('airline');
 		expect(silhouetteFor('private', 'R44', 'N1RH')).toBe('helicopter');
 		expect(silhouetteFor('private', 'P8', 'N0')).toBe('military');
 		expect(silhouetteFor('airline', 'E75L')).toBe('airliner');

@@ -139,10 +139,14 @@ export function glyphSizeFor(pixelSeparation: number): number {
 
 export type Silhouette = 'airliner' | 'bizjet' | 'light' | 'helicopter' | 'military';
 
-/** ICAO type designators of helicopters (prefix match). */
-const HELICOPTER_TYPES = /^(H269|H369|H500|H60|H47|H53|H64|UH1|B06|B105|B212|B214|B222|B230|B407|B412|B427|B429|B430|B505|R22|R44|R66|EC20|EC25|EC30|EC35|EC45|EC55|EC75|H125|H130|H135|H145|H155|H160|H175|AS32|AS50|AS55|AS65|A109|A119|A139|A149|A169|A189|S61|S64|S76|S92|MD52|MD60|MD90|BK17|B47G|EN28|EN48|R[0-9]{2}$|CH47|V22|LYNX|GAZL|PUMA|SUCO|ALO)/;
-/** ICAO type designators of military aircraft (prefix match). Airliners and bizjets in military service are not caught. */
-const MILITARY_TYPES = /^(C17|C30J|C130|C5M|K35R|KC35|K46|E3|E6|E8|P8|P3|F15|F16|F18|F22|F35|A10|B1|B2|B52|T38|TEX2|T6|T45|U2|RQ|MQ|C27J|C2|E2|EA18|AV8|H60|CH47|V22|UH1|H53|H64|C146|C12|C26|UC35|C37|C40|C32|VC25|E4|E7)/;
+/** ICAO type designators of helicopters (exact match). */
+const HELICOPTER_TYPES = new Set(
+	'H269 H369 H500 H60 H47 H53 H64 UH1 UH1Y B06 B06T B105 B212 B214 B222 B230 B407 B412 B427 B429 B430 B505 R22 R44 R66 EC20 EC25 EC30 EC35 EC45 EC55 EC75 H125 H130 H135 H145 H155 H160 H175 AS32 AS50 AS55 AS65 A109 A119 A139 A149 A169 A189 S61 S64 S76 S92 MD52 MD60 MD90 BK17 B47G EN28 EN48 CH47 V22 LYNX GAZL PUMA SUCO ALO2 ALO3 EC30 EC120 HUCO'.split(' ')
+);
+/** ICAO type designators of military aircraft (exact match). Airliners and bizjets in military service are not caught. */
+const MILITARY_TYPES = new Set(
+	'C17 C30J C130 C5M C5 K35R KC35 K35E K46 E3CF E3TF E6 E8 P8 P3 F15 F16 F18 F18H F18S F22 F35 A10 B1 B2 B52 T38 TEX2 T6 T45 U2 RQ4 MQ9 MQ1 C27J C2 E2 EA18 AV8B H60 CH47 UH1 H53 H64 C146 C12 C26 UC35 C37 C40 C32 VC25 E4 E7 KC10 DC10 C9 C21 T1 T34 T44 T2'.split(' ')
+);
 /** Military callsign prefixes (ident match). */
 const MILITARY_IDENTS = /^(RCH|REACH|NAVY|ARMY|USAF|EVAC|SAM|CNV|PAT|SPAR|AIO|HOOK|DOOM|BOLT|TOPCAT|JAKE|KING|TITAN|SLAM|COBRA|VENOM|HAWG|RAIDR|RIDER|DUKE|WOLF|PACK|BISON|ELVIS|GRIZ|MOOSE|SHARK|SNTRY|DRAGN|NCHO|GOLD|FORCE|HAVOC|STEEL|VIPER|BRONCO|TALON|SHADO|CASA|TOGA|JUMBO|RRR|BLUE)\d/;
 
@@ -151,8 +155,9 @@ export type AircraftKind = 'airline' | 'private' | 'military' | 'helicopter';
 /** Finer classification than the airline/private category, from the type designator and callsign. */
 export function aircraftKind(f: { category: string; type: string | null; ident?: string }): AircraftKind {
 	const t = (f.type ?? '').toUpperCase();
-	if (HELICOPTER_TYPES.test(t)) return 'helicopter';
-	if (MILITARY_TYPES.test(t) || MILITARY_IDENTS.test((f.ident ?? '').toUpperCase())) return 'military';
+	if (HELICOPTER_TYPES.has(t)) return 'helicopter';
+	// Callsign prefixes only reclassify non-airline traffic; an airline flight stays an airline.
+	if (MILITARY_TYPES.has(t) || (f.category !== 'airline' && MILITARY_IDENTS.test((f.ident ?? '').toUpperCase()))) return 'military';
 	return f.category === 'airline' ? 'airline' : 'private';
 }
 
