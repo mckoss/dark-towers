@@ -17,6 +17,8 @@
 	import { onMount, untrack } from 'svelte';
 	import type { AirportConfig, Flight, Incident } from '$lib/types';
 	import { buildReplay, glyphHtml, glyphSizeFor, pairColors, silhouetteFor } from '$lib/replay';
+	import { buildTrackSpline } from '$lib/separation';
+	import { fromLocalNm } from '$lib/geo';
 	import { localTimeZoned } from '$lib/time';
 	import type { BaseMap } from '$lib/leaflet';
 	import type * as Leaflet from 'leaflet';
@@ -40,6 +42,8 @@
 	const SPEEDS = [8, 16, 32];
 	const ACCENT = '#ec3013';
 	const INK = '#201e1d';
+	const GREY = '#8a8785';
+	const TRAIL_MS = 180_000;
 
 	// The model and map are built once per mount from the initial props; the
 	// page keys this component on the incident id so a new incident remounts it.
@@ -57,6 +61,15 @@
 			colorB: cb === 'accent' ? ACCENT : INK
 		};
 	});
+
+	// Other aircraft flying during the replay window: shown live in grey with
+	// their own data blocks. Traffic outside the window is not drawn at all.
+	const concurrent = untrack(() =>
+		others
+			.map((f) => ({ f, track: buildTrackSpline(airport.pos, f) }))
+			.filter((x): x is { f: Flight; track: NonNullable<typeof x.track> } => !!x.track && x.track.spline.t0 <= end && x.track.spline.t1 >= start)
+	);
+	const otherLayers = new Map<string, { mark: Leaflet.Marker; label: Leaflet.Marker; trail: Leaflet.Polyline }>();
 
 	let t = $state(start);
 	let playing = $state(false);
@@ -181,14 +194,6 @@
 			base = mod.createBaseMap(mapEl, airport.pos, { tiles, interactive: false });
 			const map = base.map;
 
-			// Context: the night's other traffic, faint.
-			for (const f of others) {
-				if (f.positions.length < 2) continue;
-				L.polyline(
-					f.positions.map((p) => [p.lat, p.lon] as [number, number]),
-					{ color: INK, weight: 1, opacity: 0.12, interactive: false }
-				).addTo(map);
-			}
 			// Each aircraft's full path, dashed.
 			for (const [f, color] of [
 				[a, colorA],
@@ -293,8 +298,61 @@
 		el.classList.toggle('parked', !s.active);
 	}
 
+	/** Other aircraft in the air at t: grey glyph, grey data block, three-minute trail. */
+	function drawOthers() {
+		if (!base || !L) return;
+		const map = base.map;
+		for (const { f, track } of concurrent) {
+			const sp = track.spline;
+			const active = t >= sp.t0 && t <= sp.t1;
+			let g = otherLayers.get(f.id);
+			if (!active) {
+				if (g) {
+					g.mark.remove();
+					g.label.remove();
+					g.trail.remove();
+					otherLayers.delete(f.id);
+				}
+				continue;
+			}
+			const v = sp.at(t)!;
+			const vel = sp.velocityAt(t);
+			const [lat, lon] = fromLocalNm(airport.pos, [v[0], v[1]]);
+			if (!g) {
+				g = {
+					mark: L.marker([lat, lon], { interactive: false, zIndexOffset: 500, icon: L.divIcon({ className: 'replay-marker', iconSize: [0, 0], iconAnchor: [0, 0], html: glyphHtml(GREY, silhouetteFor(f.category, f.type), Math.round(glyph * 0.85)) }) }).addTo(map),
+					label: L.marker([lat, lon], { interactive: false, zIndexOffset: -600, icon: L.divIcon({ className: 'replay-label', iconSize: [0, 0], iconAnchor: [0, 0], html: '' }) }).addTo(map),
+					trail: L.polyline([], { color: GREY, weight: 2, opacity: 0.8, interactive: false }).addTo(map)
+				};
+				otherLayers.set(f.id, g);
+			}
+			g.mark.setLatLng([lat, lon]);
+			const el = g.mark.getElement();
+			if (el) {
+				const hdg = vel && (Math.abs(vel[0]) > 1e-9 || Math.abs(vel[1]) > 1e-9) ? ((Math.atan2(vel[0], vel[1]) * 180) / Math.PI + 360) % 360 : 0;
+				const svg = el.querySelector('svg') as SVGElement | null;
+				if (svg) svg.style.transform = `translate(-50%, -50%) rotate(${hdg.toFixed(0)}deg)`;
+			}
+			const pts: [number, number][] = [];
+			for (let x = Math.max(sp.t0, t - TRAIL_MS); x < t; x += 2000) {
+				const q = sp.at(x)!;
+				pts.push(fromLocalNm(airport.pos, [q[0], q[1]]));
+			}
+			pts.push([lat, lon]);
+			g.trail.setLatLngs(pts);
+			g.label.setLatLng([lat, lon]);
+			const host = g.label.getElement();
+			if (host) {
+				host.innerHTML = labelHtml(GREY, flightLabel(f), { alt: v[2], gs: v[3] ?? 0, vs: vel ? vel[2] * 1000 : 0, active: true, phase: 'active' });
+				const inner = host.firstElementChild as HTMLElement | null;
+				if (inner) inner.style.transform = `translate(${Math.round(glyph * 0.7)}px, -50%)`;
+			}
+		}
+	}
+
 	function draw() {
 		if (!layers || !sample) return;
+		drawOthers();
 		layers.trailA.setLatLngs(trail('a', t));
 		layers.trailB.setLatLngs(trail('b', t));
 		placeGlyph(layers.markA, sample.a, sample.inside);

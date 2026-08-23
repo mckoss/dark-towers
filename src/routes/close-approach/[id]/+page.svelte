@@ -3,7 +3,7 @@
 	import MapLegend from '$lib/components/MapLegend.svelte';
 	import { AIRSPACE_RADIUS_NM } from '$lib/airports';
 	import { flightLabel, flightSubLabel } from '$lib/flights';
-	import { pairColors } from '$lib/replay';
+	import { pairColors, WINDOW_AFTER_MS, WINDOW_BEFORE_MS } from '$lib/replay';
 	import { localTime, nightLabel } from '$lib/time';
 	import { altContextFor, altView, displayAlt, setAltMode, type AltContext } from '$lib/altview.svelte';
 	import type { Flight } from '$lib/types';
@@ -27,6 +27,12 @@
 	const signed = (n: number) => `${n < 0 ? '−' : '+'}${Math.abs(n).toLocaleString('en-US')}'`;
 
 	const colors = $derived(pairColors(a, b));
+	/** Whether any other aircraft was airborne inside the replay window (decides the grey legend row). */
+	const concurrentOthers = $derived.by(() => {
+		const start = incident.t - WINDOW_BEFORE_MS,
+			end = incident.t + WINDOW_AFTER_MS;
+		return others.some((f) => f.positions.length > 1 && f.positions[0].t <= end && f.positions[f.positions.length - 1].t >= start);
+	});
 	/** Key for the replay map: the pair's two colours by kind (both accent/ink when they share a kind), other traffic, the ring. */
 	const legend = $derived.by(() => {
 		const kindLabel = (f: Flight) => (f.category === 'airline' ? 'Passenger airline' : 'Private and training aircraft');
@@ -34,7 +40,8 @@
 			{ kind: colors[0], label: a.category === b.category ? flightLabel(a) : kindLabel(a) },
 			{ kind: colors[1], label: a.category === b.category ? flightLabel(b) : kindLabel(b) }
 		];
-		return [...items, { kind: 'grey' as const, label: 'Other traffic that night' }, { kind: 'ring' as const, label: `${AIRSPACE_RADIUS_NM} nautical mile ring` }];
+		const grey = concurrentOthers ? [{ kind: 'grey' as const, label: 'Other aircraft flying at the time' }] : [];
+		return [...items, ...grey, { kind: 'ring' as const, label: `${AIRSPACE_RADIUS_NM} nautical mile ring` }];
 	});
 	const severityLabel = $derived(incident.severity === 'very-close' ? 'Very close' : 'Close approach');
 	const nm = (n: number) => `${n.toFixed(2)} NM`;
