@@ -54,7 +54,12 @@ Status key: `[x]` done & verified · `[~]` in progress / partial · `[ ]` to do 
 - [x] Health endpoint `/api/health` (used by Railway healthcheck in `railway.json`)
 - [ ] Verify first autonomous nightly run in production
 
-## 6. Nice-to-have / follow-ups noticed while building
+## 6. Backlog — requested
+- [ ] **Longer time series.** Keep and serve more than the rolling 30 nights: airport page can scroll back through earlier months (paged calendar / month picker, `?night=` deep links keep working), and per-night detail stays available for as long as raw data is retained.
+- [ ] **Trend graphs.** Charts of close approaches per week (and flights per week, airline vs. private) per airport and site-wide; weekly rollup query over `nights`, rendered in the design system (flat SVG, accent for close approaches). Candidate placements: airport detail above the calendar, and a site-wide view on Home or Airports.
+- [ ] Supporting: weekly aggregate table or view in SQLite; tests for week bucketing across month/year boundaries.
+
+## 7. Nice-to-have / follow-ups noticed while building
 - [ ] Replay: draw the trails with the Bézier path itself (currently 2 s spline samples as polylines — visually smooth, but a true SVG `C` path layer would be lighter)
 - [ ] Airport detail: keyboard navigation between calendar nights; deep-link `?night=` to the prototype's "ledger" home variant is out of scope
 - [ ] Ingest: record API call counts per run in `runs` table and show on `/api/health` (cost visibility)
