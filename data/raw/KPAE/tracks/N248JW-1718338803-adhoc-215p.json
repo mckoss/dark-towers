@@ -1,0 +1,191 @@
+{
+ "positions": [
+  {
+   "fa_flight_id": null,
+   "altitude": 6,
+   "altitude_change": "C",
+   "groundspeed": 69,
+   "heading": 358,
+   "latitude": 47.91631,
+   "longitude": -122.28586,
+   "timestamp": "2024-06-14T04:29:35Z",
+   "update_type": "A"
+  },
+  {
+   "fa_flight_id": null,
+   "altitude": 9,
+   "altitude_change": "C",
+   "groundspeed": 72,
+   "heading": 0,
+   "latitude": 47.92209,
+   "longitude": -122.28635,
+   "timestamp": "2024-06-14T04:29:51Z",
+   "update_type": "A"
+  },
+  {
+   "fa_flight_id": null,
+   "altitude": 12,
+   "altitude_change": "C",
+   "groundspeed": 61,
+   "heading": 4,
+   "latitude": 47.92641,
+   "longitude": -122.28621,
+   "timestamp": "2024-06-14T04:30:07Z",
+   "update_type": "A"
+  },
+  {
+   "fa_flight_id": null,
+   "altitude": 13,
+   "altitude_change": "C",
+   "groundspeed": 65,
+   "heading": 36,
+   "latitude": 47.93115,
+   "longitude": -122.2847,
+   "timestamp": "2024-06-14T04:30:23Z",
+   "update_type": "A"
+  },
+  {
+   "fa_flight_id": null,
+   "altitude": 15,
+   "altitude_change": "C",
+   "groundspeed": 80,
+   "heading": 94,
+   "latitude": 47.93239,
+   "longitude": -122.27728,
+   "timestamp": "2024-06-14T04:30:39Z",
+   "update_type": "A"
+  },
+  {
+   "fa_flight_id": null,
+   "altitude": 15,
+   "altitude_change": "-",
+   "groundspeed": 101,
+   "heading": 160,
+   "latitude": 47.92882,
+   "longitude": -122.26808,
+   "timestamp": "2024-06-14T04:30:55Z",
+   "update_type": "A"
+  },
+  {
+   "fa_flight_id": null,
+   "altitude": 15,
+   "altitude_change": "C",
+   "groundspeed": 104,
+   "heading": 175,
+   "latitude": 47.92166,
+   "longitude": -122.26685,
+   "timestamp": "2024-06-14T04:31:11Z",
+   "update_type": "A"
+  },
+  {
+   "fa_flight_id": null,
+   "altitude": 15,
+   "altitude_change": "C",
+   "groundspeed": 99,
+   "heading": 173,
+   "latitude": 47.91394,
+   "longitude": -122.26586,
+   "timestamp": "2024-06-14T04:31:27Z",
+   "update_type": "A"
+  },
+  {
+   "fa_flight_id": null,
+   "altitude": 15,
+   "altitude_change": "-",
+   "groundspeed": 101,
+   "heading": 174,
+   "latitude": 47.90672,
+   "longitude": -122.26452,
+   "timestamp": "2024-06-14T04:31:43Z",
+   "update_type": "A"
+  },
+  {
+   "fa_flight_id": null,
+   "altitude": 15,
+   "altitude_change": "-",
+   "groundspeed": 96,
+   "heading": 173,
+   "latitude": 47.90016,
+   "longitude": -122.26348,
+   "timestamp": "2024-06-14T04:31:59Z",
+   "update_type": "A"
+  },
+  {
+   "fa_flight_id": null,
+   "altitude": 14,
+   "altitude_change": "D",
+   "groundspeed": 96,
+   "heading": 175,
+   "latitude": 47.8927,
+   "longitude": -122.26218,
+   "timestamp": "2024-06-14T04:32:15Z",
+   "update_type": "A"
+  },
+  {
+   "fa_flight_id": null,
+   "altitude": 13,
+   "altitude_change": "D",
+   "groundspeed": 95,
+   "heading": 173,
+   "latitude": 47.88559,
+   "longitude": -122.26093,
+   "timestamp": "2024-06-14T04:32:31Z",
+   "update_type": "A"
+  },
+  {
+   "fa_flight_id": null,
+   "altitude": 12,
+   "altitude_change": "D",
+   "groundspeed": 89,
+   "heading": 212,
+   "latitude": 47.87921,
+   "longitude": -122.26269,
+   "timestamp": "2024-06-14T04:32:47Z",
+   "update_type": "A"
+  },
+  {
+   "fa_flight_id": null,
+   "altitude": 11,
+   "altitude_change": "D",
+   "groundspeed": 73,
+   "heading": 257,
+   "latitude": 47.87613,
+   "longitude": -122.27055,
+   "timestamp": "2024-06-14T04:33:03Z",
+   "update_type": "A"
+  },
+  {
+   "fa_flight_id": null,
+   "altitude": 10,
+   "altitude_change": "D",
+   "groundspeed": 69,
+   "heading": 283,
+   "latitude": 47.87553,
+   "longitude": -122.2784,
+   "timestamp": "2024-06-14T04:33:19Z",
+   "update_type": "A"
+  },
+  {
+   "fa_flight_id": null,
+   "altitude": 9,
+   "altitude_change": "D",
+   "groundspeed": 58,
+   "heading": 329,
+   "latitude": 47.87878,
+   "longitude": -122.28387,
+   "timestamp": "2024-06-14T04:33:35Z",
+   "update_type": "A"
+  },
+  {
+   "fa_flight_id": null,
+   "altitude": 8,
+   "altitude_change": "D",
+   "groundspeed": 56,
+   "heading": 357,
+   "latitude": 47.88261,
+   "longitude": -122.28502,
+   "timestamp": "2024-06-14T04:33:51Z",
+   "update_type": "A"
+  }
+ ]
+}
