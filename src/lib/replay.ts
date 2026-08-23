@@ -23,6 +23,8 @@ export interface AircraftSample {
 	alt: number;
 	/** Degrees true, 0–360. */
 	hdg: number;
+	/** False before the track starts or after it ends (aircraft on the ground / out of range). */
+	active: boolean;
 }
 
 export interface ReplaySample {
@@ -67,24 +69,22 @@ export function buildReplay(origin: LatLon, a: Flight, b: Flight, closestT: numb
 	const sa = ta.spline,
 		sb = tb.spline;
 
-	// Window around the recorded closest moment, clipped to the span both
-	// tracks actually cover. If that leaves less than a minute we still show
-	// what exists rather than inventing positions.
-	const spanStart = Math.max(sa.t0, sb.t0);
-	const spanEnd = Math.min(sa.t1, sb.t1);
+	// Window around the recorded closest moment, clipped to the span EITHER
+	// track covers. An aircraft whose track has not started yet, or that has
+	// already landed, holds at its first/last reported point and is flagged
+	// `active: false` so the view can show it parked rather than inventing
+	// positions. This way the replay always starts outside the envelope.
+	const spanStart = Math.min(sa.t0, sb.t0);
+	const spanEnd = Math.max(sa.t1, sb.t1);
 	let start = Math.max(closestT - WINDOW_BEFORE_MS, spanStart);
 	let end = Math.min(closestT + WINDOW_AFTER_MS, spanEnd);
-	if (end < start) {
-		// Tracks never overlap in time (should not happen for a flagged pair).
-		start = spanStart;
-		end = spanEnd;
-		if (end < start) [start, end] = [end, start];
-	}
+	if (end < start) [start, end] = [end, start];
 
 	function sampleOne(spline: Spline, flight: Flight, t: number): AircraftSample {
 		const v = spline.at(t)!;
 		const [lat, lon] = fromLocalNm(origin, [v[0], v[1]]);
-		return { lat, lon, alt: v[2], hdg: headingOf(spline, t, () => nearestHdg(flight, t)) };
+		const active = t >= spline.t0 && t <= spline.t1;
+		return { lat, lon, alt: v[2], hdg: headingOf(spline, t, () => nearestHdg(flight, t)), active };
 	}
 
 	function sampleAt(t: number): ReplaySample {
@@ -93,13 +93,15 @@ export function buildReplay(origin: LatLon, a: Flight, b: Flight, closestT: numb
 			pb = sb.at(tc)!;
 		const lateralNm = Math.hypot(pa[0] - pb[0], pa[1] - pb[1]);
 		const verticalFt = Math.abs(pa[2] - pb[2]);
+		const A = sampleOne(sa, a, tc),
+			B = sampleOne(sb, b, tc);
 		return {
 			t: tc,
-			a: sampleOne(sa, a, tc),
-			b: sampleOne(sb, b, tc),
+			a: A,
+			b: B,
 			lateralNm,
 			verticalFt,
-			inside: lateralNm < SEPARATION_LATERAL_NM && verticalFt < SEPARATION_VERTICAL_FT
+			inside: A.active && B.active && lateralNm < SEPARATION_LATERAL_NM && verticalFt < SEPARATION_VERTICAL_FT
 		};
 	}
 

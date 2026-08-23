@@ -216,23 +216,30 @@
 		el.style.transform = ox < -6 ? `translate(calc(-100% + ${ox}px), ${oy}px)` : `translate(${Math.max(ox, 10)}px, ${oy}px)`;
 	}
 
-	function placeGlyph(marker: Leaflet.Marker, s: { lat: number; lon: number; hdg: number }, alert: boolean) {
+	function placeGlyph(marker: Leaflet.Marker, s: { lat: number; lon: number; hdg: number; active: boolean }, alert: boolean) {
 		marker.setLatLng([s.lat, s.lon]);
 		const el = marker.getElement();
 		if (!el) return;
 		const svg = el.querySelector('svg') as SVGElement | null;
 		if (svg) svg.style.transform = `translate(-50%, -50%) rotate(${s.hdg.toFixed(0)}deg)`;
 		el.classList.toggle('alert', alert);
+		// Before its track starts or after it ends the aircraft is parked at its
+		// first/last report: show it faded instead of pretending it is flying.
+		el.classList.toggle('parked', !s.active);
 	}
 
 	function draw() {
 		if (!layers || !sample) return;
 		layers.trailA.setLatLngs(trail('a', t));
 		layers.trailB.setLatLngs(trail('b', t));
-		layers.sep.setLatLngs([
-			[sample.a.lat, sample.a.lon],
-			[sample.b.lat, sample.b.lon]
-		]);
+		layers.sep.setLatLngs(
+			sample.a.active && sample.b.active
+				? [
+						[sample.a.lat, sample.a.lon],
+						[sample.b.lat, sample.b.lon]
+					]
+				: []
+		);
 		placeGlyph(layers.markA, sample.a, sample.inside);
 		placeGlyph(layers.markB, sample.b, sample.inside);
 		placeLabel(layers.labelA, sample.a, sample.b);
@@ -458,5 +465,8 @@
 			transform: translate(-50%, -50%) scale(2.1);
 			opacity: 0;
 		}
+	}
+	:global(.replay-marker.parked) {
+		opacity: 0.35;
 	}
 </style>
