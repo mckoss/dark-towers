@@ -40,12 +40,14 @@
 			<dt>FlightAware key</dt><dd>{data.apiKeyPresent ? 'present' : 'MISSING'}</dd>
 			<dt>Google sign-in</dt><dd>{data.googleConfigured ? 'configured' : 'not configured'}</dd>
 			<dt>Admins</dt><dd>{data.admins.join(', ')}</dd>
-			<dt>Extended history</dt>
+			<dt>AeroAPI tier</dt>
 			<dd>
 				{#if data.historyOverride != null}
-					{data.historyOverride ? 'on' : 'off'} (forced by <code>aeroapi_history</code> in config)
+					extended history forced {data.historyOverride ? 'on' : 'off'} by <code>aeroapi_history</code> in config
+				{:else if data.capability?.extendedHistory}
+					<strong>Standard or Premium</strong> — extended history available: any past night can be fetched and backfilled · checked {when(data.capability.checkedAt)}
 				{:else if data.capability}
-					{data.capability.extendedHistory ? 'available' : 'not available'} on this key — flights older than the 10-day live window {data.capability.extendedHistory ? 'can' : 'cannot'} be fetched · checked {when(data.capability.checkedAt)}
+					<strong>Personal</strong> — live window only: flights and tracks from the last 10 days, 10 queries a minute. Upgrading to Standard adds extended history (backfill of any past night, and retry of nights already recorded as "too old") · checked {when(data.capability.checkedAt)}
 				{:else}
 					not yet checked on this key
 				{/if}
