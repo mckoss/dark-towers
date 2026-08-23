@@ -133,9 +133,9 @@
 <section class="section cell">
 	<h2 class="section-heading">Airport requests ({data.requests.length})</h2>
 	<div class="grid requests">
-		<div class="table-header">When</div><div class="table-header">Request</div><div class="table-header">Email</div><div></div>
+		<div class="table-header">When</div><div class="table-header">Request</div><div class="table-header">FAA tower record</div><div class="table-header">Email</div><div></div>
 		{#each data.requests as r (r.id)}
-			<div class="tabular">{when(r.created_at)}</div><div>{r.value}</div><div>{r.email ?? '—'}</div>
+			<div class="tabular">{when(r.created_at)}</div><div>{r.value}{#if r.code && r.code !== r.value} <span class="muted-text">→ {r.code}</span>{/if}</div><div class="tabular">{r.assessment ?? '—'}</div><div>{r.email ?? '—'}</div>
 			<form method="POST" action="?/deleteRequest" use:enhance><input type="hidden" name="id" value={r.id} /><button class="link-btn" type="submit">delete</button></form>
 		{:else}
 			<div class="muted-text">No requests yet.</div>
@@ -162,7 +162,7 @@
 	.counts { grid-template-columns: 80px 80px 90px 120px 120px; }
 	.altcheck { grid-template-columns: 70px 100px 100px 80px 120px 110px 110px; max-height: 320px; overflow: auto; }
 	.runs { grid-template-columns: 170px 70px 110px 80px 1fr; }
-	.requests { grid-template-columns: 170px 1fr 1fr 60px; }
+	.requests { grid-template-columns: 170px 1fr 1fr 1fr 60px; }
 	.msg { color: var(--ink-60); }
 	.sub { margin-top: 24px; font-size: 16px; font-weight: 800; }
 	.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }

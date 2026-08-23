@@ -99,6 +99,8 @@ function migrate(d: Database.Database) {
 	const ncols = (d.prepare(`PRAGMA table_info(nights)`).all() as { name: string }[]).map((c) => c.name);
 	if (!ncols.includes('altimeter')) d.exec(`ALTER TABLE nights ADD COLUMN altimeter TEXT; ALTER TABLE nights ADD COLUMN ground_offset_ft INTEGER; ALTER TABLE nights ADD COLUMN ground_tracks INTEGER;`);
 	if (!ncols.includes('on_field')) d.exec(`ALTER TABLE nights ADD COLUMN on_field TEXT;`);
+	const rcols = (d.prepare(`PRAGMA table_info(requests)`).all() as { name: string }[]).map((c) => c.name);
+	if (!rcols.includes('code')) d.exec(`ALTER TABLE requests ADD COLUMN code TEXT; ALTER TABLE requests ADD COLUMN assessment TEXT;`);
 }
 
 /* ---------- writes (all upserts → idempotent) ---------- */
@@ -158,8 +160,8 @@ export function recordRunEnd(id: number, ok: boolean, message: string) {
 	db().prepare(`UPDATE runs SET finished_at = ?, ok = ?, message = ? WHERE id = ?`).run(Date.now(), ok ? 1 : 0, message, id);
 }
 
-export function insertRequest(value: string, email: string | null) {
-	db().prepare(`INSERT INTO requests (value, email, created_at) VALUES (?, ?, ?)`).run(value, email, Date.now());
+export function insertRequest(value: string, email: string | null, code: string | null = null, assessment: string | null = null) {
+	db().prepare(`INSERT INTO requests (value, email, code, assessment, created_at) VALUES (?, ?, ?, ?, ?)`).run(value, email, code, assessment, Date.now());
 }
 
 /* ---------- reads ---------- */
@@ -272,7 +274,7 @@ export function recentRuns(limit = 40): RunRow[] {
 	return db().prepare(`SELECT * FROM runs ORDER BY id DESC LIMIT ?`).all(limit) as RunRow[];
 }
 export interface RequestRow {
-	id: number; value: string; email: string | null; created_at: number;
+	id: number; value: string; email: string | null; code: string | null; assessment: string | null; created_at: number;
 }
 export function listRequests(limit = 200): RequestRow[] {
 	return db().prepare(`SELECT * FROM requests ORDER BY id DESC LIMIT ?`).all(limit) as RequestRow[];

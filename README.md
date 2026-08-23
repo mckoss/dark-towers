@@ -45,6 +45,12 @@ FlightAware responses; `data/db/darktowers.sqlite` is derived from it.
   (10 days); set `"aeroapi_history": true` on Standard+ to use the `/history/` endpoints.
 - **Tower hours:** FAA Chart Supplement (entered by hand, effective-dated, editable in
   `/admin/airports`; seeded from `airports.json`).
+- **Tower record check:** the [FAA NASR 28-day subscription](https://www.faa.gov/air_traffic/flight_info/aeronav/aero_data/NASR_Subscription/)
+  (`APT_BASE.csv` + `ATC_BASE.csv`) says which airports have a tower and its staffed hours.
+  Downloaded once per cycle by the scheduler (or `npm run nasr:update`), reduced to
+  `data/nasr/<cycle>.json`, and used to accept or decline airport requests.
+- **Altimeter settings:** hourly METAR/SPECI from the Iowa State ASOS archive, cached per night
+  beside the raw flight data, for the AGL correction.
 - **Airline classification:** FlightAware's flight type plus published operator codes.
 
 ## Deploying to Railway

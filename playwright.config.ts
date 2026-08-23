@@ -11,7 +11,7 @@ export default defineConfig({
 		trace: 'retain-on-failure'
 	},
 	webServer: {
-		command: 'npm run build && SCHEDULER=off DTW_NO_AUTH=1 CONFIG_JSON={} npm run preview -- --port 4173',
+		command: 'npm run build && SCHEDULER=off DTW_NO_AUTH=1 CONFIG_JSON={} NASR_JSON=tests/fixtures/nasr.json npm run preview -- --port 4173',
 		url: 'http://localhost:4173/api/health',
 		reuseExistingServer: !process.env.CI,
 		timeout: 180_000

@@ -5,6 +5,7 @@
  * cached, a missed run or a restart simply catches up on the next tick.
  */
 import cron from 'node-cron';
+import { updateNasr } from './nasr';
 import { towerHoursOn } from '$lib/airports';
 import { trackedAirports } from './airports-store';
 import { addDays, nightWindow, todayKey } from '$lib/time';
@@ -45,11 +46,16 @@ export async function catchUp(log: (m: string) => void = console.log): Promise<v
 }
 
 let task: ReturnType<typeof cron.schedule> | null = null;
+let nasrTask: ReturnType<typeof cron.schedule> | null = null;
+void nasrTask;
 
 export function startScheduler(log: (m: string) => void = console.log) {
 	if (task) return;
 	task = cron.schedule('7 * * * *', () => void catchUp(log));
+	// FAA NASR facility data: new 28-day cycle picked up within a day of release.
+	nasrTask = cron.schedule('41 4 * * *', () => void updateNasr({ log }));
 	log('scheduler: hourly catch-up enabled');
 	// Also catch up shortly after boot.
 	setTimeout(() => void catchUp(log), 15_000).unref();
+	setTimeout(() => void updateNasr({ log }), 30_000).unref();
 }

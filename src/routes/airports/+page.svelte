@@ -100,7 +100,7 @@
 	</div>
 	<div class="cell-lg">
 		{#if form?.submitted}
-			<div class="confirm">Thanks — <strong>{form.value}</strong> has been added to the request list.</div>
+			<div class="confirm" data-testid="request-ok">{form.message}</div>
 		{:else}
 			<form method="POST" use:enhance>
 				<input type="text" name="value" placeholder="Airport code, or city and state" maxlength="120" required aria-label="Airport code, or city and state" />
@@ -240,9 +240,6 @@
 		border: 2px solid #fff;
 		font-size: 15px;
 		line-height: 1.5;
-	}
-	.confirm strong {
-		font-weight: 800;
 	}
 
 	@media (max-width: 760px) {

@@ -70,11 +70,14 @@ test.describe('airports', () => {
 		await expect(page).toHaveURL(/\/airport\/PAE/);
 	});
 
-	test('request form confirms a submission without promising review', async ({ page }) => {
+	test('request form checks the FAA tower record: a 24-hour tower is declined, a no-tower airport is accepted', async ({ page }) => {
 		await page.goto('/airports');
+		await page.getByPlaceholder(/Airport code/).fill('SEA');
+		await page.getByRole('button', { name: 'Send request' }).click();
+		await expect(page.getByRole('alert')).toContainText(/staffed 24 hours/);
 		await page.getByPlaceholder(/Airport code/).fill('KMMH');
 		await page.getByRole('button', { name: 'Send request' }).click();
-		await expect(page.getByText(/Thanks — KMMH has been added to the request list/)).toBeVisible();
+		await expect(page.getByTestId('request-ok')).toContainText(/MMH .*no control tower.*added to the request list/);
 		const text = await page.locator('main').textContent();
 		expect(text).not.toMatch(/we will review|within \d+ (days|hours)/i);
 	});
