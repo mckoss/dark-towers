@@ -59,11 +59,36 @@
 	// ---- playback ----
 	let raf = 0;
 	let last = 0;
+	// Playback stops on the closest moment, the pair flashes HOLD_FLASHES
+	// times, then continues.
+	const HOLD_FLASHES = 5;
+	const FLASH_MS = 500;
+	let holding = $state(false);
+	let holdTimer: ReturnType<typeof setTimeout> | undefined;
+	let heldClosest = false;
+	function clearHold() {
+		clearTimeout(holdTimer);
+		holding = false;
+	}
 	function tick(now: number) {
-		if (!playing) return;
+		if (!playing || holding) return;
 		const dt = last ? now - last : 0;
 		last = now;
-		t = Math.min(end, t + dt * speed);
+		let next = Math.min(end, t + dt * speed);
+		if (!heldClosest && incident.t > t && incident.t <= next) {
+			heldClosest = true;
+			t = incident.t;
+			holding = true;
+			holdTimer = setTimeout(() => {
+				holding = false;
+				if (playing) {
+					last = 0;
+					raf = requestAnimationFrame(tick);
+				}
+			}, HOLD_FLASHES * FLASH_MS);
+			return;
+		}
+		t = next;
 		if (t >= end) {
 			playing = false;
 			return;
@@ -75,9 +100,13 @@
 		if (playing) {
 			playing = false;
 			cancelAnimationFrame(raf);
+			clearHold();
 			return;
 		}
-		if (t >= end) t = start;
+		if (t >= end) {
+			t = start;
+			heldClosest = false;
+		}
 		playing = true;
 		last = 0;
 		raf = requestAnimationFrame(tick);
@@ -88,7 +117,9 @@
 		if (!replay) return;
 		playing = false;
 		cancelAnimationFrame(raf);
+		clearHold();
 		t = Math.min(end, Math.max(start, t + dir * STEP_MS));
+		heldClosest = t >= incident.t;
 	}
 	/** Choosing a speed also resumes playback if it was paused. */
 	function setSpeed(s: number) {
@@ -98,8 +129,10 @@
 	function scrub(e: Event) {
 		playing = false;
 		cancelAnimationFrame(raf);
+		clearHold();
 		const k = Number((e.currentTarget as HTMLInputElement).value);
 		t = start + (k / (STEPS - 1)) * span;
+		heldClosest = t >= incident.t;
 	}
 
 	// ---- map ----
@@ -199,6 +232,7 @@
 			cancelled = true;
 			ro?.disconnect();
 			cancelAnimationFrame(raf);
+			clearTimeout(holdTimer);
 			base?.destroy();
 			base = null;
 			layers = null;
@@ -286,7 +320,7 @@
 	</div>
 	<div class="replay-controls">
 		<button class="btn" data-testid="replay-play" onclick={play} disabled={!replay}>
-			{playing ? 'Pause' : atEnd ? 'Replay again' : 'Play replay'}
+			{playing ? (holding ? 'Closest moment' : 'Pause') : atEnd ? 'Replay again' : 'Play replay'}
 		</button>
 		<div class="replay-track">
 			<input
