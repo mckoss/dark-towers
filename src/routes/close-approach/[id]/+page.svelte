@@ -22,7 +22,7 @@
 	const correction = $derived(altCtx.offsetFt);
 	const showAlt = (reported: number) => {
 		const d = displayAlt(reported, altCtx, altView.mode);
-		return `${d.ft.toLocaleString('en-US')} ft ${d.mode === 'reported' ? 'ADS-B' : 'AGL'}`;
+		return `${d.ft.toLocaleString('en-US')} ft`;
 	};
 	const signed = (n: number) => `${n < 0 ? '−' : '+'}${Math.abs(n).toLocaleString('en-US')}'`;
 
@@ -98,17 +98,17 @@
 			<div class="alt-note" data-testid="alt-note">
 				{#if altView.mode === 'agl'}
 					{#if altSource === 'on-field'}
-						AGL = height above the field: ADS-B altitude, corrected {signed(-correction)} — {altCtx.points === 1 ? 'an aircraft' : `${altCtx.points} reports from aircraft`} on the field within an hour of this moment read {signed(correction)} against the field elevation of {airport.elevationFt.toLocaleString('en-US')}'. Source altitudes come in 100' steps.
+						Altitudes shown are AGL (height above the field): ADS-B altitude, corrected {signed(-correction)} — {altCtx.points === 1 ? 'an aircraft' : `${altCtx.points} reports from aircraft`} on the field within an hour of this moment read {signed(correction)} against the field elevation of {airport.elevationFt.toLocaleString('en-US')}'. Source altitudes come in 100' steps.
 					{:else if altSource === 'weather'}
-						AGL = height above the field: ADS-B altitude, corrected {signed(-correction)} for the air pressure at {localTime(airport.tz, incident.t, true)}, minus the field elevation of {airport.elevationFt.toLocaleString('en-US')}'. Source altitudes come in 100' steps.
+						Altitudes shown are AGL (height above the field): ADS-B altitude, corrected {signed(-correction)} for the air pressure at {localTime(airport.tz, incident.t, true)}, minus the field elevation of {airport.elevationFt.toLocaleString('en-US')}'. Source altitudes come in 100' steps.
 					{:else if altSource === 'tracks'}
-						AGL = height above the field: ADS-B altitude, corrected {signed(-correction)} from the lowest points of that night's tracks near the runway, minus the field elevation of {airport.elevationFt.toLocaleString('en-US')}'. Source altitudes come in 100' steps.
+						Altitudes shown are AGL (height above the field): ADS-B altitude, corrected {signed(-correction)} from the lowest points of that night's tracks near the runway, minus the field elevation of {airport.elevationFt.toLocaleString('en-US')}'. Source altitudes come in 100' steps.
 					{:else}
-						AGL = height above the field ({airport.elevationFt.toLocaleString('en-US')}'), uncorrected: no ground reference for this night.
+						Altitudes shown are AGL (height above the field, {airport.elevationFt.toLocaleString('en-US')}'), uncorrected: no ground reference for this night.
 					{/if}
 					<button type="button" class="alt-switch" onclick={() => setAltMode('reported')}>Show ADS-B altitudes</button>
 				{:else}
-					ADS-B altitude: the figure each aircraft broadcast, which is measured against a standard air pressure and not corrected for the day's weather or the field elevation.
+					Altitudes shown are ADS-B: the figure each aircraft broadcast, measured against a standard air pressure and not corrected for the day's weather or the field elevation.
 					<button type="button" class="alt-switch" onclick={() => setAltMode('agl')}>Show heights AGL</button>
 				{/if}
 			</div>

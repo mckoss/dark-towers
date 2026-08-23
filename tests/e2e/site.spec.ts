@@ -169,10 +169,9 @@ test.describe('close approach', () => {
 		await expect(page.getByText(/Nearest approach · \d+:\d\d:\d\d [ap]m/)).toBeVisible();
 		await expect(page.getByTestId('nearest-moment')).toContainText('kt');
 		// Altitudes default to height above the field; the reader can switch to raw reported altitude.
-		await expect(page.getByTestId('alt-note')).toContainText(/AGL = height above the field: ADS-B altitude, corrected [−+][\d,]+'/);
+		await expect(page.getByTestId('alt-note')).toContainText(/Altitudes shown are AGL .*corrected [−+][\d,]+'/);
 		await page.getByRole('button', { name: 'Show ADS-B altitudes' }).click();
-		await expect(page.getByTestId('alt-note')).toContainText(/ADS-B altitude: the figure each aircraft broadcast/);
-		await expect(page.getByTestId('nearest-moment')).toContainText('ft ADS-B');
+		await expect(page.getByTestId('alt-note')).toContainText(/Altitudes shown are ADS-B/);
 		await page.getByRole('button', { name: 'Show heights AGL' }).click();
 		// Editorial rule: never claim what is or is not in an FAA record.
 		expect(await page.locator('main').textContent()).not.toMatch(/reported to the FAA|FAA record/i);
