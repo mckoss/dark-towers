@@ -2,7 +2,7 @@
 	/* 30-night calendar (README §3). Heat by flight volume through greys; nights
 	   with a close approach are accent-filled; selected night has an ink border. */
 	import type { NightSummary } from '$lib/types';
-	import { weekdayShort, dayOfMonth, nightLabel } from '$lib/time';
+	import { weekdayShort, dayOfMonth } from '$lib/time';
 
 	interface Props {
 		calendar: { night: string; summary: NightSummary | null }[];
@@ -11,20 +11,19 @@
 	}
 	let { calendar, selected, onselect }: Props = $props();
 
-	/** Text for a chip's hover / focus tip and accessible label. */
-	function describe(c: { night: string; summary: NightSummary | null }): string {
+	/** Lines for a chip's hover / focus tip: flights, then close approaches. */
+	function describe(c: { night: string; summary: NightSummary | null }): string[] {
 		const s = c.summary;
-		if (!s) return `${nightLabel(c.night)} — no data yet`;
-		const ca = s.incidents ? `, ${s.incidents} close approach${s.incidents === 1 ? '' : 'es'}` : '';
-		return `${nightLabel(c.night)} — ${s.flights} flights${ca}`;
+		if (!s) return ['No data yet'];
+		return [`${s.flights} flights`, `${s.incidents} close ${s.incidents === 1 ? 'approach' : 'approaches'}`];
 	}
-	let tip = $state<{ text: string; x: number } | null>(null);
+	let tip = $state<{ lines: string[]; x: number; hot: boolean } | null>(null);
 	let gridEl: HTMLDivElement;
 	function showTip(e: Event, c: { night: string; summary: NightSummary | null }) {
 		const el = e.currentTarget as HTMLElement;
 		const r = el.getBoundingClientRect(),
 			g = gridEl.getBoundingClientRect();
-		tip = { text: describe(c), x: r.left - g.left + r.width / 2 };
+		tip = { lines: describe(c), x: r.left - g.left + r.width / 2, hot: (c.summary?.incidents ?? 0) > 0 };
 	}
 
 	const max = $derived(Math.max(1, ...calendar.map((c) => c.summary?.flights ?? 0)));
@@ -49,7 +48,9 @@
 	</div>
 	<div class="grid" bind:this={gridEl}>
 		{#if tip}
-			<div class="tip" data-testid="cal-tip" style:left="{tip.x}px">{tip.text}</div>
+			<div class="tip datablock" data-testid="cal-tip" style:left="{tip.x}px" style:--db-color={tip.hot ? 'var(--accent)' : 'var(--ink)'}>
+				{#each tip.lines as line, i (i)}<div class={i === 0 ? 'db-id' : 'db-plain'}>{line}</div>{/each}
+			</div>
 		{/if}
 		{#each calendar as c (c.night)}
 			{@const s = c.summary}
@@ -90,15 +91,8 @@
 	.tip {
 		position: absolute;
 		top: 100%;
-		margin-top: 6px;
+		margin-top: 4px;
 		transform: translateX(-50%);
-		padding: 5px 8px;
-		background: var(--ink);
-		color: #fff;
-		font-size: 12px;
-		font-weight: 600;
-		white-space: nowrap;
-		pointer-events: none;
 		z-index: 5;
 	}
 	.night {

@@ -105,7 +105,7 @@ test.describe('airport detail', () => {
 		expect(await cards.count()).toBeGreaterThan(0);
 		// Hovering a night shows its flight and close-approach counts.
 		await page.getByRole('button', { name: /Mon 17/ }).hover();
-		await expect(page.getByTestId('cal-tip')).toContainText(/\d+ flights, \d+ close approach/);
+		await expect(page.getByTestId('cal-tip')).toContainText(/\d+ flights\s*\d+ close approach/);
 		// The hours the night covers sit under the title.
 		await expect(page.getByTestId('night-hours')).toContainText(/Tower closed \d+:00 [ap]m to \d+:00 [ap]m/);
 	});
