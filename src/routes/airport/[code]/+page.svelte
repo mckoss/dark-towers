@@ -31,14 +31,6 @@
 
 	let focus: string | null = $state(null);
 
-	const intro = $derived.by(() => {
-		const a = airport;
-		if (!a.towerHours) {
-			return `There is no control tower at ${a.name}. At every hour of the day, airliners and private aircraft arrive and depart with nobody watching the airspace from a tower.`;
-		}
-		const closed = hoursClosed(a);
-		return `The tower at ${a.name} is staffed from ${hourLabel(a.towerHours.open)} to ${hourLabel(a.towerHours.close)}. For the other ${closed} hours of every day, airliners and private aircraft arrive and depart with nobody in the tower.`;
-	});
 
 
 	function selectNight(n: string) {
@@ -69,7 +61,6 @@
 				<div class="place">{airport.city}, {airport.state} · {airport.icao}</div>
 			</div>
 		</div>
-		<p class="intro">{intro}</p>
 	</div>
 	<div class="facts">
 		<div class="fact">
@@ -200,13 +191,6 @@
 	.place {
 		font-size: 15px;
 		color: var(--ink-60);
-	}
-	.intro {
-		margin-top: 22px;
-		max-width: 60ch;
-		font-size: 16px;
-		line-height: 1.55;
-		color: var(--ink-80);
 	}
 	.facts {
 		display: grid;
