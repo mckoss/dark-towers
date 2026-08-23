@@ -49,10 +49,6 @@
 
 	const kindLabel = (f: Flight) => (f.category === 'airline' ? 'Passenger airline' : 'Private or training');
 	const describe = (f: Flight) => `${kindLabel(f)}${f.type ? ` · ${f.type}` : ''}`;
-	const identLabel = (f: Flight) => {
-		const sub = flightSubLabel(f);
-		return sub ? `${flightLabel(f)} (${sub})` : flightLabel(f);
-	};
 
 	function movement(f: Flight): string {
 		const other = f.otherCity ?? f.otherName ?? f.otherCode;
@@ -87,8 +83,17 @@
 				<div class="figure accent tabular">{ft(incident.verticalFt)} <span class="at">at</span> {nm(incident.lateralNm)}</div>
 			</div>
 			<div class="at-moment" data-testid="nearest-moment">
-				<div class="moment-row"><span class="swatch" class:swatch-accent={colors[0] === 'accent'} class:swatch-ink={colors[0] === 'ink'}></span><span class="who">{flightLabel(a)}</span><span class="tabular">{showAlt(incident.altA)}</span><span class="tabular">{incident.gsA} kt</span></div>
-				<div class="moment-row"><span class="swatch" class:swatch-accent={colors[1] === 'accent'} class:swatch-ink={colors[1] === 'ink'}></span><span class="who">{flightLabel(b)}</span><span class="tabular">{showAlt(incident.altB)}</span><span class="tabular">{incident.gsB} kt</span></div>
+				{#each [{ f: a, alt: incident.altA, gs: incident.gsA, swatch: colors[0] }, { f: b, alt: incident.altB, gs: incident.gsB, swatch: colors[1] }] as row (row.f.id)}
+					<div class="moment-row">
+						<span class="swatch" class:swatch-accent={row.swatch === 'accent'} class:swatch-ink={row.swatch === 'ink'}></span>
+						<span class="who">
+							<span class="who-name">{flightLabel(row.f)}{#if flightSubLabel(row.f)}<span class="who-sub">{flightSubLabel(row.f)}</span>{/if}</span>
+							<span class="who-desc">{describe(row.f)} · {movement(row.f)}</span>
+						</span>
+						<span class="tabular">{showAlt(row.alt)}</span>
+						<span class="tabular">{row.gs} kt</span>
+					</div>
+				{/each}
 			</div>
 			<div class="alt-note" data-testid="alt-note">
 				{#if altView.mode === 'agl'}
@@ -118,21 +123,6 @@
 	</div>
 </section>
 
-<section class="section split">
-	<div>
-		{#each [{ f: a, label: 'Aircraft A', alt: incident.altA, swatch: colors[0] }, { f: b, label: 'Aircraft B', alt: incident.altB, swatch: colors[1] }] as card (card.label)}
-			<div class="card">
-				<div class="card-head">
-					<span class="swatch" class:swatch-accent={card.swatch === 'accent'} class:swatch-ink={card.swatch === 'ink'}></span>
-					<span class="table-header">{card.label}</span>
-				</div>
-				<div class="ident">{identLabel(card.f)}</div>
-				<div class="desc">{describe(card.f)} · {movement(card.f)}</div>
-				<div class="alt">{altView.mode === 'agl' ? 'Height AGL' : 'ADS-B altitude'} at closest point: <strong>{showAlt(card.alt)}</strong></div>
-			</div>
-		{/each}
-	</div>
-</section>
 
 <section class="others">
 	<h2 class="others-heading">Other close approaches at {airport.name}</h2>
@@ -225,7 +215,7 @@
 	}
 	.moment-row {
 		display: grid;
-		grid-template-columns: 12px 1fr 80px 60px;
+		grid-template-columns: 12px 1fr 96px 56px;
 		gap: 12px;
 		align-items: center;
 		padding: 8px 0;
@@ -236,7 +226,22 @@
 		height: 12px;
 	}
 	.moment-row .who {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		min-width: 0;
+	}
+	.who-name {
 		font-weight: 700;
+	}
+	.who-sub {
+		margin-left: 0.45em;
+		font-weight: 400;
+		color: var(--ink-45);
+	}
+	.who-desc {
+		font-size: 12px;
+		color: var(--ink-60);
 	}
 	.at {
 		font-size: 0.5em;
@@ -269,15 +274,6 @@
 	.replay-col {
 		min-width: 0;
 	}
-	.card {
-		padding: 24px;
-		border-bottom: var(--row-rule);
-	}
-	.card-head {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-	}
 	.swatch {
 		display: block;
 		width: 22px;
@@ -288,21 +284,6 @@
 	}
 	.swatch-ink {
 		background: var(--ink);
-	}
-	.ident {
-		margin-top: 12px;
-		font-size: 28px;
-		font-weight: 900;
-		letter-spacing: -0.02em;
-	}
-	.desc {
-		margin-top: 6px;
-		font-size: 15px;
-		color: var(--ink-60);
-	}
-	.alt {
-		margin-top: 12px;
-		font-size: 15px;
 	}
 	.others {
 		padding: 36px var(--gutter) 64px;
@@ -363,9 +344,6 @@
 		}
 		.figure {
 			font-size: 40px;
-		}
-		.card {
-			padding: 20px var(--gutter);
 		}
 		.row {
 			grid-template-columns: 1fr 1fr;
