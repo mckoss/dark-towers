@@ -4,7 +4,7 @@
 
 ```
 npm install
-cp settings.example.json settings.json     # add your FlightAware AeroAPI key (or set FLIGHTAWARE_API_KEY)
+cp config.example.json config.json         # add your FlightAware AeroAPI key, admins, Google client
 npm run db:rebuild                         # build the SQLite db from the committed sample data (no API calls)
 npm run dev                                # http://localhost:5173
 npm test && npm run test:e2e               # vitest + Playwright

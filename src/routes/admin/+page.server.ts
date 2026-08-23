@@ -1,13 +1,12 @@
 import { AIRPORTS } from '$lib/airports';
 import { deleteRequest, incompleteNights, listRequests, nightCounts, recentRuns } from '$lib/server/db';
 import { currentJob, startCatchUp, startIngest } from '$lib/server/jobs';
-import { flightAwareApiKey } from '$lib/server/config';
-import { settings } from '$lib/server/settings';
+import { config, flightAwareApiKey } from '$lib/server/config';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = ({ locals }) => {
-	const s = settings();
+	const s = config();
 	return {
 		user: locals.user!,
 		admins: s.admins,

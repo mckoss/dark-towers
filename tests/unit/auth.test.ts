@@ -2,44 +2,44 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const base = { api_key: 'k', admins: ['Admin@Example.com ', 'second@example.com'], session_secret: 'test-secret', google: { client_id: 'cid', client_secret: 'cs' } };
 
-async function load(settingsJson: unknown) {
-	vi.stubEnv('SETTINGS_JSON', JSON.stringify(settingsJson));
+async function load(configJson: unknown) {
+	vi.stubEnv('CONFIG_JSON', JSON.stringify(configJson));
 	vi.stubEnv('NODE_ENV', 'test');
 	vi.resetModules();
-	const settings = await import('../../src/lib/server/settings');
-	settings.resetSettingsCache();
+	const cfg = await import('../../src/lib/server/config');
+	cfg.resetConfigCache();
 	const session = await import('../../src/lib/server/session');
 	const google = await import('../../src/lib/server/google');
-	return { settings, session, google };
+	return { cfg, session, google };
 }
 
-describe('settings', () => {
+describe('config', () => {
 	afterEach(() => vi.unstubAllEnvs());
 
-	it('loads from SETTINGS_JSON and normalises admin emails', async () => {
-		const { settings } = await load(base);
-		expect(settings.settings().admins).toEqual(['admin@example.com', 'second@example.com']);
-		expect(settings.isAdmin('ADMIN@example.com')).toBe(true);
-		expect(settings.isAdmin('someone@else.com')).toBe(false);
-		expect(settings.isAdmin(null)).toBe(false);
+	it('loads from CONFIG_JSON and normalises admin emails', async () => {
+		const { cfg } = await load(base);
+		expect(cfg.config().admins).toEqual(['admin@example.com', 'second@example.com']);
+		expect(cfg.isAdmin('ADMIN@example.com')).toBe(true);
+		expect(cfg.isAdmin('someone@else.com')).toBe(false);
+		expect(cfg.isAdmin(null)).toBe(false);
 	});
 
-	it('FLIGHTAWARE_API_KEY env overrides the settings key', async () => {
+	it('FLIGHTAWARE_API_KEY env overrides the config key', async () => {
 		vi.stubEnv('FLIGHTAWARE_API_KEY', 'override');
-		const { settings } = await load(base);
-		expect(settings.settings().api_key).toBe('override');
+		const { cfg } = await load(base);
+		expect(cfg.config().api_key).toBe('override');
 	});
 
 	it('google is undefined unless both client fields are present', async () => {
-		const { settings } = await load({ ...base, google: { client_id: 'x' } });
-		expect(settings.settings().google).toBeUndefined();
+		const { cfg } = await load({ ...base, google: { client_id: 'x' } });
+		expect(cfg.config().google).toBeUndefined();
 	});
 
 	it('open mode only with DTW_NO_AUTH', async () => {
-		const { settings } = await load(base);
-		expect(settings.openMode()).toBe(false);
+		const { cfg } = await load(base);
+		expect(cfg.openMode()).toBe(false);
 		vi.stubEnv('DTW_NO_AUTH', '1');
-		expect(settings.openMode()).toBe(true);
+		expect(cfg.openMode()).toBe(true);
 	});
 });
 

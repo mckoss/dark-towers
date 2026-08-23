@@ -1,8 +1,7 @@
 import { building } from '$app/environment';
-import { SCHEDULER_ENABLED } from '$lib/server/config';
 import { startScheduler } from '$lib/server/scheduler';
 import { decodeSession, SESSION_COOKIE } from '$lib/server/session';
-import { isAdmin, openMode } from '$lib/server/settings';
+import { isAdmin, openMode, SCHEDULER_ENABLED } from '$lib/server/config';
 import { error, redirect, type Handle, type ServerInit } from '@sveltejs/kit';
 
 let warnedOpen = false;

@@ -7,11 +7,12 @@
 import cron from 'node-cron';
 import { trackedAirports } from '$lib/airports';
 import { addDays, nightWindow, todayKey } from '$lib/time';
+import { config } from './config';
 import { nightSummary } from './db';
 import { ingestNight } from './pipeline';
 
 /** AeroAPI history reach for the account tier, in days. */
-const HISTORY_DAYS = Number(process.env.HISTORY_DAYS ?? 9);
+const HISTORY_DAYS = config().history_days;
 /** Wait this long after the window ends so late tracks are available. */
 const SETTLE_MS = 60 * 60 * 1000;
 

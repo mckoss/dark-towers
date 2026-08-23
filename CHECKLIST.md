@@ -7,7 +7,7 @@ Status key: `[x]` done & verified · `[~]` in progress / partial · `[ ]` to do 
 ## 0. Repo & hosting
 - [x] Public repo `mckoss/dark-towers`, prototype hosted on GitHub Pages (desktop + mobile chooser)
 - [x] SvelteKit 2 / Svelte 5 / TypeScript scaffold, `adapter-node` (Railway-ready), `npm start` runs the built server
-- [x] Secrets: `FLIGHTAWARE_API_KEY` env → fallback gitignored `settings.json`
+- [x] Secrets: `FLIGHTAWARE_API_KEY` env → fallback gitignored `config.json`
 - [?] Railway service + volume for `DATA_DIR`, deploy on CI pass on `main` (QUESTIONS #12)
 - [x] GitHub Actions CI: `npm run check`, unit tests, DB rebuild from raw, Playwright e2e — green on `main` (~1 min)
 - [x] `CLAUDE.md` with project conventions
@@ -55,12 +55,12 @@ Status key: `[x]` done & verified · `[~]` in progress / partial · `[ ]` to do 
 - [ ] Verify first autonomous nightly run in production
 
 ## 5b. Admin & accounts
-- [x] Single settings source: `settings.json` locally / `SETTINGS_JSON` env on Railway (same JSON) — api key, admins, Google client, session secret, public origin
+- [x] Single settings source: `config.json` locally / `CONFIG_JSON` env on Railway (same JSON) — api key, admins, Google client, session secret, public origin
 - [x] Google sign-in (authorization-code flow, id_token claims checked for audience/issuer, no new dependency); signed stateless session cookie; admins allow-list checked live per request
 - [x] `/admin` console: unlinked, `noindex`, robots-disallowed; redirect to sign-in when anonymous, 403 when not an admin; open mode for local dev/e2e via `DTW_NO_AUTH=1`
 - [x] Console features: config status, "Catch up now", ingest a night (with force), live job log, data-on-hand per airport, incomplete nights, recent runs, airport requests (delete)
 - [?] Google OAuth client id/secret — needs creating in Google Cloud Console (QUESTIONS #18)
-- [ ] Admin: manage admins from the UI (currently the list lives in settings) — follow-up if wanted
+- [ ] Admin: manage admins from the UI (currently the list lives in config.json) — follow-up if wanted
 - [ ] Admin: edit tracked airports / tower hours from the UI instead of `src/lib/airports.ts`
 
 ## 6. Backlog — requested

@@ -1,6 +1,6 @@
 import { exchangeCode } from '$lib/server/google';
 import { setSessionCookie } from '$lib/server/session';
-import { isAdmin } from '$lib/server/settings';
+import { isAdmin } from '$lib/server/config';
 import { error, redirect, type RequestHandler } from '@sveltejs/kit';
 
 export const GET: RequestHandler = async ({ url, cookies, fetch }) => {

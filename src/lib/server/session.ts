@@ -4,7 +4,7 @@
  */
 import crypto from 'node:crypto';
 import type { Cookies } from '@sveltejs/kit';
-import { settings } from './settings';
+import { config } from './config';
 
 export const SESSION_COOKIE = 'dtw_session';
 const SESSION_DAYS = 14;
@@ -17,11 +17,11 @@ export interface SessionUser {
 
 let ephemeralSecret: string | null = null;
 function secret(): string {
-	const s = settings().session_secret;
+	const s = config().session_secret;
 	if (s) return s;
 	if (!ephemeralSecret) {
 		ephemeralSecret = crypto.randomBytes(32).toString('hex');
-		console.warn('[session] no session_secret in settings — sessions will not survive a restart');
+		console.warn('[session] no session_secret in config — sessions will not survive a restart');
 	}
 	return ephemeralSecret;
 }

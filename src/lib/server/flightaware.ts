@@ -90,7 +90,7 @@ export class ApiError extends Error {
 
 async function apiGet(pathAndQuery: string, log?: Logger): Promise<unknown> {
 	const key = flightAwareApiKey();
-	if (!key) throw new Error('No FlightAware API key: set FLIGHTAWARE_API_KEY or create settings.json');
+	if (!key) throw new Error('No FlightAware API key: add api_key to config.json (or CONFIG_JSON)');
 	return spaced(async () => {
 		log?.(`GET ${pathAndQuery}`);
 		const res = await fetch(`${BASE}${pathAndQuery}`, { headers: { 'x-apikey': key, accept: 'application/json' } });

@@ -1,16 +1,16 @@
 /** Google OAuth 2.0 web flow, no library. */
 import crypto from 'node:crypto';
-import { settings } from './settings';
+import { config } from './config';
 
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 
 export function googleConfigured(): boolean {
-	return !!settings().google;
+	return !!config().google;
 }
 
 export function redirectUri(requestOrigin: string): string {
-	return `${settings().public_origin ?? requestOrigin}/auth/google/callback`;
+	return `${config().public_origin ?? requestOrigin}/auth/google/callback`;
 }
 
 export function newState(): string {
@@ -18,7 +18,7 @@ export function newState(): string {
 }
 
 export function authorizationUrl(requestOrigin: string, state: string): string {
-	const g = settings().google;
+	const g = config().google;
 	if (!g) throw new Error('Google sign-in is not configured');
 	const q = new URLSearchParams({
 		client_id: g.client_id,
@@ -38,7 +38,7 @@ export interface GoogleUser {
 }
 
 export async function exchangeCode(requestOrigin: string, code: string, fetchFn: typeof fetch = fetch): Promise<GoogleUser> {
-	const g = settings().google;
+	const g = config().google;
 	if (!g) throw new Error('Google sign-in is not configured');
 	const res = await fetchFn(TOKEN_URL, {
 		method: 'POST',

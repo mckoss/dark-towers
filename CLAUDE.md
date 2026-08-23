@@ -6,7 +6,8 @@ status; `QUESTIONS.md` for open decisions.
 
 ## Stack
 - SvelteKit 2, Svelte 5 **runes mode** (`$props/$state/$derived/$effect`, `onclick` not `on:click`), TypeScript strict.
-- `adapter-node` → `npm run build && npm start` (Railway). `PORT`, `DATA_DIR`, `FLIGHTAWARE_API_KEY`, `SCHEDULER=off` env vars.
+- `adapter-node` → `npm run build && npm start` (Railway). Config: `config.json` locally / `CONFIG_JSON` env on Railway (same JSON: api_key, admins, google, session_secret, public_origin, data_dir, scheduler, history_days). `PORT` comes from the platform.
+- `/admin` is unlinked and Google-sign-in gated; `DTW_NO_AUTH=1` opens it locally.
 - Data: raw FlightAware responses cached forever under `data/raw/<ICAO>/…`; SQLite at `data/db/darktowers.sqlite` (gitignored, rebuild with `npm run db:rebuild`).
 - Maps: Leaflet via `src/lib/leaflet.ts` (CARTO tiles — never tile.openstreetmap.org); US map is d3-geo SVG.
 - Tracks are drawn/replayed through `src/lib/spline.ts` (time-parameterised Catmull-Rom → cubic Bézier).
