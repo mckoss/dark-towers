@@ -49,6 +49,36 @@ const DUPLICATE_LATERAL_NM = 0.2;
 const DUPLICATE_VERTICAL_FT = 300;
 const DUPLICATE_FRACTION = 0.8;
 
+/**
+ * Same-aircraft test at the reports themselves, which survives a sparse
+ * "ghost" record (FlightAware sometimes files the same transponder under a
+ * second ad-hoc identity with a report every minute): if most of one track's
+ * reports fall within 0.15 NM and 300 ft of where the other track was at that
+ * instant, they are one aircraft. Needs at least 3 overlapping reports.
+ */
+const GHOST_LATERAL_NM = 0.15;
+const GHOST_VERTICAL_FT = 300;
+const GHOST_FRACTION = 0.8;
+export function sameAircraft(a: TrackSpline, b: TrackSpline, origin: LatLon): boolean {
+	for (const [x, y] of [
+		[a, b],
+		[b, a]
+	] as const) {
+		let n = 0,
+			near = 0;
+		for (const p of x.flight.positions) {
+			if (p.t < y.spline.t0 || p.t > y.spline.t1) continue;
+			const q = y.spline.at(p.t);
+			if (!q) continue;
+			const [e, no] = toLocalNm(origin, [p.lat, p.lon]);
+			n++;
+			if (Math.hypot(e - q[0], no - q[1]) < GHOST_LATERAL_NM && Math.abs(p.alt - q[2]) < GHOST_VERTICAL_FT) near++;
+		}
+		if (n >= 3 && near / n >= GHOST_FRACTION) return true;
+	}
+	return false;
+}
+
 function onGround(p: number[], elevationFt: number | undefined, offsetFt: number): boolean {
 	if (elevationFt != null && p[2] - offsetFt <= elevationFt + GROUND_AGL_FT) return true;
 	return p.length > 3 && p[3] < GROUND_SPEED_KT;
@@ -112,6 +142,7 @@ export function findIncidents(origin: LatLon, airportIcao: string, night: string
 			// One physical aircraft can carry two flight ids back to back (e.g. a
 			// touch-and-go). It cannot be close to itself.
 			if (A.flight.tail && A.flight.tail === B.flight.tail) continue;
+			if (sameAircraft(A, B, origin)) continue;
 			const cp = closestApproach(A.spline, B.spline, opts);
 			if (!cp) continue;
 			const posA = fromLocalNm(origin, [cp.a[0], cp.a[1]]);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fromLocalNm, type LatLon } from '$lib/geo';
-import { closestApproach, buildTrackSpline, findIncidents, incidentId, severityOf } from '$lib/separation';
+import { closestApproach, buildTrackSpline, findIncidents, incidentId, sameAircraft, severityOf } from '$lib/separation';
 import type { Flight, Position } from '$lib/types';
 
 const ORIGIN: LatLon = [47.9079, -122.2816];
@@ -162,5 +162,29 @@ describe('closestApproach / severityOf', () => {
 		expect(severityOf(0.99, 499)).toBe('very-close');
 		expect(severityOf(1, 499)).toBe('closer-than-allowed');
 		expect(severityOf(0.99, 500)).toBe('closer-than-allowed');
+	});
+});
+
+describe('sameAircraft (ghost records)', () => {
+	it('a sparse ad-hoc record riding on a real track is the same aircraft, a parallel one is not', () => {
+		const origin: [number, number] = [47.9079, -122.2816];
+		const mk = (id: string, pts: [number, number, number, number][]): Flight => ({
+			id, airport: 'KPAE', night: '2026-08-22', ident: id, tail: null, type: null, category: 'private', operator: null, operatorName: null, operatorShort: null,
+			direction: 'departure', eventTime: 0, otherCode: null, otherName: null, otherCity: null,
+			positions: pts.map(([t, e, n, alt]) => { const [lat, lon] = fromLocalNm(origin, [e, n]); return { t, lat, lon, alt, gs: 200, hdg: 0, dist: Math.hypot(e, n) }; })
+		});
+		// Real track: 16 s reports climbing out northbound.
+		const real = mk('REAL', Array.from({ length: 20 }, (_, i) => [i * 16_000, 0, i * 0.9, 2000 + i * 400] as [number, number, number, number]));
+		// Ghost: a report every 60 s on the same path (small jitter).
+		const ghost = mk('GHOST', [0, 60_000, 120_000, 180_000, 240_000].map((t) => [t, 0.03, (t / 16_000) * 0.9, 2000 + (t / 16_000) * 400 + 40] as [number, number, number, number]));
+		// A genuinely separate aircraft 0.5 NM abeam at the same altitude.
+		const other = mk('OTHER', [0, 60_000, 120_000, 180_000, 240_000].map((t) => [t, 0.5, (t / 16_000) * 0.9, 2000 + (t / 16_000) * 400] as [number, number, number, number]));
+		const T = (f: Flight) => buildTrackSpline(origin, f)!;
+		expect(sameAircraft(T(real), T(ghost), origin)).toBe(true);
+		expect(sameAircraft(T(real), T(other), origin)).toBe(false);
+		// findIncidents drops the ghost pair but still flags the real neighbour.
+		const ids = findIncidents(origin, 'KPAE', '2026-08-22', [real, ghost, other]).map((i) => [i.flightA, i.flightB].sort().join('+'));
+		expect(ids).not.toContain('GHOST+REAL');
+		expect(ids).toContain('OTHER+REAL');
 	});
 });
