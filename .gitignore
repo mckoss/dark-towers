@@ -12,13 +12,11 @@ config.json
 .env.*
 !.env.example
 
-# Runtime data (SQLite db, logs). Raw sample data under data/raw is committed.
-/data/db
-/data/*.db*
-/data/logs
+# Runtime data. The raw FlightAware cache lives on the Railway volume / your machine,
+# not in git; `npm run db:seed` loads a small fixture from tests/fixtures/raw.
+/data/
 
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 test-results/
 playwright-report/
-/data/drive

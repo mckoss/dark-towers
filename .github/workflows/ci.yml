@@ -20,8 +20,8 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm test
-      # Rebuild the SQLite database from the committed raw sample data (no API calls).
-      - run: npm run db:rebuild
+      # Seed the raw cache from the test fixture and build the SQLite database (no API calls).
+      - run: npm run db:seed
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v4

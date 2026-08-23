@@ -18,7 +18,8 @@
 		"ingest": "tsx scripts/ingest.ts",
 		"db:rebuild": "tsx scripts/rebuild.ts",
 		"import:colab": "tsx scripts/import-colab.ts",
-		"test:e2e": "playwright test"
+		"test:e2e": "playwright test",
+		"db:seed": "tsx scripts/seed.ts"
 	},
 	"dependencies": {
 		"better-sqlite3": "^12.4.1",

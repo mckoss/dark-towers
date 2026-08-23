@@ -27,7 +27,7 @@ test.describe('home', () => {
 		expect(res.ok()).toBeTruthy();
 		const body = await res.json();
 		expect(body.ok).toBe(true);
-		expect(body.nights).toBeGreaterThanOrEqual(7);
+		expect(body.nights).toBeGreaterThanOrEqual(4);
 	});
 
 	test('serves a PWA manifest and service worker', async ({ request }) => {

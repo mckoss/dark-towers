@@ -24,7 +24,8 @@ Status key: `[x]` done & verified · `[~]` in progress / partial · `[ ]` to do 
 - [~] Detector calibration against real data — 10 flags over 7 nights, mostly pattern traffic vs. a landing aircraft; needs your judgement (QUESTIONS #14)
 - [x] Scheduler: hourly catch-up inside the server for every `tracked` airport (last 9 nights), runs at boot too
 - [x] CLI: `npm run ingest -- PAE 2026-08-18 [--nights N] [--offline] [--force] | --catch-up`, `npm run db:rebuild`, `npm run import:colab`
-- [x] Sample data: Colab week (Aug 12–18) imported and committed under `data/raw/KPAE` with full tracks for all 7 nights (Drive file imported 08-23)
+- [x] Sample data: all Drive weeks (May 2024 → Aug 2026) imported locally; `data/` is gitignored, a 4-night fixture (`tests/fixtures/raw`, `npm run db:seed`) serves dev/CI
+- [ ] Backup job for the Railway volume (raw cache + SQLite)
 - [x] Unit tests (96): time windows/DST, geo, spline continuity & smoothness, separation detector on synthetic tracks, track clipping incl. ring-crossing interpolation, DB upserts, idempotent re-ingest with `fetch` never called
 - [x] Airport "requested" form persists to `requests` table (no email yet — QUESTIONS #8)
 

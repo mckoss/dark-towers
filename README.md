@@ -5,7 +5,7 @@
 ```
 npm install
 cp config.example.json config.json         # add your FlightAware AeroAPI key, admins, Google client
-npm run db:rebuild                         # build the SQLite db from the committed sample data (no API calls)
+npm run db:seed                            # load the test fixture (4 KPAE nights) and build the SQLite db — no API calls
 npm run dev                                # http://localhost:5173
 npm test && npm run test:e2e               # vitest + Playwright
 npm run ingest -- PAE 2026-08-22           # collect one night (cached; re-runs are free)
