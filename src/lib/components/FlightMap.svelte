@@ -2,7 +2,7 @@
 	import { flightLabel } from '$lib/flights';
 	import { dataBlockHtml, trendOf } from '$lib/datablock';
 	import { altView, displayAlt, NO_CORRECTION, type AltContext } from '$lib/altview.svelte';
-	import { localClock, localTimeZoned } from '$lib/time';
+	import { localTimeZoned } from '$lib/time';
 	import { glyphHtml, silhouetteFor } from '$lib/replay';
 	import { SEPARATION_LATERAL_NM, SEPARATION_VERTICAL_FT } from '$lib/airports';
 	import { distanceNm } from '$lib/geo';
@@ -426,7 +426,7 @@
 			<input class="replay-scrubber" data-testid="night-scrubber" type="range" min="0" max={STEPS - 1} step="1" value={step} oninput={scrub} aria-label="Replay position" disabled={!span} />
 			{#if span}
 				{#each sortedIncidents as inc (inc.id)}
-					<span class="replay-pip" data-testid="night-pip" style="--pip: {((inc.t - span.start) / (span.end - span.start)).toFixed(4)}" title="Close approach at {localClock(tz, inc.t)}"></span>
+					<span class="replay-pip" data-testid="night-pip" style="--pip: {((inc.t - span.start) / (span.end - span.start)).toFixed(4)}" title="Close approach at {localTimeZoned(tz, inc.t)}"></span>
 				{/each}
 			{/if}
 		</div>
@@ -442,7 +442,7 @@
 		<div class="replay-readout tabular">
 			<div>
 				<div class="replay-readout-label">Local time</div>
-				<div class="replay-readout-value" data-testid="night-time">{span ? localClock(tz, started ? t : span.start, true) : '—'}</div>
+				<div class="replay-readout-value" data-testid="night-time">{span ? localTimeZoned(tz, started ? t : span.start, true) : "—"}</div>
 			</div>
 			<div>
 				<div class="replay-readout-label">In the air</div>

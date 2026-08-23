@@ -10,7 +10,7 @@
 	import { onMount, untrack } from 'svelte';
 	import type { AirportConfig, Flight, Incident } from '$lib/types';
 	import { buildReplay, glyphHtml, glyphSizeFor, pairColors, silhouetteFor } from '$lib/replay';
-	import { localClock } from '$lib/time';
+	import { localTimeZoned } from '$lib/time';
 	import type { BaseMap } from '$lib/leaflet';
 	import type * as Leaflet from 'leaflet';
 
@@ -310,7 +310,7 @@
 		<div class="replay-readout tabular">
 			<div>
 				<div class="replay-readout-label">Local time</div>
-				<div class="replay-readout-value" data-testid="replay-time">{localClock(airport.tz, t, true)}</div>
+				<div class="replay-readout-value" data-testid="replay-time">{localTimeZoned(airport.tz, t, true)}</div>
 			</div>
 			<div>
 				<div class="replay-readout-label">Lateral</div>
