@@ -4,6 +4,8 @@
  * the latest complete night (so the figures on every page agree).
  */
 import { getAirport, listAirports } from './airports-store';
+import { operatorMap } from './operators-store';
+import { flightLabel } from '$lib/flights';
 import { addDays, todayKey } from '$lib/time';
 import type { AirportConfig, Flight, Incident, NightSummary } from '$lib/types';
 import * as db from './db';
@@ -139,7 +141,7 @@ export function airportDetail(code: string, night?: string | null, month?: strin
 	for (let d = period.from; d <= period.to; d = addDays(d, 1)) calendar.push({ night: d, summary: byNight.get(d) ?? null });
 	const latestInWindow = [...nights].reverse().find((n) => n.complete)?.night ?? nights[nights.length - 1]?.night ?? null;
 	const selectedNight = night && byNight.has(night) ? night : latestInWindow;
-	const flights = selectedNight ? db.flightsForNight(airport.icao, selectedNight) : [];
+	const flights = selectedNight ? decorate(db.flightsForNight(airport.icao, selectedNight)) : [];
 	const incidents = selectedNight ? db.incidentsForNight(airport.icao, selectedNight) : [];
 	return { airport, period, nav, hasAnyData: !!range.first, totals, calendar, selectedNight, flights, incidents, nightSummary: selectedNight ? (byNight.get(selectedNight) ?? null) : null };
 }
@@ -162,19 +164,40 @@ export function incidentDetail(id: string): IncidentDetail | null {
 	const a = db.flightById(incident.flightA);
 	const b = db.flightById(incident.flightB);
 	if (!airport || !a || !b) return null;
-	const others = db.flightsForNight(airport.icao, incident.night).filter((f) => f.id !== a.id && f.id !== b.id && f.positions.length > 1);
+	decorate([a, b]);
+	const others = decorate(db.flightsForNight(airport.icao, incident.night).filter((f) => f.id !== a.id && f.id !== b.id && f.positions.length > 1));
 	const period = currentPeriod();
 	const related = db
 		.incidentsForAirport(airport.icao, period.from)
 		.filter((i) => i.id !== id)
-		.map((i) => ({ ...i, identA: db.flightById(i.flightA)?.ident ?? '?', identB: db.flightById(i.flightB)?.ident ?? '?' }));
+		.map((i) => ({ ...i, identA: labelFor(i.flightA), identB: labelFor(i.flightB) }));
 	return { incident, airport, a, b, others, related };
 }
 
+/** Fill operatorName/operatorShort from the live operators table. */
+export function decorate(flights: Flight[]): Flight[] {
+	const ops = operatorMap();
+	for (const f of flights) {
+		const o = f.operator ? ops.get(f.operator.toUpperCase()) : undefined;
+		f.operatorName = o?.name ?? null;
+		f.operatorShort = o?.short ?? null;
+	}
+	return flights;
+}
+
+/** Friendly label ("Alaska 1712") for a stored flight id. */
+export function labelFor(flightId: string): string {
+	const f = db.flightById(flightId);
+	if (!f) return '?';
+	decorate([f]);
+	return flightLabel(f);
+}
+
+/** Friendly labels for every flight referenced by the incidents. */
 export function identsFor(incidents: Incident[]): Record<string, string> {
 	const out: Record<string, string> = {};
 	for (const i of incidents) {
-		for (const fid of [i.flightA, i.flightB]) if (!(fid in out)) out[fid] = db.flightById(fid)?.ident ?? '?';
+		for (const fid of [i.flightA, i.flightB]) if (!(fid in out)) out[fid] = labelFor(fid);
 	}
 	return out;
 }

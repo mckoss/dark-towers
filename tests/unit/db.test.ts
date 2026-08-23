@@ -16,7 +16,7 @@ function pos(t: number, alt = 2000): Position {
 function flight(id: string, over: Partial<Flight> = {}): Flight {
 	return {
 		id, airport: 'KPAE', night: '2026-08-14', ident: id.toUpperCase(), tail: 'N' + id, type: 'C172', category: 'private',
-		operator: null, operatorName: null, direction: 'arrival', eventTime: Date.UTC(2026, 7, 15, 5), otherCode: null,
+		operator: null, operatorName: null, operatorShort: null, direction: 'arrival', eventTime: Date.UTC(2026, 7, 15, 5), otherCode: null,
 		otherName: null, otherCity: null, positions: [pos(1), pos(2)], ...over
 	};
 }
@@ -48,7 +48,7 @@ describe('upsertFlight', () => {
 	it('round-trips every field', () => {
 		const f = flight('b', { operator: 'QXE', operatorName: 'Horizon Air', category: 'airline', direction: 'departure', otherCode: 'PDX', otherName: 'Portland', otherCity: 'Portland' });
 		upsertFlight(f);
-		expect(flightById('b')).toEqual(f);
+		expect(flightById('b')).toEqual({ ...f, operatorShort: null });
 	});
 	it('orders a night by event time', () => {
 		upsertFlight(flight('late', { eventTime: 300 }));

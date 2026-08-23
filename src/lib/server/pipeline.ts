@@ -11,7 +11,7 @@
  * overwrites the same database rows. Use `force` to re-fetch the flight list
  * (e.g. the night was first processed before its window had ended).
  */
-import { AIRSPACE_RADIUS_NM, OPERATORS, towerHoursOn } from '$lib/airports';
+import { AIRSPACE_RADIUS_NM, towerHoursOn } from '$lib/airports';
 import { getAirport } from './airports-store';
 import { distanceNm, fromLocalNm, toLocalNm } from '$lib/geo';
 import { findIncidents } from '$lib/separation';
@@ -155,7 +155,8 @@ export function normalizeFlight(airport: AirportConfig, night: string, f: RawFli
 		type: f.aircraft_type?.trim() || null,
 		category: categoryOf(f),
 		operator,
-		operatorName: operator ? (OPERATORS[operator] ?? null) : null,
+		operatorName: null,
+		operatorShort: null,
 		direction: f._source,
 		eventTime,
 		otherCode,

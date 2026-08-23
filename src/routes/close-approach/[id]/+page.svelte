@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Replay from '$lib/components/Replay.svelte';
-	import { OPERATORS } from '$lib/airports';
+	import { flightLabel, flightSubLabel } from '$lib/flights';
 	import { pairColors } from '$lib/replay';
 	import { localTime, nightLabel } from '$lib/time';
 	import type { Flight } from '$lib/types';
@@ -17,12 +17,15 @@
 
 	const kindLabel = (f: Flight) => (f.category === 'airline' ? 'Passenger airline' : 'Private or training');
 	const describe = (f: Flight) => `${kindLabel(f)}${f.type ? ` · ${f.type}` : ''}`;
-	const identLabel = (f: Flight) => (f.tail && f.tail !== f.ident ? `${f.ident} (${f.tail})` : f.ident);
+	const identLabel = (f: Flight) => {
+		const sub = flightSubLabel(f);
+		return sub ? `${flightLabel(f)} (${sub})` : flightLabel(f);
+	};
 
 	/** "a Horizon Air passenger flight" / "a private or training aircraft" */
 	function noun(f: Flight): string {
 		if (f.category === 'airline') {
-			const op = f.operatorName ?? (f.operator ? OPERATORS[f.operator] : null);
+			const op = f.operatorName;
 			return op ? `a ${op} passenger flight` : 'a passenger airline flight';
 		}
 		return 'a private or training aircraft';
@@ -33,7 +36,7 @@
 		return other ? `leaving for ${other}` : 'leaving';
 	}
 	const narrative = $derived(
-		`${a.ident}, ${noun(a)} ${movement(a)}, and ${b.ident}, ${noun(b)} ${movement(b)}, ` +
+		`${flightLabel(a)}, ${noun(a)} ${movement(a)}, and ${flightLabel(b)}, ${noun(b)} ${movement(b)}, ` +
 			`came within ${nm(incident.lateralNm)} of each other side to side while only ${ft(incident.verticalFt)} apart vertically. ` +
 			`The closest point was ${nm(incident.distNm)} from the field, at ${feet(incident.altA)} and ${feet(incident.altB)}. ` +
 			`With the tower closed, no controller was on duty to keep them apart.`
@@ -41,7 +44,7 @@
 </script>
 
 <svelte:head>
-	<title>{a.ident} and {b.ident} · close approach · Dark Tower Watch</title>
+	<title>{flightLabel(a)} and {flightLabel(b)} · close approach · Dark Tower Watch</title>
 </svelte:head>
 
 <div class="back">
@@ -54,7 +57,7 @@
 			<span class="pill" class:pill-accent={incident.severity === 'very-close'} class:pill-grey={incident.severity !== 'very-close'}>{severityLabel}</span>
 			<span class="ref tabular">{incident.id}</span>
 		</div>
-		<h1 class="headline">{a.ident} and {b.ident} came within {nm(incident.lateralNm)} and {ft(incident.verticalFt)} of each other.</h1>
+		<h1 class="headline">{flightLabel(a)} and {flightLabel(b)} came within {nm(incident.lateralNm)} and {ft(incident.verticalFt)} of each other.</h1>
 		<div class="when">{nightLabel(incident.night)} · {localTime(airport.tz, incident.t)} · {airport.name} · tower closed</div>
 		<p class="body note">{narrative}</p>
 	</div>

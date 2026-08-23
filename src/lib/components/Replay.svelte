@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { flightLabel } from '$lib/flights';
 	/**
 	 * Animated replay of a close approach. Both aircraft are sampled from their
 	 * own timestamped tracks at one shared clock; the map is Leaflet (browser
@@ -163,7 +164,7 @@
 				L!.marker([c.a.lat, c.a.lon], {
 					interactive: false,
 					zIndexOffset: -500,
-					icon: L!.divIcon({ className: 'replay-label', iconSize: [0, 0], iconAnchor: [0, 0], html: labelHtml(color, f.ident) })
+					icon: L!.divIcon({ className: 'replay-label', iconSize: [0, 0], iconAnchor: [0, 0], html: labelHtml(color, flightLabel(f)) })
 				}).addTo(map);
 			layers = { trailA, trailB, sep, markA: mk(colorA, a), markB: mk(colorB, b), labelA: lb(colorA, a), labelB: lb(colorB, b) };
 

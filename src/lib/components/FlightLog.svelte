@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { flightKind, flightLabel, flightSubLabel } from '$lib/flights';
 	/* Flight log table (README §3). Row hover reports the flight id via onfocus
 	   so the map can highlight the matching track. */
 	import type { Flight } from '$lib/types';
@@ -12,7 +13,7 @@
 	}
 	let { flights, tz, focus = null, onfocus }: Props = $props();
 
-	const kind = (f: Flight) => (f.category === 'airline' ? (f.operatorName ?? 'Passenger airline') : 'Private or training');
+	const kind = (f: Flight) => flightKind(f);
 	const other = (f: Flight) => (f.otherCode ? `${f.otherName ?? f.otherCode} (${f.otherCode})` : 'Unknown');
 </script>
 
@@ -39,7 +40,7 @@
 			<div class="time tabular">{localTime(tz, f.eventTime)}</div>
 			<div class="kind" class:airline={f.category === 'airline'}><span class="swatch" class:airline={f.category === 'airline'}></span>{kind(f)}</div>
 			<div class="dim">{f.direction === 'arrival' ? 'Arriving' : 'Leaving'}</div>
-			<div class="ident">{f.ident}{#if f.tail && f.tail !== f.ident}<span class="tail"> {f.tail}</span>{/if}</div>
+			<div class="ident">{flightLabel(f)}{#if flightSubLabel(f)}<span class="tail"> {flightSubLabel(f)}</span>{/if}</div>
 			<div class="dim">{f.type ?? '—'}</div>
 			<div class="dim">{other(f)}</div>
 		</div>

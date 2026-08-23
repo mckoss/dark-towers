@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { flightLabel } from '$lib/flights';
 	/*
 	 * Flight-path map (README "Maps → Flight-path map"). Leaflet base map from
 	 * $lib/leaflet (CARTO tiles, 10 NM ring, field marker, fitted bounds); each
@@ -63,7 +64,7 @@
 		for (const f of flights) {
 			if (f.positions.length < 2) continue;
 			const line = L.polyline(sampled(f), { ...style(f, focus), lineCap: 'round', lineJoin: 'round' });
-			line.bindTooltip(`${f.ident} · ${f.type ?? 'Unknown type'}`, { sticky: true, direction: 'top', className: 'track-tip' });
+			line.bindTooltip(`${flightLabel(f)} · ${f.type ?? 'Unknown type'}`, { sticky: true, direction: 'top', className: 'track-tip' });
 			line.on('mouseover', () => onfocus?.(f.id));
 			line.on('mouseout', () => onfocus?.(null));
 			line.addTo(layer);

@@ -73,8 +73,12 @@ export interface Flight {
 	tail: string | null;
 	type: string | null;
 	category: FlightCategory;
+	/** ICAO operator code, e.g. ASA. */
 	operator: string | null;
+	/** Full operator name, resolved at read time from the operators table ("Alaska Airlines"). */
 	operatorName: string | null;
+	/** Short operator name for labels ("Alaska"). */
+	operatorShort: string | null;
 	direction: Direction;
 	/** Unix ms of the arrival/departure event. */
 	eventTime: number;

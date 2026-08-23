@@ -40,7 +40,7 @@ function flight(id: string, tail: string | null, line: Line): Flight {
 		type: 'C172',
 		category: 'private',
 		operator: null,
-		operatorName: null,
+		operatorName: null, operatorShort: null,
 		direction: 'arrival',
 		eventTime: line.start,
 		otherCode: null,

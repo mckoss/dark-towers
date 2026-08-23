@@ -1,0 +1,33 @@
+{
+  "$comment": "Seed for airline operator names (ICAO 3-letter code → names). Insert-only: codes already in the live database are never modified by this file. Edit online at /admin/operators and Export JSON to refresh this file. 'short' is used in flight labels (\"Alaska 1712\"); 'name' in the flight log's Kind column.",
+  "operators": [
+    { "icao": "ASA", "name": "Alaska Airlines", "short": "Alaska" },
+    { "icao": "QXE", "name": "Horizon Air", "short": "Horizon" },
+    { "icao": "SWA", "name": "Southwest Airlines", "short": "Southwest" },
+    { "icao": "SKW", "name": "SkyWest Airlines", "short": "SkyWest" },
+    { "icao": "AAY", "name": "Allegiant Air", "short": "Allegiant" },
+    { "icao": "UAL", "name": "United Airlines", "short": "United" },
+    { "icao": "DAL", "name": "Delta Air Lines", "short": "Delta" },
+    { "icao": "AAL", "name": "American Airlines", "short": "American" },
+    { "icao": "JBU", "name": "JetBlue Airways", "short": "JetBlue" },
+    { "icao": "FFT", "name": "Frontier Airlines", "short": "Frontier" },
+    { "icao": "NKS", "name": "Spirit Airlines", "short": "Spirit" },
+    { "icao": "HAL", "name": "Hawaiian Airlines", "short": "Hawaiian" },
+    { "icao": "SCX", "name": "Sun Country Airlines", "short": "Sun Country" },
+    { "icao": "KAP", "name": "Cape Air", "short": "Cape Air" },
+    { "icao": "ENY", "name": "Envoy Air", "short": "Envoy" },
+    { "icao": "RPA", "name": "Republic Airways", "short": "Republic" },
+    { "icao": "EDV", "name": "Endeavor Air", "short": "Endeavor" },
+    { "icao": "PDT", "name": "Piedmont Airlines", "short": "Piedmont" },
+    { "icao": "PSA", "name": "PSA Airlines", "short": "PSA" },
+    { "icao": "ASH", "name": "Mesa Airlines", "short": "Mesa" },
+    { "icao": "GJS", "name": "GoJet Airlines", "short": "GoJet" },
+    { "icao": "CPZ", "name": "Compass Airlines", "short": "Compass" },
+    { "icao": "AIP", "name": "Alpine Air Express", "short": "Alpine Air" },
+    { "icao": "KEN", "name": "Kenmore Air", "short": "Kenmore" },
+    { "icao": "FDX", "name": "FedEx Express", "short": "FedEx" },
+    { "icao": "UPS", "name": "UPS Airlines", "short": "UPS" },
+    { "icao": "AMF", "name": "Ameriflight", "short": "Ameriflight" },
+    { "icao": "CAP", "name": "Civil Air Patrol", "short": "Civil Air Patrol" }
+  ]
+}

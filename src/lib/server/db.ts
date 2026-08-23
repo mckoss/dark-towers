@@ -154,7 +154,7 @@ interface FlightRow {
 function rowToFlight(r: FlightRow): Flight {
 	return {
 		id: r.id, airport: r.airport, night: r.night, ident: r.ident, tail: r.tail, type: r.type,
-		category: r.category as Flight['category'], operator: r.operator, operatorName: r.operator_name,
+		category: r.category as Flight['category'], operator: r.operator, operatorName: r.operator_name, operatorShort: null,
 		direction: r.direction as Flight['direction'], eventTime: r.event_time,
 		otherCode: r.other_code, otherName: r.other_name, otherCity: r.other_city,
 		positions: JSON.parse(r.positions) as Position[]

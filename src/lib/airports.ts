@@ -23,23 +23,6 @@ export const GROUND_SPEED_KT = 40;
 export const VERY_CLOSE_LATERAL_NM = 1;
 export const VERY_CLOSE_VERTICAL_FT = 500;
 
-/** Known operator ICAO codes → plain names. */
-export const OPERATORS: Record<string, string> = {
-	ASA: 'Alaska Airlines',
-	QXE: 'Horizon Air',
-	SWA: 'Southwest Airlines',
-	SKW: 'SkyWest',
-	AAY: 'Allegiant Air',
-	UAL: 'United Airlines',
-	DAL: 'Delta Air Lines',
-	JBU: 'JetBlue',
-	KAP: 'Cape Air',
-	KEN: 'Kenmore Air',
-	AIP: 'Alpine Air Express',
-	FDX: 'FedEx',
-	UPS: 'UPS',
-	CAP: 'Civil Air Patrol'
-};
 
 /** The schedule row in effect on a local date (YYYY-MM-DD), or undefined. Latest `from` wins on overlap. */
 export function scheduleOn(schedules: TowerSchedule[], date: string): TowerSchedule | undefined {

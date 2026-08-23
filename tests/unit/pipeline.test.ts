@@ -95,7 +95,8 @@ describe('normalizeFlight', () => {
 			type: 'E75L',
 			category: 'airline',
 			operator: 'QXE',
-			operatorName: 'Horizon Air',
+			operatorName: null, // names are resolved at read time from the operators table
+			operatorShort: null,
 			direction: 'arrival',
 			eventTime: Date.parse('2026-08-15T05:10:00Z'),
 			otherCode: 'PDX',

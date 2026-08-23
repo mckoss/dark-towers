@@ -89,6 +89,8 @@ test.describe('airport detail', () => {
 		await expect(page.getByText('7:00 am – 9:00 pm').first()).toBeVisible();
 		await expect(page.getByText(/Night of /)).toBeVisible();
 		await expect(page.getByText(/Flight log/)).toBeVisible();
+		// Airline flights are named in plain language, with the callsign secondary.
+		await expect(page.getByText(/^(Horizon|Alaska|Southwest) \d+$/).first()).toBeVisible();
 		// No process metrics on the page.
 		expect(await page.locator('main').textContent()).not.toMatch(/positions analy/i);
 	});
@@ -225,5 +227,25 @@ test.describe('admin airports', () => {
 		await expect(page.getByText('Saved DDC.')).toBeVisible();
 		// It now drifts from the seed file (live-only row).
 		await expect(page.getByText(/schedule:DDC-2030-01-01/)).toBeVisible();
+	});
+});
+
+test.describe('admin operators', () => {
+	test('lists operator names, exports JSON, and renames apply at render time', async ({ page, request }) => {
+		await page.goto('/admin/operators');
+		await expect(page.getByRole('heading', { name: 'Airline names' })).toBeVisible();
+		const exp = await request.get('/admin/operators/export');
+		expect((await exp.json()).operators.some((o: { icao: string }) => o.icao === 'QXE')).toBe(true);
+		const row = page.getByTestId('operator-QXE');
+		await row.locator('input[name="short"]').fill('Horizon (e2e)');
+		await row.getByRole('button', { name: 'save' }).click();
+		await expect(page.getByText('Saved QXE.')).toBeVisible();
+		await page.goto('/airport/PAE?night=2026-08-14');
+		await expect(page.getByText(/Horizon \(e2e\) \d+/).first()).toBeVisible();
+		// restore
+		await page.goto('/admin/operators');
+		await row.locator('input[name="short"]').fill('Horizon');
+		await row.getByRole('button', { name: 'save' }).click();
+		await expect(page.getByText('Saved QXE.')).toBeVisible();
 	});
 });
