@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { flightLabel } from '$lib/flights';
+	import { dataBlockHtml, trendOf } from '$lib/datablock';
 	/**
 	 * Animated replay of a close approach. Both aircraft are sampled from their
 	 * own timestamped tracks at one shared clock; the map is Leaflet (browser
@@ -108,8 +109,10 @@
 			`<svg class="replay-glyph" viewBox="0 0 40 40" width="${g}" height="${g}"><path fill="${color}" d="${SILHOUETTE_PATHS[shape]}"/></svg>`
 		);
 	}
-	function labelHtml(color: string, text: string): string {
-		return `<div class="replay-chip" style="color:${color};border-color:${color}">${text}</div>`;
+	/** ATC-style data block beside each aircraft (label / altitude·trend·speed). */
+	function labelHtml(color: string, text: string, s?: { alt: number; gs: number; vs: number; active: boolean }): string {
+		if (!s) return `<div class="replay-chip" style="color:${color};border-color:${color}">${text}</div>`;
+		return dataBlockHtml({ label: text + (s.active ? '' : ' · on ground'), altFt: s.alt, gsKt: s.gs, trend: trendOf(s.vs) }, color);
 	}
 
 	onMount(() => {
@@ -199,10 +202,13 @@
 		return pts;
 	}
 
-	function placeLabel(marker: Leaflet.Marker, self: { lat: number; lon: number }, other: { lat: number; lon: number }) {
+	function placeLabel(marker: Leaflet.Marker, self: { lat: number; lon: number; alt: number; gs: number; vs: number; active: boolean }, other: { lat: number; lon: number }, color: string, text: string) {
 		if (!base) return;
 		marker.setLatLng([self.lat, self.lon]);
-		const el = marker.getElement()?.firstElementChild as HTMLElement | null;
+		const host = marker.getElement();
+		if (!host) return;
+		host.innerHTML = labelHtml(color, text, self);
+		const el = host.firstElementChild as HTMLElement | null;
 		if (!el) return;
 		const p = base.map.latLngToContainerPoint([self.lat, self.lon]);
 		const q = base.map.latLngToContainerPoint([other.lat, other.lon]);
@@ -243,8 +249,8 @@
 		);
 		placeGlyph(layers.markA, sample.a, sample.inside);
 		placeGlyph(layers.markB, sample.b, sample.inside);
-		placeLabel(layers.labelA, sample.a, sample.b);
-		placeLabel(layers.labelB, sample.b, sample.a);
+		placeLabel(layers.labelA, sample.a, sample.b, colorA, flightLabel(a));
+		placeLabel(layers.labelB, sample.b, sample.a, colorB, flightLabel(b));
 	}
 
 	$effect(() => {

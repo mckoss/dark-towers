@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { flightLabel } from '$lib/flights';
+	import { dataBlockHtml, trendOf } from '$lib/datablock';
 	/*
 	 * Flight-path map (README "Maps → Flight-path map"). Leaflet base map from
 	 * $lib/leaflet (CARTO tiles, 10 NM ring, field marker, fitted bounds); each
@@ -31,19 +32,63 @@
 	let L: typeof LeafletNS | null = null;
 	let layer: LeafletNS.LayerGroup | null = null;
 	const lines = new Map<string, LeafletNS.Polyline>();
+	const splines = new Map<string, { spline: Spline; samples: { t: number; lat: number; lon: number }[] }>();
+	let hoverDot: LeafletNS.CircleMarker | null = null;
+	let hoverTip: LeafletNS.Tooltip | null = null;
 
+	/** Spline over [lat, lon, alt ft, gs kt] and its 2 s samples (kept for hover lookups). */
 	function sampled(f: Flight): [number, number][] {
-		const pts = f.positions.map((p) => ({ t: p.t, v: [p.lat, p.lon] }));
+		const pts = f.positions.map((p) => ({ t: p.t, v: [p.lat, p.lon, p.alt, p.gs] }));
 		if (pts.length < 2) return pts.map((p) => [p.v[0], p.v[1]]);
 		const s = new Spline(pts);
-		const out: [number, number][] = [];
+		const samples: { t: number; lat: number; lon: number }[] = [];
 		for (let t = s.t0; t < s.t1; t += SAMPLE_MS) {
 			const v = s.at(t)!;
-			out.push([v[0], v[1]]);
+			samples.push({ t, lat: v[0], lon: v[1] });
 		}
 		const last = s.at(s.t1)!;
-		out.push([last[0], last[1]]);
-		return out;
+		samples.push({ t: s.t1, lat: last[0], lon: last[1] });
+		splines.set(f.id, { spline: s, samples });
+		return samples.map((p) => [p.lat, p.lon]);
+	}
+
+	/** Nearest sampled instant on a flight's path to a map point (screen-space). */
+	function nearestTime(f: Flight, latlng: LeafletNS.LatLng): number | null {
+		const entry = splines.get(f.id);
+		if (!entry || !base) return null;
+		const p = base.map.latLngToContainerPoint(latlng);
+		let best = entry.samples[0],
+			bestD = Infinity;
+		for (const s of entry.samples) {
+			const q = base.map.latLngToContainerPoint([s.lat, s.lon]);
+			const d = (q.x - p.x) ** 2 + (q.y - p.y) ** 2;
+			if (d < bestD) {
+				bestD = d;
+				best = s;
+			}
+		}
+		return best.t;
+	}
+
+	function showBlock(f: Flight, t: number) {
+		const entry = splines.get(f.id);
+		if (!entry || !base || !L) return;
+		const v = entry.spline.at(t)!;
+		const vel = entry.spline.velocityAt(t);
+		const color = f.category === 'airline' ? '#ec3013' : '#201e1d';
+		const html = dataBlockHtml({ label: `${flightLabel(f)}${f.type ? ' · ' + f.type : ''}`, altFt: v[2], gsKt: v[3], trend: trendOf(vel ? vel[2] * 1000 : null) }, color);
+		const at: LeafletNS.LatLngExpression = [v[0], v[1]];
+		if (!hoverDot) hoverDot = L.circleMarker(at, { radius: 4, color, weight: 2, fillColor: '#f3f2f2', fillOpacity: 1, interactive: false }).addTo(base.map);
+		else hoverDot.setLatLng(at).setStyle({ color });
+		if (!hoverTip) hoverTip = L.tooltip({ permanent: true, direction: 'right', offset: [10, 0], className: 'track-tip', interactive: false }).setLatLng(at).setContent(html).addTo(base.map);
+		else hoverTip.setLatLng(at).setContent(html);
+	}
+
+	function hideBlock() {
+		hoverDot?.remove();
+		hoverTip?.remove();
+		hoverDot = null;
+		hoverTip = null;
 	}
 
 	function style(f: Flight, focused: string | null): LeafletNS.PathOptions {
@@ -60,13 +105,25 @@
 		if (!base || !L) return;
 		layer?.remove();
 		lines.clear();
+		splines.clear();
+		hideBlock();
 		layer = L.layerGroup().addTo(base.map);
 		for (const f of flights) {
 			if (f.positions.length < 2) continue;
 			const line = L.polyline(sampled(f), { ...style(f, focus), lineCap: 'round', lineJoin: 'round' });
-			line.bindTooltip(`${flightLabel(f)} · ${f.type ?? 'Unknown type'}`, { sticky: true, direction: 'top', className: 'track-tip' });
-			line.on('mouseover', () => onfocus?.(f.id));
-			line.on('mouseout', () => onfocus?.(null));
+			line.on('mouseover', (e: LeafletNS.LeafletMouseEvent) => {
+				onfocus?.(f.id);
+				const t = nearestTime(f, e.latlng);
+				if (t != null) showBlock(f, t);
+			});
+			line.on('mousemove', (e: LeafletNS.LeafletMouseEvent) => {
+				const t = nearestTime(f, e.latlng);
+				if (t != null) showBlock(f, t);
+			});
+			line.on('mouseout', () => {
+				onfocus?.(null);
+				hideBlock();
+			});
 			line.addTo(layer);
 			lines.set(f.id, line);
 		}
@@ -116,20 +173,5 @@
 	.flight-map {
 		width: 100%;
 		background: var(--ground-alt);
-	}
-	:global(.leaflet-tooltip.track-tip) {
-		border-radius: 0;
-		border: 1px solid var(--ink);
-		background: var(--ground);
-		color: var(--ink);
-		font-family: var(--font);
-		font-size: 12px;
-		font-weight: 600;
-		letter-spacing: 0.04em;
-		box-shadow: none;
-		padding: 4px 8px;
-	}
-	:global(.leaflet-tooltip.track-tip::before) {
-		display: none;
 	}
 </style>

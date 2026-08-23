@@ -11,7 +11,7 @@
  * overwrites the same database rows. Use `force` to re-fetch the flight list
  * (e.g. the night was first processed before its window had ended).
  */
-import { AIRSPACE_RADIUS_NM, towerHoursOn } from '$lib/airports';
+import { AIRSPACE_EXIT_NM, AIRSPACE_RADIUS_NM, TRACK_GAP_MS, towerHoursOn } from '$lib/airports';
 import { getAirport } from './airports-store';
 import { distanceNm, fromLocalNm, toLocalNm } from '$lib/geo';
 import { findIncidents } from '$lib/separation';
@@ -167,13 +167,15 @@ export function normalizeFlight(airport: AirportConfig, night: string, f: RawFli
 }
 
 /**
- * Keep the positions inside the ring, and only while the tower was closed on
- * this night. Where the track crosses the ring, a point is interpolated on the
- * boundary so the curve enters and leaves at the edge instead of jumping to a
- * report many miles away. Resolution is whatever ADS-B reported — nothing
- * inside the ring is thinned.
+ * Keep the part of a track that matters for this night: from the moment the
+ * aircraft enters the 10 NM ring until it leaves the 20 NM ring (hysteresis),
+ * and only while the tower was closed on this night. A point is interpolated
+ * on the 10 NM boundary at entry (and on the 20 NM boundary at exit) so the
+ * curve starts and ends at a ring instead of jumping to a report miles away.
+ * A gap longer than TRACK_GAP_MS between reports starts a new segment.
+ * Resolution is whatever ADS-B reported — nothing inside is thinned.
  */
-export function clipTrack(airport: AirportConfig, night: string, track: RawTrack, radiusNm = AIRSPACE_RADIUS_NM): Position[] {
+export function clipTrack(airport: AirportConfig, night: string, track: RawTrack, radiusNm = AIRSPACE_RADIUS_NM, exitNm = Math.max(radiusNm, AIRSPACE_EXIT_NM * (radiusNm / AIRSPACE_RADIUS_NM))): Position[] {
 	const hours = towerHoursOn(airport, night);
 	const pts: Position[] = [];
 	for (const p of track.positions ?? []) {
@@ -195,22 +197,29 @@ export function clipTrack(airport: AirportConfig, night: string, track: RawTrack
 	let inside = false;
 	for (let i = 0; i < pts.length; i++) {
 		const p = pts[i];
-		if (nightOf(airport.tz, hours, p.t) !== night) {
-			inside = false;
-			continue;
-		}
 		const prev = i > 0 ? pts[i - 1] : null;
-		if (p.dist <= radiusNm) {
-			if (!inside && prev && prev.dist > radiusNm && nightOf(airport.tz, hours, prev.t) === night) {
-				const x = ringCrossing(airport, prev, p, radiusNm);
+		const prevOk = !!prev && nightOf(airport.tz, hours, prev.t) === night && p.t - prev.t <= TRACK_GAP_MS;
+		if (nightOf(airport.tz, hours, p.t) !== night || (prev && p.t - prev.t > TRACK_GAP_MS)) inside = false;
+		if (nightOf(airport.tz, hours, p.t) !== night) continue;
+		if (!inside) {
+			if (p.dist <= radiusNm) {
+				// Entering: interpolate the 10 NM crossing from the previous report.
+				if (prevOk && prev!.dist > radiusNm) {
+					const x = ringCrossing(airport, prev!, p, radiusNm);
+					if (x) out.push(x);
+				}
+				out.push(p);
+				inside = true;
+			}
+		} else if (p.dist > exitNm) {
+			// Leaving: interpolate the 20 NM crossing, then stop.
+			if (prevOk) {
+				const x = ringCrossing(airport, prev!, p, exitNm);
 				if (x) out.push(x);
 			}
-			out.push(p);
-			inside = true;
-		} else if (inside && prev) {
-			const x = ringCrossing(airport, prev, p, radiusNm);
-			if (x) out.push(x);
 			inside = false;
+		} else {
+			out.push(p);
 		}
 	}
 	// Dedupe identical timestamps.

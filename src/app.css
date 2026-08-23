@@ -272,3 +272,46 @@ p {
 	height: 10px;
 	background: var(--ink);
 }
+
+/* ---- ATC-style data block (flight map hover, replay) ---- */
+.datablock {
+	display: inline-block;
+	padding: 5px 8px 6px;
+	background: var(--ground);
+	border: 2px solid var(--db-color, var(--ink));
+	color: var(--ink);
+	font-family: var(--font);
+	line-height: 1.2;
+	white-space: nowrap;
+	pointer-events: none;
+	box-shadow: 0 1px 0 rgba(32, 30, 29, 0.12);
+}
+.datablock .db-id {
+	font-size: 12px;
+	font-weight: 800;
+	letter-spacing: 0.02em;
+	color: var(--db-color, var(--ink));
+}
+.datablock .db-atc {
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	white-space: pre;
+}
+.datablock .db-plain {
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--ink-60);
+}
+.leaflet-tooltip.track-tip {
+	background: none;
+	border: none;
+	box-shadow: none;
+	padding: 0;
+}
+.leaflet-tooltip.track-tip::before {
+	display: none;
+}

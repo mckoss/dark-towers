@@ -23,6 +23,10 @@ export interface AircraftSample {
 	alt: number;
 	/** Degrees true, 0–360. */
 	hdg: number;
+	/** Knots. */
+	gs: number;
+	/** Vertical speed, ft/s (+ climbing). */
+	vs: number;
 	/** False before the track starts or after it ends (aircraft on the ground / out of range). */
 	active: boolean;
 }
@@ -82,9 +86,10 @@ export function buildReplay(origin: LatLon, a: Flight, b: Flight, closestT: numb
 
 	function sampleOne(spline: Spline, flight: Flight, t: number): AircraftSample {
 		const v = spline.at(t)!;
+		const vel = spline.velocityAt(t);
 		const [lat, lon] = fromLocalNm(origin, [v[0], v[1]]);
 		const active = t >= spline.t0 && t <= spline.t1;
-		return { lat, lon, alt: v[2], hdg: headingOf(spline, t, () => nearestHdg(flight, t)), active };
+		return { lat, lon, alt: v[2], hdg: headingOf(spline, t, () => nearestHdg(flight, t)), gs: v[3] ?? 0, vs: active && vel ? vel[2] * 1000 : 0, active };
 	}
 
 	function sampleAt(t: number): ReplaySample {

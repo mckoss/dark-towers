@@ -11,6 +11,8 @@ GitHub issues; conventions for contributors are in CLAUDE.md.
 - **The home page never names a specific airport.**
 - **Honest gaps.** Nights without tracks, airports without data, and unverified tower hours are stated, not hidden.
 - **Idempotent data pipeline.** Every raw API response is cached forever; re-running costs nothing; the database is rebuilt from the cache.
+- **Tracks are recorded from the 10 NM ring until 20 NM.** Once an aircraft enters the 10 NM ring its path is kept until it passes 20 NM, so go-arounds and missed approaches are shown whole. Close approaches are still only counted inside 10 NM.
+- **ATC-style data blocks.** Hovering a path, or watching a replay, shows label / altitude (hundreds of feet) with climb-descent arrow / groundspeed, plus the same in plain language.
 - **Nights are keyed by the evening.** "Night of Aug 22" = tower close on Aug 22 to tower open on Aug 23, per airport, per the schedule in effect that date.
 - **Airports are data, not code.** `airports.json` seeds; the database is the source of truth once it exists; edits happen online and are exported back to the file.
 

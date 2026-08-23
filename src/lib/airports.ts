@@ -11,8 +11,12 @@ import type { AirportConfig, TowerHours, TowerSchedule } from './types';
  * This module keeps the client-safe helpers and thresholds.
  */
 
-/** Radius of the airspace we analyse, in nautical miles. */
+/** Radius of the airspace we analyse, in nautical miles. A track is recorded from the moment it enters this ring… */
 export const AIRSPACE_RADIUS_NM = 10;
+/** …until it leaves this outer ring, so go-arounds and missed approaches are not cut off at 10 NM. */
+export const AIRSPACE_EXIT_NM = 20;
+/** A gap longer than this between reports starts a new segment (the aircraft left and came back). */
+export const TRACK_GAP_MS = 10 * 60_000;
 /** Controller separation minima: flag pairs inside BOTH of these at once. */
 export const SEPARATION_LATERAL_NM = 3;
 export const SEPARATION_VERTICAL_FT = 1000;
