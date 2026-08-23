@@ -387,7 +387,7 @@ p {
 /* Time marks under the scrubber: start and end at the extremes, a red time under each pip. */
 .replay-marks {
 	position: relative;
-	height: 36px;
+	height: 50px;
 	font-size: 11px;
 	font-weight: 600;
 	letter-spacing: 0.02em;
@@ -432,12 +432,18 @@ p {
 	left: 50%;
 	background: var(--accent);
 }
-/* Second row: label 14px lower, tick reaches up to the bar. */
+/* Rows 1 and 2 sit 14px lower each; ticks reach up to the bar. Row 2 is reserved for the start and end times. */
 .replay-marks .lane-1 {
 	padding-top: 24px;
 }
 .replay-marks .lane-1::before {
 	height: 24px;
+}
+.replay-marks .lane-2 {
+	padding-top: 38px;
+}
+.replay-marks .lane-2::before {
+	height: 38px;
 }
 .replay-track-col {
 	flex: 1;
