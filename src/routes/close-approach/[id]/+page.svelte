@@ -1,5 +1,7 @@
 <script lang="ts">
 	import Replay from '$lib/components/Replay.svelte';
+	import MapLegend from '$lib/components/MapLegend.svelte';
+	import { AIRSPACE_RADIUS_NM } from '$lib/airports';
 	import { flightLabel, flightSubLabel } from '$lib/flights';
 	import { pairColors } from '$lib/replay';
 	import { localTime, nightLabel } from '$lib/time';
@@ -25,6 +27,15 @@
 	const signed = (n: number) => `${n < 0 ? '−' : '+'}${Math.abs(n).toLocaleString('en-US')}'`;
 
 	const colors = $derived(pairColors(a, b));
+	/** Key for the replay map: the pair's two colours by kind (both accent/ink when they share a kind), other traffic, the ring. */
+	const legend = $derived.by(() => {
+		const kindLabel = (f: Flight) => (f.category === 'airline' ? 'Passenger airline' : 'Private and training aircraft');
+		const items = [
+			{ kind: colors[0], label: a.category === b.category ? flightLabel(a) : kindLabel(a) },
+			{ kind: colors[1], label: a.category === b.category ? flightLabel(b) : kindLabel(b) }
+		];
+		return [...items, { kind: 'grey' as const, label: 'Other traffic that night' }, { kind: 'ring' as const, label: `${AIRSPACE_RADIUS_NM} nautical mile ring` }];
+	});
 	const severityLabel = $derived(incident.severity === 'very-close' ? 'Very close' : 'Close approach');
 	const nm = (n: number) => `${n.toFixed(2)} NM`;
 	const ft = (n: number) => `${Math.round(n).toLocaleString('en-US')}'`;
@@ -68,6 +79,7 @@
 		{#key incident.id}
 			<Replay {airport} {a} {b} {incident} {others} alt={altCtx} />
 		{/key}
+		<MapLegend items={legend} />
 	</div>
 	<div class="facts">
 		<div class="fact">

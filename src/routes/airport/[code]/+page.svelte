@@ -6,6 +6,7 @@
 	import { nightLabel } from '$lib/time';
 	import { monthLabel } from '$lib/monthLabel';
 	import FlightMap from '$lib/components/FlightMap.svelte';
+	import MapLegend from '$lib/components/MapLegend.svelte';
 	import { altContextFor } from '$lib/altview.svelte';
 	import { median } from '$lib/util';
 	import NightCalendar from '$lib/components/NightCalendar.svelte';
@@ -130,11 +131,7 @@
 				{:else}
 					<div class="no-tracks inset">Flight paths for this night are not available.</div>
 				{/if}
-				<div class="map-legend">
-					<span><i class="line-accent"></i>Passenger airline</span>
-					<span><i class="line-ink"></i>Private and training aircraft</span>
-					<span><i class="ring"></i>{AIRSPACE_RADIUS_NM} nautical mile ring</span>
-				</div>
+				<MapLegend items={[{ kind: 'accent', label: 'Passenger airline' }, { kind: 'ink', label: 'Private and training aircraft' }, { kind: 'ring', label: `${AIRSPACE_RADIUS_NM} nautical mile ring` }]} />
 			</div>
 			<div class="night-right">
 				<div class="night-head"><div class="table-header">Close approaches this night</div></div>
@@ -327,43 +324,6 @@
 		padding: 24px;
 		font-size: 15px;
 		color: var(--ink-60);
-	}
-	.map-legend {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 10px 24px;
-		padding: 14px var(--gutter);
-		border-top: var(--row-rule);
-		font-size: 12px;
-		font-weight: 600;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--ink-60);
-	}
-	.map-legend span {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-	}
-	.map-legend i {
-		display: block;
-	}
-	.line-accent {
-		width: 20px;
-		height: 3px;
-		background: var(--accent);
-	}
-	.line-ink {
-		width: 20px;
-		height: 2px;
-		background: var(--ink);
-	}
-	.ring {
-		width: 10px;
-		height: 10px;
-		border: 1px solid var(--ink);
-		border-radius: 50% !important;
 	}
 	.no-incidents {
 		padding: 24px;
