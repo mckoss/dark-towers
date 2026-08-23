@@ -5,7 +5,8 @@
  * cached, a missed run or a restart simply catches up on the next tick.
  */
 import cron from 'node-cron';
-import { trackedAirports } from '$lib/airports';
+import { towerHoursOn } from '$lib/airports';
+import { trackedAirports } from './airports-store';
 import { addDays, nightWindow, todayKey } from '$lib/time';
 import { config } from './config';
 import { nightSummary } from './db';
@@ -27,7 +28,7 @@ export async function catchUp(log: (m: string) => void = console.log): Promise<v
 			const today = todayKey(a.tz, now);
 			for (let i = HISTORY_DAYS; i >= 0; i--) {
 				const night = addDays(today, -i);
-				const win = nightWindow(a.tz, a.towerHours, night);
+				const win = nightWindow(a.tz, towerHoursOn(a, night), night);
 				if (win.end + SETTLE_MS > now) continue;
 				const existing = nightSummary(a.icao, night);
 				if (existing?.complete) continue;

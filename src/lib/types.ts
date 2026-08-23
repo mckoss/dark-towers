@@ -9,6 +9,18 @@ export interface TowerHours {
 	close: number;
 }
 
+/** An effective-dated tower-hours row. open/close null = no tower during this period. */
+export interface TowerSchedule {
+	id: string;
+	/** YYYY-MM-DD inclusive. */
+	from: string;
+	/** YYYY-MM-DD inclusive, or null for open-ended. */
+	to: string | null;
+	open: number | null;
+	close: number | null;
+	note: string;
+}
+
 export interface AirportConfig {
 	/** IATA / local code shown to users, e.g. "PAE". */
 	code: string;
@@ -23,8 +35,10 @@ export interface AirportConfig {
 	pos: [number, number];
 	/** Field elevation, feet MSL (used to ignore aircraft on the ground). */
 	elevationFt: number;
-	/** null means there is no tower at any hour. */
+	/** Tower hours in effect today; null means there is no tower at any hour. Derived from `schedules`. */
 	towerHours: TowerHours | null;
+	/** Effective-dated schedules; use towerHoursOn(airport, night) for a specific night. */
+	schedules: TowerSchedule[];
 	carriers: string[];
 	status: AirportStatus;
 	/** Whether the nightly pipeline should collect data for this airport. */

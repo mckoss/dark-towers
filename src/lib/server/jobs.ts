@@ -1,7 +1,8 @@
 /** Background pipeline jobs started from /admin. One at a time; log kept in memory. */
 import { catchUp } from './scheduler';
 import { ingestNight } from './pipeline';
-import { airportByCode } from '$lib/airports';
+import { towerHoursOn } from '$lib/airports';
+import { getAirport } from './airports-store';
 import { addDays, nightWindow, todayKey } from '$lib/time';
 import { nightSummary } from './db';
 
@@ -59,7 +60,7 @@ export function startIngest(code: string, night: string, force: boolean): boolea
  * error so a tier limit doesn't burn through the remaining nights.
  */
 export function startBackfill(code: string, nights: number): boolean {
-	const a = airportByCode(code);
+	const a = getAirport(code);
 	if (!a) return false;
 	return start(`backfill ${a.code} × ${nights} nights`, async (log) => {
 		const today = todayKey(a.tz);
@@ -68,7 +69,7 @@ export function startBackfill(code: string, nights: number): boolean {
 			calls = 0;
 		for (let i = nights; i >= 1; i--) {
 			const night = addDays(today, -i);
-			if (nightWindow(a.tz, a.towerHours, night).end > Date.now()) continue;
+			if (nightWindow(a.tz, towerHoursOn(a, night), night).end > Date.now()) continue;
 			if (nightSummary(a.icao, night)?.complete) {
 				skipped++;
 				continue;
@@ -78,5 +79,16 @@ export function startBackfill(code: string, nights: number): boolean {
 			done++;
 		}
 		log(`backfill finished: ${done} night(s) ingested, ${skipped} already complete, ${calls} API calls`);
+	});
+}
+
+/** Re-fetch (force) and reprocess specific nights — after tower hours changed for a past period. */
+export function startReingest(code: string, nights: string[]): boolean {
+	const a = getAirport(code);
+	if (!a) return false;
+	return start(`re-ingest ${a.code} × ${nights.length} nights`, async (log) => {
+		let calls = 0;
+		for (const night of nights) calls += (await ingestNight(a.code, night, { force: true, log })).apiCalls;
+		log(`re-ingest finished: ${nights.length} night(s), ${calls} API calls`);
 	});
 }

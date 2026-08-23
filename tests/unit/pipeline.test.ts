@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { airportByCode } from '$lib/airports';
+import type { AirportConfig } from '$lib/types';
 import { destination, type LatLon } from '$lib/geo';
 import { zonedToUtc } from '$lib/time';
 import type { RawFlight, RawPosition, RawTrack } from '$lib/server/flightaware';
@@ -9,7 +9,11 @@ freshDataDir('pipeline');
 const pipeline = await import('$lib/server/pipeline');
 const { eventTimeOf, categoryOf, normalizeFlight, clipTrack } = pipeline;
 
-const PAE = airportByCode('PAE')!;
+const PAE: AirportConfig = {
+	code: 'PAE', icao: 'KPAE', name: 'Snohomish County (Paine Field)', city: 'Everett', state: 'WA', tz: 'America/Los_Angeles',
+	pos: [47.9079, -122.2816], elevationFt: 606, towerHours: { open: 7, close: 21 }, carriers: [], status: 'tracking', tracked: true,
+	schedules: [{ id: 'PAE-2024-01-01', from: '2024-01-01', to: null, open: 7, close: 21, note: '' }]
+};
 const NIGHT = '2026-08-14';
 const LA = PAE.tz;
 

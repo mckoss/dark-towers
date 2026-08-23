@@ -42,7 +42,7 @@
 			<dt>Admins</dt><dd>{data.admins.join(', ')}</dd>
 			<dt>AeroAPI history</dt><dd>{data.historyEnabled ? 'enabled (Standard+ tier)' : 'off — live window only (10 days)'}</dd>
 			<dt>Scheduler depth</dt><dd>{data.historyDays} nights</dd>
-			<dt>Tracked airports</dt><dd>{data.airports.filter((a) => a.tracked).map((a) => a.code).join(', ') || 'none'}</dd>
+			<dt>Tracked airports</dt><dd>{data.airports.filter((a) => a.tracked).map((a) => a.code).join(', ') || 'none'} · <a href="/admin/airports">edit airports &amp; tower hours</a></dd>
 		</dl>
 	</div>
 </section>

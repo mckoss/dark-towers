@@ -7,7 +7,7 @@
  *   npm run ingest -- BLI --backfill 30         last 30 nights, oldest first, skipping complete ones
  *   flags: --offline (cache only, no API), --force (re-fetch flight lists)
  */
-import { airportByCode } from '../src/lib/airports';
+import { getAirport as airportByCode } from '../src/lib/server/airports-store';
 import { ingestNight } from '../src/lib/server/pipeline';
 import { catchUp } from '../src/lib/server/scheduler';
 import { addDays, nightWindow, todayKey } from '../src/lib/time';

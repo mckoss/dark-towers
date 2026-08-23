@@ -11,7 +11,8 @@
  * overwrites the same database rows. Use `force` to re-fetch the flight list
  * (e.g. the night was first processed before its window had ended).
  */
-import { AIRSPACE_RADIUS_NM, OPERATORS, airportByCode } from '$lib/airports';
+import { AIRSPACE_RADIUS_NM, OPERATORS, towerHoursOn } from '$lib/airports';
+import { getAirport } from './airports-store';
 import { distanceNm, fromLocalNm, toLocalNm } from '$lib/geo';
 import { findIncidents } from '$lib/separation';
 import { nightOf, nightWindow } from '$lib/time';
@@ -33,7 +34,7 @@ export interface IngestResult extends NightSummary {
 }
 
 export async function ingestNight(airportCode: string, night: string, opts: IngestOptions = {}): Promise<IngestResult> {
-	const airport = airportByCode(airportCode);
+	const airport = getAirport(airportCode);
 	if (!airport) throw new Error(`Unknown airport ${airportCode}`);
 	const log = opts.log ?? (() => {});
 	const runId = recordRunStart(airport.icao, night);
@@ -48,7 +49,7 @@ export async function ingestNight(airportCode: string, night: string, opts: Inge
 }
 
 async function ingest(airport: AirportConfig, night: string, opts: IngestOptions, log: Logger): Promise<IngestResult> {
-	const win = nightWindow(airport.tz, airport.towerHours, night);
+	const win = nightWindow(airport.tz, towerHoursOn(airport, night), night);
 	let apiCalls = 0;
 	const counting: Logger = (m) => {
 		if (m.startsWith('GET ')) apiCalls++;
@@ -137,7 +138,7 @@ export function normalizeFlight(airport: AirportConfig, night: string, f: RawFli
 	if (eventTime == null) return null;
 	// Keep the flight on the night it was queried for; the API window already
 	// bounds it, but guard against stragglers just outside the window.
-	const n = nightOf(airport.tz, airport.towerHours, eventTime);
+	const n = nightOf(airport.tz, towerHoursOn(airport, night), eventTime);
 	if (n !== night) return null;
 	const other = f._source === 'arrival' ? f.origin : f.destination;
 	// Position-only endpoints come back as "L 45.81 -119.07": no real airport.
@@ -172,6 +173,7 @@ export function normalizeFlight(airport: AirportConfig, night: string, f: RawFli
  * inside the ring is thinned.
  */
 export function clipTrack(airport: AirportConfig, night: string, track: RawTrack, radiusNm = AIRSPACE_RADIUS_NM): Position[] {
+	const hours = towerHoursOn(airport, night);
 	const pts: Position[] = [];
 	for (const p of track.positions ?? []) {
 		const t = Date.parse(p.timestamp);
@@ -192,13 +194,13 @@ export function clipTrack(airport: AirportConfig, night: string, track: RawTrack
 	let inside = false;
 	for (let i = 0; i < pts.length; i++) {
 		const p = pts[i];
-		if (nightOf(airport.tz, airport.towerHours, p.t) !== night) {
+		if (nightOf(airport.tz, hours, p.t) !== night) {
 			inside = false;
 			continue;
 		}
 		const prev = i > 0 ? pts[i - 1] : null;
 		if (p.dist <= radiusNm) {
-			if (!inside && prev && prev.dist > radiusNm && nightOf(airport.tz, airport.towerHours, prev.t) === night) {
+			if (!inside && prev && prev.dist > radiusNm && nightOf(airport.tz, hours, prev.t) === night) {
 				const x = ringCrossing(airport, prev, p, radiusNm);
 				if (x) out.push(x);
 			}

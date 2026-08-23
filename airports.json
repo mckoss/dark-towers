@@ -1,0 +1,338 @@
+{
+  "$comment": "Seed data for airports and tower-hour schedules. Insert-only: rows whose id already exists in the live database are never modified by this file. Edit online at /admin/airports and use Export JSON to refresh this file. Hours are local 24h; open/close null = no tower for that period; 'to' null = open-ended.",
+  "airports": [
+    {
+      "id": "PAE",
+      "code": "PAE",
+      "icao": "KPAE",
+      "name": "Snohomish County (Paine Field)",
+      "city": "Everett",
+      "state": "WA",
+      "tz": "America/Los_Angeles",
+      "lat": 47.9079,
+      "lon": -122.2816,
+      "elevation_ft": 606,
+      "carriers": [
+        "Alaska",
+        "Horizon",
+        "Southwest"
+      ],
+      "status": "tracking",
+      "tracked": true,
+      "schedules": [
+        {
+          "id": "PAE-2024-01-01",
+          "from": "2024-01-01",
+          "to": null,
+          "open": 7,
+          "close": 21,
+          "note": "Matches the Colab notebook (07:00\u201321:00 local). Verify against the FAA Chart Supplement."
+        }
+      ]
+    },
+    {
+      "id": "BLI",
+      "code": "BLI",
+      "icao": "KBLI",
+      "name": "Bellingham International",
+      "city": "Bellingham",
+      "state": "WA",
+      "tz": "America/Los_Angeles",
+      "lat": 48.7929,
+      "lon": -122.5375,
+      "elevation_ft": 170,
+      "carriers": [
+        "Allegiant",
+        "Alaska"
+      ],
+      "status": "queued",
+      "tracked": false,
+      "schedules": [
+        {
+          "id": "BLI-2024-01-01",
+          "from": "2024-01-01",
+          "to": null,
+          "open": 6,
+          "close": 22,
+          "note": "Copied from the design prototype \u2014 UNVERIFIED. Check the FAA Chart Supplement TWR line."
+        }
+      ]
+    },
+    {
+      "id": "RDM",
+      "code": "RDM",
+      "icao": "KRDM",
+      "name": "Roberts Field",
+      "city": "Redmond",
+      "state": "OR",
+      "tz": "America/Los_Angeles",
+      "lat": 44.2541,
+      "lon": -121.15,
+      "elevation_ft": 3080,
+      "carriers": [
+        "Alaska",
+        "United",
+        "Delta"
+      ],
+      "status": "queued",
+      "tracked": false,
+      "schedules": [
+        {
+          "id": "RDM-2024-01-01",
+          "from": "2024-01-01",
+          "to": null,
+          "open": 6,
+          "close": 22,
+          "note": "Copied from the design prototype \u2014 UNVERIFIED. Check the FAA Chart Supplement TWR line."
+        }
+      ]
+    },
+    {
+      "id": "SUN",
+      "code": "SUN",
+      "icao": "KSUN",
+      "name": "Friedman Memorial",
+      "city": "Hailey",
+      "state": "ID",
+      "tz": "America/Boise",
+      "lat": 43.5044,
+      "lon": -114.2961,
+      "elevation_ft": 5318,
+      "carriers": [
+        "Alaska",
+        "Delta",
+        "United"
+      ],
+      "status": "queued",
+      "tracked": false,
+      "schedules": [
+        {
+          "id": "SUN-2024-01-01",
+          "from": "2024-01-01",
+          "to": null,
+          "open": 7,
+          "close": 21,
+          "note": "Copied from the design prototype \u2014 UNVERIFIED. Check the FAA Chart Supplement TWR line."
+        }
+      ]
+    },
+    {
+      "id": "HYA",
+      "code": "HYA",
+      "icao": "KHYA",
+      "name": "Barnstable Municipal",
+      "city": "Hyannis",
+      "state": "MA",
+      "tz": "America/New_York",
+      "lat": 41.6693,
+      "lon": -70.2804,
+      "elevation_ft": 54,
+      "carriers": [
+        "Cape Air",
+        "JetBlue"
+      ],
+      "status": "queued",
+      "tracked": false,
+      "schedules": [
+        {
+          "id": "HYA-2024-01-01",
+          "from": "2024-01-01",
+          "to": null,
+          "open": 6,
+          "close": 22,
+          "note": "Copied from the design prototype \u2014 UNVERIFIED. Check the FAA Chart Supplement TWR line."
+        }
+      ]
+    },
+    {
+      "id": "PIH",
+      "code": "PIH",
+      "icao": "KPIH",
+      "name": "Pocatello Regional",
+      "city": "Pocatello",
+      "state": "ID",
+      "tz": "America/Boise",
+      "lat": 42.9098,
+      "lon": -112.5958,
+      "elevation_ft": 4452,
+      "carriers": [
+        "SkyWest"
+      ],
+      "status": "queued",
+      "tracked": false,
+      "schedules": [
+        {
+          "id": "PIH-2024-01-01",
+          "from": "2024-01-01",
+          "to": null,
+          "open": 6,
+          "close": 20,
+          "note": "Copied from the design prototype \u2014 UNVERIFIED. Check the FAA Chart Supplement TWR line."
+        }
+      ]
+    },
+    {
+      "id": "MMH",
+      "code": "MMH",
+      "icao": "KMMH",
+      "name": "Mammoth Yosemite",
+      "city": "Mammoth Lakes",
+      "state": "CA",
+      "tz": "America/Los_Angeles",
+      "lat": 37.6241,
+      "lon": -118.8377,
+      "elevation_ft": 7135,
+      "carriers": [
+        "Alaska",
+        "United"
+      ],
+      "status": "requested",
+      "tracked": false,
+      "schedules": [
+        {
+          "id": "MMH-2024-01-01",
+          "from": "2024-01-01",
+          "to": null,
+          "open": null,
+          "close": null,
+          "note": "Copied from the design prototype \u2014 UNVERIFIED. Check the FAA Chart Supplement TWR line."
+        }
+      ]
+    },
+    {
+      "id": "EKO",
+      "code": "EKO",
+      "icao": "KEKO",
+      "name": "Elko Regional",
+      "city": "Elko",
+      "state": "NV",
+      "tz": "America/Los_Angeles",
+      "lat": 40.8249,
+      "lon": -115.7917,
+      "elevation_ft": 5140,
+      "carriers": [
+        "SkyWest"
+      ],
+      "status": "requested",
+      "tracked": false,
+      "schedules": [
+        {
+          "id": "EKO-2024-01-01",
+          "from": "2024-01-01",
+          "to": null,
+          "open": 6,
+          "close": 20,
+          "note": "Copied from the design prototype \u2014 UNVERIFIED. Check the FAA Chart Supplement TWR line."
+        }
+      ]
+    },
+    {
+      "id": "HIB",
+      "code": "HIB",
+      "icao": "KHIB",
+      "name": "Range Regional",
+      "city": "Hibbing",
+      "state": "MN",
+      "tz": "America/Chicago",
+      "lat": 47.3866,
+      "lon": -92.839,
+      "elevation_ft": 1354,
+      "carriers": [
+        "Delta Connection"
+      ],
+      "status": "requested",
+      "tracked": false,
+      "schedules": [
+        {
+          "id": "HIB-2024-01-01",
+          "from": "2024-01-01",
+          "to": null,
+          "open": null,
+          "close": null,
+          "note": "Copied from the design prototype \u2014 UNVERIFIED. Check the FAA Chart Supplement TWR line."
+        }
+      ]
+    },
+    {
+      "id": "OTH",
+      "code": "OTH",
+      "icao": "KOTH",
+      "name": "Southwest Oregon Regional",
+      "city": "North Bend",
+      "state": "OR",
+      "tz": "America/Los_Angeles",
+      "lat": 43.4171,
+      "lon": -124.246,
+      "elevation_ft": 17,
+      "carriers": [
+        "Advanced Air"
+      ],
+      "status": "requested",
+      "tracked": false,
+      "schedules": [
+        {
+          "id": "OTH-2024-01-01",
+          "from": "2024-01-01",
+          "to": null,
+          "open": null,
+          "close": null,
+          "note": "Copied from the design prototype \u2014 UNVERIFIED. Check the FAA Chart Supplement TWR line."
+        }
+      ]
+    },
+    {
+      "id": "CKB",
+      "code": "CKB",
+      "icao": "KCKB",
+      "name": "North Central West Virginia",
+      "city": "Clarksburg",
+      "state": "WV",
+      "tz": "America/New_York",
+      "lat": 39.2966,
+      "lon": -80.2281,
+      "elevation_ft": 1217,
+      "carriers": [
+        "SkyWest"
+      ],
+      "status": "requested",
+      "tracked": false,
+      "schedules": [
+        {
+          "id": "CKB-2024-01-01",
+          "from": "2024-01-01",
+          "to": null,
+          "open": 7,
+          "close": 19,
+          "note": "Copied from the design prototype \u2014 UNVERIFIED. Check the FAA Chart Supplement TWR line."
+        }
+      ]
+    },
+    {
+      "id": "DDC",
+      "code": "DDC",
+      "icao": "KDDC",
+      "name": "Dodge City Regional",
+      "city": "Dodge City",
+      "state": "KS",
+      "tz": "America/Chicago",
+      "lat": 37.7634,
+      "lon": -99.9656,
+      "elevation_ft": 2594,
+      "carriers": [
+        "SkyWest"
+      ],
+      "status": "requested",
+      "tracked": false,
+      "schedules": [
+        {
+          "id": "DDC-2024-01-01",
+          "from": "2024-01-01",
+          "to": null,
+          "open": null,
+          "close": null,
+          "note": "Copied from the design prototype \u2014 UNVERIFIED. Check the FAA Chart Supplement TWR line."
+        }
+      ]
+    }
+  ]
+}

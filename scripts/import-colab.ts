@@ -7,10 +7,11 @@
  *   npm run import:colab -- data/raw/KPAE-2026-08-12.json [tracks.json]
  */
 import fs from 'node:fs';
-import { airportByCode } from '../src/lib/airports';
+import { getAirport as airportByCode } from '../src/lib/server/airports-store';
 import { eventTimeOf } from '../src/lib/server/pipeline';
 import { hasCachedFlights, storeFlights, storeTrack, type RawFlight, type RawTrack } from '../src/lib/server/flightaware';
 import { nightOf } from '../src/lib/time';
+import { towerHoursOn } from '../src/lib/airports';
 
 const [file, tracksFile] = process.argv.slice(2);
 if (!file) {
@@ -26,7 +27,8 @@ const byNight = new Map<string, RawFlight[]>();
 for (const f of flights) {
 	const t = eventTimeOf(f);
 	if (t == null) continue;
-	const n = nightOf(airport.tz, airport.towerHours, t);
+	// Use the schedule in effect on the flight's own date (evening or morning).
+	const n = nightOf(airport.tz, towerHoursOn(airport, new Date(t).toISOString().slice(0, 10)), t);
 	if (!n) continue;
 	if (!byNight.has(n)) byNight.set(n, []);
 	byNight.get(n)!.push(f);

@@ -202,3 +202,28 @@ test.describe('admin', () => {
 		expect([302, 503]).toContain(res.status());
 	});
 });
+
+test.describe('admin airports', () => {
+	test('lists airports from the database, exports the seed JSON, and edits a schedule', async ({ page, request }) => {
+		await page.goto('/admin/airports');
+		await expect(page.getByRole('heading', { name: 'Airports and tower hours' })).toBeVisible();
+		await expect(page.getByTestId('airport-PAE')).toBeVisible();
+		const exp = await request.get('/admin/airports/export');
+		expect(exp.ok()).toBeTruthy();
+		const json = await exp.json();
+		expect(json.airports.find((a: { code: string }) => a.code === 'PAE').schedules.length).toBeGreaterThan(0);
+
+		// Add a future schedule row for an untracked airport (no stored nights → no re-ingest warning).
+		const card = page.getByTestId('airport-DDC');
+		await card.getByRole('button', { name: /DDC/ }).click();
+		const newRow = card.locator('form.new');
+		await newRow.locator('input[name="from"]').fill('2030-01-01');
+		await newRow.locator('input[name="open"]').fill('6');
+		await newRow.locator('input[name="close"]').fill('20');
+		await newRow.locator('input[name="note"]').fill('e2e test row');
+		await newRow.getByRole('button', { name: 'add' }).click();
+		await expect(page.getByText('Saved DDC.')).toBeVisible();
+		// It now drifts from the seed file (live-only row).
+		await expect(page.getByText(/schedule:DDC-2030-01-01/)).toBeVisible();
+	});
+});

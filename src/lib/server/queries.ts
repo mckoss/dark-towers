@@ -3,7 +3,7 @@
  * SQLite and the static airport config. Period = rolling 30 nights ending on
  * the latest complete night (so the figures on every page agree).
  */
-import { AIRPORTS, airportByCode } from '$lib/airports';
+import { getAirport, listAirports } from './airports-store';
 import { addDays, todayKey } from '$lib/time';
 import type { AirportConfig, Flight, Incident, NightSummary } from '$lib/types';
 import * as db from './db';
@@ -63,7 +63,7 @@ export interface AirportWithStats extends AirportConfig {
 
 export function airportsWithStats(period = currentPeriod()): AirportWithStats[] {
 	const by = db.totalsByAirport(period.from, period.to);
-	return AIRPORTS.map((a) => ({ ...a, stats: by[a.icao] ?? null }));
+	return listAirports().map((a) => ({ ...a, stats: by[a.icao] ?? null }));
 }
 
 export function homeData() {
@@ -104,7 +104,7 @@ export interface AirportDetail {
 }
 
 export function airportDetail(code: string, night?: string | null, month?: string | null): AirportDetail | null {
-	const airport = airportByCode(code);
+	const airport = getAirport(code);
 	if (!airport) return null;
 	const range = db
 		.db()
@@ -158,7 +158,7 @@ export interface IncidentDetail {
 export function incidentDetail(id: string): IncidentDetail | null {
 	const incident = db.incidentById(id);
 	if (!incident) return null;
-	const airport = airportByCode(incident.airport);
+	const airport = getAirport(incident.airport);
 	const a = db.flightById(incident.flightA);
 	const b = db.flightById(incident.flightB);
 	if (!airport || !a || !b) return null;
