@@ -66,19 +66,14 @@
 	<title>{flightLabel(a)} and {flightLabel(b)} · close approach · Dark Towers</title>
 </svelte:head>
 
-<div class="back">
-	<a href="/airport/{airport.code}">← {airport.name}</a>
-</div>
-
-<section class="section">
-	<div class="cell head">
-		<div class="meta">
-			<span class="pill" class:pill-accent={incident.severity === 'very-close'} class:pill-grey={incident.severity !== 'very-close'}>{severityLabel}</span>
-			<span class="ref tabular">{incident.id}</span>
-		</div>
-		<h1 class="headline">{flightLabel(a)} and {flightLabel(b)} came within {nm(incident.lateralNm)} and {ft(incident.verticalFt)} of each other.</h1>
-		<div class="when">{nightLabel(incident.night)} · {localTime(airport.tz, incident.t)} · {airport.name} · tower closed</div>
+<section class="section head">
+	<div class="meta">
+		<a class="back" href="/airport/{airport.code}">← {airport.name}</a>
+		<span class="pill" class:pill-accent={incident.severity === 'very-close'} class:pill-grey={incident.severity !== 'very-close'}>{severityLabel}</span>
+		<span class="ref tabular">{incident.id}</span>
 	</div>
+	<h1 class="headline">{flightLabel(a)} and {flightLabel(b)}</h1>
+	<div class="when">{nightLabel(incident.night)} · {localTime(airport.tz, incident.t)} · {airport.name} · tower closed</div>
 </section>
 
 <section class="section split">
@@ -175,19 +170,21 @@
 </section>
 
 <style>
-	.back {
-		padding: 16px var(--gutter);
-		border-bottom: var(--row-rule);
+	/* Kept short so the map below is in view on arrival. */
+	.head {
+		padding: 14px var(--gutter) 16px;
 	}
-	.back a {
+	.back {
 		font-size: 13px;
 		font-weight: 600;
 		border: none;
+		margin-right: 10px;
 	}
 	.meta {
 		display: flex;
 		align-items: center;
-		gap: 14px;
+		flex-wrap: wrap;
+		gap: 12px;
 	}
 	.ref {
 		font-size: 12px;
@@ -197,17 +194,16 @@
 		color: var(--ink-45);
 	}
 	.headline {
-		margin-top: 20px;
-		font-size: 44px;
+		margin-top: 10px;
+		font-size: 26px;
 		font-weight: 900;
-		line-height: 1.02;
+		line-height: 1.1;
 		letter-spacing: -0.02em;
 		word-spacing: 0.08em;
-		max-width: 20ch;
 	}
 	.when {
-		margin-top: 16px;
-		font-size: 16px;
+		margin-top: 6px;
+		font-size: 14px;
 		color: var(--ink-60);
 	}
 	.facts {
@@ -385,7 +381,7 @@
 	}
 	@media (max-width: 760px) {
 		.headline {
-			font-size: 32px;
+			font-size: 22px;
 		}
 		.facts {
 			grid-template-rows: none;

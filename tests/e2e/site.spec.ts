@@ -160,7 +160,8 @@ test.describe('close approach', () => {
 		await page.goto(`/airport/PAE?night=${NIGHT_WITH_INCIDENTS}`);
 		await page.getByRole('link', { name: /Replay this close approach/ }).first().click();
 		await expect(page).toHaveURL(/\/close-approach\/PAE-/);
-		await expect(page.getByRole('heading', { level: 1 })).toContainText(/came within .* NM and .*' of each other/);
+		await expect(page.getByRole('heading', { level: 1 })).toContainText(/ and /);
+		await expect(page.getByText(/\d+' at \d+\.\d\d NM/)).toBeVisible();
 		await expect(page.getByText(/one is enough/)).toBeVisible();
 		await expect(page.getByText(/Nearest approach · \d+:\d\d:\d\d [ap]m/)).toBeVisible();
 		await expect(page.getByTestId('nearest-moment')).toContainText('kt');
