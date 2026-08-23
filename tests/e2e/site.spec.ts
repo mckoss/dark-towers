@@ -117,18 +117,18 @@ test.describe('airport detail', () => {
 		await expect(play).toHaveAttribute('aria-label', 'Play');
 		// A red pip on the scrubber for every close approach that night.
 		expect(await page.getByTestId('night-pip').count()).toBeGreaterThan(0);
-		const before = await page.getByTestId('night-time').textContent();
+		const before = await page.getByTestId('night-time').getAttribute('data-t');
 		await play.click();
 		await page.waitForTimeout(1500);
-		expect(await page.getByTestId('night-time').textContent()).not.toBe(before);
+		expect(await page.getByTestId('night-time').getAttribute('data-t')).not.toBe(before);
 		await play.click();
 		await expect(play).toHaveAttribute('aria-label', 'Play');
 		// Single-step: +15 s then −15 s returns to the same clock reading.
-		const paused = await page.getByTestId('night-time').textContent();
+		const paused = await page.getByTestId('night-time').getAttribute('data-t');
 		await page.getByTestId('night-forward').click();
-		expect(await page.getByTestId('night-time').textContent()).not.toBe(paused);
+		expect(await page.getByTestId('night-time').getAttribute('data-t')).not.toBe(paused);
 		await page.getByTestId('night-back').click();
-		expect(await page.getByTestId('night-time').textContent()).toBe(paused);
+		expect(await page.getByTestId('night-time').getAttribute('data-t')).toBe(paused);
 	});
 
 	test('a night without close approaches shows the honest empty state', async ({ page }) => {
@@ -183,17 +183,17 @@ test.describe('close approach', () => {
 		await expect(page.getByTestId('replay-pip')).toBeAttached();
 		// Playback starts on its own once the map is up.
 		await expect(play).toHaveAttribute('aria-label', 'Pause');
-		const before = await page.getByTestId('replay-time').textContent();
+		const before = await page.getByTestId('replay-time').getAttribute('data-t');
 		await page.waitForTimeout(1000);
-		const after = await page.getByTestId('replay-time').textContent();
+		const after = await page.getByTestId('replay-time').getAttribute('data-t');
 		expect(after).not.toBe(before);
 		await expect(page.getByTestId('replay-lateral')).toContainText('NM');
 		// Stepping pauses playback and moves the clock by 15 s.
 		await page.getByTestId('replay-forward').click();
 		await expect(play).toHaveAttribute('aria-label', /Play|Replay/);
-		const stepped = await page.getByTestId('replay-time').textContent();
+		const stepped = await page.getByTestId('replay-time').getAttribute('data-t');
 		await page.getByTestId('replay-back').click();
-		expect(await page.getByTestId('replay-time').textContent()).not.toBe(stepped);
+		expect(await page.getByTestId('replay-time').getAttribute('data-t')).not.toBe(stepped);
 		await expect(page.getByTestId('replay-vertical')).toContainText('ft');
 		// Scrubbing to the end lands on the closest pass region and stops.
 		const scrubber = page.getByTestId('replay-scrubber');
@@ -202,7 +202,7 @@ test.describe('close approach', () => {
 			el.dispatchEvent(new Event('input', { bubbles: true }));
 		});
 		await page.waitForTimeout(200);
-		await expect(page.getByTestId('replay-time')).not.toHaveText(before ?? '');
+		expect(await page.getByTestId('replay-time').getAttribute('data-t')).not.toBe(before);
 	});
 
 	test('unknown incident id is a 404', async ({ page }) => {

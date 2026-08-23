@@ -415,7 +415,7 @@
 <div class="replay-map-wrap">
 	<div class="flight-map" bind:this={el} style:height="{height}px" aria-label="Map of flight paths near the airport"></div>
 	{#if replay && span}
-		<div class="replay-clock" data-testid="night-time">{localTimeZoned(tz, started ? t : span.start, true)}</div>
+		<div class="replay-clock" data-testid="night-time" data-t={started ? t : span.start}>{localTimeZoned(tz, started ? t : span.start)}</div>
 	{/if}
 </div>
 {#if replay}

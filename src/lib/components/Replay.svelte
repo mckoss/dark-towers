@@ -379,7 +379,7 @@
 			{/if}
 		</div>
 		{#if replay}
-			<div class="replay-clock" data-testid="replay-time">{localTimeZoned(airport.tz, t, true)}</div>
+			<div class="replay-clock" data-testid="replay-time" data-t={t}>{localTimeZoned(airport.tz, t)}</div>
 		{/if}
 	</div>
 	<div class="replay-controls">
