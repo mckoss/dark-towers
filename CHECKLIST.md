@@ -54,6 +54,15 @@ Status key: `[x]` done & verified · `[~]` in progress / partial · `[ ]` to do 
 - [x] Health endpoint `/api/health` (used by Railway healthcheck in `railway.json`)
 - [ ] Verify first autonomous nightly run in production
 
+## 5b. Admin & accounts
+- [x] Single settings source: `settings.json` locally / `SETTINGS_JSON` env on Railway (same JSON) — api key, admins, Google client, session secret, public origin
+- [x] Google sign-in (authorization-code flow, id_token claims checked for audience/issuer, no new dependency); signed stateless session cookie; admins allow-list checked live per request
+- [x] `/admin` console: unlinked, `noindex`, robots-disallowed; redirect to sign-in when anonymous, 403 when not an admin; open mode for local dev/e2e via `DTW_NO_AUTH=1`
+- [x] Console features: config status, "Catch up now", ingest a night (with force), live job log, data-on-hand per airport, incomplete nights, recent runs, airport requests (delete)
+- [?] Google OAuth client id/secret — needs creating in Google Cloud Console (QUESTIONS #18)
+- [ ] Admin: manage admins from the UI (currently the list lives in settings) — follow-up if wanted
+- [ ] Admin: edit tracked airports / tower hours from the UI instead of `src/lib/airports.ts`
+
 ## 6. Backlog — requested
 - [x] **Longer time series.** Airport page defaults to the rolling last 30 days; stepping back moves through calendar-month windows (`?month=YYYY-MM`, e.g. June 2024) with stats, calendar and night panel scoped to that window; `?night=` deep links outside the default window imply their month; 'Last 30 days →' returns. All historical data (May 2024 →) is reachable.
 - [ ] **Trend graphs.** Charts of close approaches per week (and flights per week, airline vs. private) per airport and site-wide; weekly rollup query over `nights`, rendered in the design system (flat SVG, accent for close approaches). Candidate placements: airport detail above the calendar, and a site-wide view on Home or Airports.

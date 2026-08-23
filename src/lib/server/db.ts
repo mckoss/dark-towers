@@ -233,3 +233,27 @@ export function totalsByAirport(fromNight: string, toNight: string): Record<stri
 	for (const r of rows) out[r.airport] = r;
 	return out;
 }
+
+/* ---------- admin reads ---------- */
+
+export interface RunRow {
+	id: number; airport: string; night: string; started_at: number; finished_at: number | null; ok: number | null; message: string | null;
+}
+export function recentRuns(limit = 40): RunRow[] {
+	return db().prepare(`SELECT * FROM runs ORDER BY id DESC LIMIT ?`).all(limit) as RunRow[];
+}
+export interface RequestRow {
+	id: number; value: string; email: string | null; created_at: number;
+}
+export function listRequests(limit = 200): RequestRow[] {
+	return db().prepare(`SELECT * FROM requests ORDER BY id DESC LIMIT ?`).all(limit) as RequestRow[];
+}
+export function deleteRequest(id: number) {
+	db().prepare(`DELETE FROM requests WHERE id = ?`).run(id);
+}
+export function incompleteNights(limit = 60): NightSummary[] {
+	return (db().prepare(`SELECT * FROM nights WHERE complete = 0 ORDER BY night DESC LIMIT ?`).all(limit) as NightRow[]).map(rowToNight);
+}
+export function nightCounts(): { airport: string; nights: number; complete: number; first: string; last: string }[] {
+	return db().prepare(`SELECT airport, COUNT(*) nights, SUM(complete) complete, MIN(night) first, MAX(night) last FROM nights GROUP BY airport ORDER BY airport`).all() as never;
+}

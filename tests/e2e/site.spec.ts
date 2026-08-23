@@ -179,3 +179,26 @@ test.describe('method', () => {
 		expect(text).not.toMatch(/loss of separation|general aviation|air carrier/i);
 	});
 });
+
+test.describe('admin', () => {
+	test('is unlinked, noindex, and gated (open mode in tests; anonymous users are sent to sign-in otherwise)', async ({ page, request }) => {
+		// The e2e server runs with DTW_NO_AUTH=1 so the console is reachable.
+		const res = await page.goto('/admin');
+		expect(res?.headers()['x-robots-tag']).toContain('noindex');
+		await expect(page.getByRole('heading', { name: 'Pipeline console' })).toBeVisible();
+		await expect(page.getByText(/Open mode/)).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Catch up now' })).toBeVisible();
+		// Data on hand reflects the sample database.
+		await expect(page.getByText('KPAE').first()).toBeVisible();
+		// Nothing in the public chrome links to /admin.
+		await page.goto('/');
+		expect(await page.locator('a[href^="/admin"]').count()).toBe(0);
+		const robots = await (await request.get('/robots.txt')).text();
+		expect(robots).toMatch(/Disallow: \/admin/);
+	});
+
+	test('sign-in endpoint refuses when Google is not configured', async ({ request }) => {
+		const res = await request.get('/auth/google', { maxRedirects: 0 });
+		expect([302, 503]).toContain(res.status());
+	});
+});

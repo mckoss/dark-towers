@@ -1,3 +1,10 @@
 {
-    "api_key": "<your FlightAware AeroAPI key>"
+    "api_key": "<FlightAware AeroAPI key>",
+    "admins": ["mckoss@gmail.com", "kstoltz@citynetwork.com"],
+    "google": {
+        "client_id": "<Google OAuth client id>.apps.googleusercontent.com",
+        "client_secret": "<Google OAuth client secret>"
+    },
+    "session_secret": "<any long random string>",
+    "public_origin": "https://your-domain.example"
 }
