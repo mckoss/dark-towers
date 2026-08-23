@@ -181,18 +181,18 @@ export function glyphHtml(color: string, shape: Silhouette, g: number): string {
 
 /**
  * Lay time marks out in two rows so labels never overlap: each mark, in
- * x order, goes on row 0 unless it would collide with the previous row-0
- * label, in which case it goes on row 1. `x` and `labelW` are in the same
- * units (pixels). Returns a row index per mark.
+ * x order, goes on the first row whose previous label it clears; if neither
+ * row is free it gets -1 (no label — the pip itself still shows). `x` and
+ * `labelW` are in the same units (pixels). Returns a row index per mark.
  */
 export function assignLanes(xs: number[], labelW: number): number[] {
 	const order = xs.map((x, i) => i).sort((a, b) => xs[a] - xs[b]);
 	const lastX = [-Infinity, -Infinity];
 	const lanes = new Array<number>(xs.length).fill(0);
 	for (const i of order) {
-		const lane = xs[i] - lastX[0] < labelW ? 1 : 0;
+		const lane = xs[i] - lastX[0] >= labelW ? 0 : xs[i] - lastX[1] >= labelW ? 1 : -1;
 		lanes[i] = lane;
-		lastX[lane] = xs[i];
+		if (lane >= 0) lastX[lane] = xs[i];
 	}
 	return lanes;
 }

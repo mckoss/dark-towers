@@ -83,17 +83,17 @@
 	const marks = $derived.by(() => {
 		if (!span) return [] as { x: number; frac: number; text: string; kind: 'start' | 'end' | 'pip'; lane: number }[];
 		const len = span.end - span.start;
-		const inner = Math.max(0, marksW - 16);
+		const inner = Math.max(0, marksW - 6);
 		// Close approaches take rows 0–1; the start and end times always sit on row 2.
 		const pips = sortedIncidents.map((inc) => {
 			const frac = (inc.t - span.start) / len;
-			return { frac, text: localTime(tz, inc.t), kind: 'pip' as const, x: 8 + inner * frac };
+			return { frac, text: localTime(tz, inc.t), kind: 'pip' as const, x: 3 + inner * frac };
 		});
 		const lanes = assignLanes(pips.map((m) => m.x), MARK_W);
 		return [
 			...pips.map((m, i) => ({ ...m, lane: lanes[i] })),
-			{ frac: 0, text: localTime(tz, span.start), kind: 'start' as const, x: 8, lane: 2 },
-			{ frac: 1, text: localTime(tz, span.end), kind: 'end' as const, x: marksW - 8, lane: 2 }
+			{ frac: 0, text: localTime(tz, span.start), kind: 'start' as const, x: 1, lane: 2 },
+			{ frac: 1, text: localTime(tz, span.end), kind: 'end' as const, x: marksW - 1, lane: 2 }
 		];
 	});
 	/** Intervals (as fractions of the span) when at least one flight of a kind is in the air, merged. */
@@ -478,8 +478,8 @@
 		</div>
 		{#if span}
 			<div class="replay-marks" data-testid="night-marks" bind:clientWidth={marksW}>
-				{#each marks as m, i (m.kind + i)}
-					<span class="mark {m.kind === 'pip' ? 'pip-mark' : m.kind} lane-{m.lane}" style="--pip: {m.frac.toFixed(4)}">{m.text}</span>
+				{#each marks.filter((m) => m.lane >= 0) as m, i (m.kind + i)}
+					<span class="mark {m.kind === 'pip' ? 'pip-mark' : m.kind} lane-{m.lane}" class:edge-left={m.kind === 'pip' && m.x < MARK_W / 2} class:edge-right={m.kind === 'pip' && marksW - m.x < MARK_W / 2} style="--pip: {m.frac.toFixed(4)}">{m.text}</span>
 				{/each}
 			</div>
 		{/if}

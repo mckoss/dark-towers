@@ -411,19 +411,19 @@ p {
 	background: var(--ink-45);
 }
 .replay-marks .start {
-	left: 8px;
+	left: 1px;
 }
 .replay-marks .start::before {
 	left: 0;
 }
 .replay-marks .end {
-	right: 8px;
+	right: 1px;
 }
 .replay-marks .end::before {
 	right: 0;
 }
 .replay-marks .pip-mark {
-	left: calc(8px + (100% - 16px) * var(--pip));
+	left: calc(3px + (100% - 6px) * var(--pip));
 	transform: translateX(-50%);
 	color: var(--accent);
 	font-weight: 700;
@@ -431,6 +431,23 @@ p {
 .replay-marks .pip-mark::before {
 	left: 50%;
 	background: var(--accent);
+}
+/* Pip labels near either end stay inside the bar; their tick still marks the exact spot. */
+.replay-marks .pip-mark.edge-left {
+	transform: none;
+	left: 1px;
+}
+.replay-marks .pip-mark.edge-left::before {
+	left: 2px;
+}
+.replay-marks .pip-mark.edge-right {
+	transform: none;
+	left: auto;
+	right: 1px;
+}
+.replay-marks .pip-mark.edge-right::before {
+	left: auto;
+	right: 2px;
 }
 /* Rows 1 and 2 sit 14px lower each; ticks reach up to the bar. Row 2 is reserved for the start and end times. */
 .replay-marks .lane-1 {
@@ -459,21 +476,65 @@ p {
 	position: relative;
 	z-index: 2;
 	width: 100%;
-	accent-color: var(--accent);
-	cursor: pointer;
+	height: 20px;
 	margin: 0;
+	background: transparent;
+	cursor: pointer;
+	appearance: none;
+	-webkit-appearance: none;
+}
+/* Own the track geometry so the bands can sit exactly inside its border:
+   track 8px tall with a 1px ink border (transparent fill), square thumb. */
+.replay-scrubber::-webkit-slider-runnable-track {
+	height: 8px;
+	background: transparent;
+	border: 1px solid var(--ink-45);
+}
+.replay-scrubber::-moz-range-track {
+	height: 8px;
+	background: transparent;
+	border: 1px solid var(--ink-45);
+}
+.replay-scrubber::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 6px;
+	height: 20px;
+	margin-top: -7px;
+	background: var(--accent);
+	border: none;
+	border-radius: 3px;
+	box-shadow: 0 0 0 1px var(--ground);
+}
+.replay-scrubber::-moz-range-thumb {
+	width: 6px;
+	height: 20px;
+	background: var(--accent);
+	border: none;
+	border-radius: 3px;
+	box-shadow: 0 0 0 1px var(--ground);
+}
+.replay-scrubber:disabled {
+	cursor: default;
+}
+.replay-scrubber:disabled::-webkit-slider-thumb {
+	background: var(--ink-25);
+}
+.replay-scrubber:disabled::-moz-range-thumb {
+	background: var(--ink-25);
 }
 /* Faint band on the scrubber while an airline flight is in the air. */
 .replay-band {
-	/* A strip just below the native track, so the track's own outline is never painted over. */
+	/* Inside the track's 1px border: track is 8px tall centred on the input. */
 	position: absolute;
-	top: calc(50% + 7px);
-	height: 5px;
+	top: 50%;
+	height: 6px;
+	margin-top: -3px;
 	/* Opaque tints (accent / ink over the ground colour) so the airline band covers a private one beneath it. */
 	background: #f6c6bc;
 	pointer-events: none;
-	left: calc(8px + (100% - 16px) * var(--from));
-	width: calc((100% - 16px) * (var(--to) - var(--from)));
+	left: calc(1px + (100% - 2px) * var(--from));
+	width: calc((100% - 2px) * (var(--to) - var(--from)));
 }
 .replay-band.private {
 	background: #d9d6d6;
@@ -491,7 +552,7 @@ p {
 	background: var(--accent);
 	box-shadow: 0 0 0 2px var(--ground);
 	pointer-events: none;
-	left: calc(8px + (100% - 16px) * var(--pip));
+	left: calc(3px + (100% - 6px) * var(--pip));
 }
 .replay-speeds {
 	display: flex;
