@@ -80,7 +80,7 @@
 		const vel = entry.spline.velocityAt(t);
 		const color = f.category === 'airline' ? '#ec3013' : '#201e1d';
 		const shown = displayAlt(v[2], t, alt, altView.mode);
-		const html = dataBlockHtml({ label: `${flightLabel(f)}${f.type ? ' · ' + f.type : ''}`, altFt: shown.ft, altUnit: shown.mode === 'agl' ? 'above field' : 'reported', gsKt: v[3], trend: trendOf(vel ? vel[2] * 1000 : null) }, color);
+		const html = dataBlockHtml({ label: `${flightLabel(f)}${f.type ? ' · ' + f.type : ''}`, altFt: shown.ft, altUnit: shown.mode === 'agl' ? 'AGL' : 'reported', gsKt: v[3], trend: trendOf(vel ? vel[2] * 1000 : null) }, color);
 		const at: LeafletNS.LatLngExpression = [v[0], v[1]];
 		if (!hoverDot) hoverDot = L.circleMarker(at, { radius: 4, color, weight: 2, fillColor: '#f3f2f2', fillOpacity: 1, interactive: false }).addTo(base.map);
 		else hoverDot.setLatLng(at).setStyle({ color });

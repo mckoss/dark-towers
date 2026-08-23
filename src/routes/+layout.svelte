@@ -45,6 +45,7 @@
 
 <footer class="site-footer">
 	<span class="footnote">Dark Tower Watch · a citizen project built on public ADS-B data and published tower hours</span>
+	<span class="footnote glossary"><abbr title="Above ground level">AGL</abbr> — height above the airport, not above sea level · <abbr title="Nautical mile">NM</abbr> — nautical mile, 1.15 miles · <abbr title="Knots">kt</abbr> — knots, nautical miles per hour</span>
 	<a href="/method#who-we-are">Who we are</a>
 </footer>
 
@@ -131,6 +132,15 @@
 		padding: 24px var(--gutter) 40px;
 		border-top: var(--rule);
 		font-size: 13px;
+	}
+	.glossary {
+		flex-basis: 100%;
+		color: var(--ink-45);
+	}
+	.glossary abbr {
+		text-decoration: none;
+		font-weight: 700;
+		color: var(--ink-60);
 	}
 	@media (max-width: 760px) {
 		.brand {

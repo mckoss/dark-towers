@@ -8,7 +8,7 @@ export interface DataBlockInput {
 	label: string;
 	/** Feet, already in the unit named by `altUnit`. */
 	altFt: number;
-	/** Suffix for the plain-language line: "above field" (default) or "reported". */
+	/** Suffix for the plain-language line: "AGL" (default; above ground level, i.e. the field) or "reported". */
 	altUnit?: string;
 	/** Knots. */
 	gsKt: number;
@@ -29,7 +29,7 @@ export function dataBlockLines(d: DataBlockInput): [string, string, string] {
 	return [
 		d.label,
 		`${altitudeHundreds(d.altFt)}${arrow} ${String(Math.round(d.gsKt)).padStart(3, ' ')}`,
-		`${Math.round(d.altFt).toLocaleString('en-US')} ft ${d.altUnit ?? 'above field'}${arrow ? ' ' + arrow : ''} · ${Math.round(d.gsKt)} kt`
+		`${Math.round(d.altFt).toLocaleString('en-US')} ft ${d.altUnit ?? 'AGL'}${arrow ? ' ' + arrow : ''} · ${Math.round(d.gsKt)} kt`
 	];
 }
 

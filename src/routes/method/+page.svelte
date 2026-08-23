@@ -38,7 +38,7 @@
 
 	const limitations = [
 		'Aircraft that do not broadcast a position signal do not appear at all, so these counts are a floor, not a total.',
-		'Transponders broadcast altitude against a standard air pressure, not the day\'s actual pressure, and in steps of 100 feet. Heights above the field are corrected using the airport\'s hourly weather reports (the altimeter setting), interpolated between reports; a night with no weather report is shown uncorrected and says so. Expect about ±100 feet. The difference between two aircraft is not affected by this correction, so separation figures use the altitudes exactly as reported.',
+		'Transponders broadcast altitude against a standard air pressure, not the day\'s actual pressure, and in steps of 100 feet. Heights above the field (AGL) are corrected using the airport\'s hourly weather reports (the altimeter setting), interpolated between reports; a night with no weather report is shown uncorrected and says so. Expect about ±100 feet. The difference between two aircraft is not affected by this correction, so separation figures use the altitudes exactly as reported.',
 		'Landing and takeoff times are sometimes estimated rather than measured; where the measured time is missing, the estimate is used.',
 		'Coverage close to the ground is uneven, so the lowest parts of some flight paths are missing.',
 		'An aircraft on the runway does not count. Any moment when either aircraft was within 150 feet of the field (after the pressure correction), or moving slower than 40 knots, is left out — so a landing roll beneath a passing aircraft is not flagged.'

@@ -117,7 +117,7 @@
 		if (!s) return `<div class="replay-chip" style="color:${color};border-color:${color}">${text}</div>`;
 		const note = s.phase === 'after' ? ' · track ended' : s.phase === 'before' ? ' · not yet reporting' : '';
 		const shown = displayAlt(s.alt, at, alt, altView.mode);
-		return dataBlockHtml({ label: text + note, altFt: shown.ft, altUnit: shown.mode === 'agl' ? 'above field' : 'reported', gsKt: s.gs, trend: trendOf(s.vs) }, color);
+		return dataBlockHtml({ label: text + note, altFt: shown.ft, altUnit: shown.mode === 'agl' ? 'AGL' : 'reported', gsKt: s.gs, trend: trendOf(s.vs) }, color);
 	}
 
 	onMount(() => {
