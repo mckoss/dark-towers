@@ -2,10 +2,61 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="refresh" content="0; url=standalone/Dark%20Tower%20Watch%20(offline).html">
-<title>Dark Tower Watch</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dark Tower Watch — prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #f3f2f2; color: #201e1d; font-family: "Archivo", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  ::selection { background: #ffc4b8; }
+  :focus-visible { outline: 2px solid #ec3013; outline-offset: 2px; }
+  main { max-width: 960px; margin: 0 auto; padding: 56px 24px 48px; }
+  .kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #ec3013; margin: 0 0 14px; }
+  h1 { font-size: 46px; font-weight: 900; letter-spacing: -0.03em; line-height: 1.02; margin: 0 0 18px; max-width: 18ch; }
+  p { font-size: 17px; line-height: 1.6; color: #444141; max-width: 54ch; margin: 0; }
+  .choices { display: grid; grid-template-columns: 1fr 1fr; border-top: 2px solid #201e1d; border-bottom: 2px solid #201e1d; margin-top: 40px; }
+  .choices a { display: block; padding: 28px 24px 32px; text-decoration: none; color: inherit; border-right: 2px solid #201e1d; }
+  .choices a:last-child { border-right: none; }
+  .choices a:hover { background: #eae9e9; }
+  .choices .name { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 8px; }
+  .choices .desc { font-size: 14px; line-height: 1.5; color: #605d5d; margin: 0 0 18px; }
+  .choices .go { font-size: 14px; font-weight: 700; letter-spacing: 0.04em; color: #ae1800; }
+  .foot { font-size: 12px; color: #7d7979; margin-top: 24px; line-height: 1.5; }
+  .foot a { color: #ae1800; text-decoration: none; border-bottom: 1px solid rgba(174,24,0,0.4); }
+  .foot a:hover { color: #ec3013; border-bottom-color: #ec3013; }
+  @media (max-width: 640px) {
+    main { padding: 36px 20px 40px; }
+    h1 { font-size: 34px; }
+    .choices { grid-template-columns: 1fr; }
+    .choices a { border-right: none; border-bottom: 1px solid #d7d3d3; }
+    .choices a:last-child { border-bottom: none; }
+  }
+</style>
 </head>
 <body>
-<p>Redirecting to the <a href="standalone/Dark%20Tower%20Watch%20(offline).html">Dark Tower Watch prototype</a>…</p>
+<main>
+  <p class="kicker">Prototype</p>
+  <h1>Dark Tower Watch</h1>
+  <p>Flights and close approaches at airports where airliners land with no tower on duty. Choose a prototype to view.</p>
+
+  <nav class="choices" aria-label="Prototype layouts">
+    <a href="prototype/Dark%20Tower%20Watch.dc.html">
+      <p class="name">Desktop site</p>
+      <p class="desc">All five views — home, airports, airport detail, close-approach replay, and method — with live maps.</p>
+      <span class="go">Open desktop prototype →</span>
+    </a>
+    <a href="prototype/Dark%20Tower%20Watch%20Mobile.dc.html">
+      <p class="name">Mobile screens</p>
+      <p class="desc">Four mobile screens shown in phone frames, as an installable web app would present them.</p>
+      <span class="go">Open mobile prototype →</span>
+    </a>
+  </nav>
+
+  <p class="foot">A single self-contained offline copy of the desktop site is also available:
+    <a href="standalone/Dark%20Tower%20Watch%20(offline).html">Dark Tower Watch (offline)</a>.
+    Source on <a href="https://github.com/mckoss/dark-towers">GitHub</a>.</p>
+</main>
 </body>
 </html>

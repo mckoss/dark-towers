@@ -303,6 +303,9 @@ Note: the capture tool re-renders the DOM and does not paint Leaflet's basemap r
 panels appear on a blank ground in these images. Open the standalone HTML file to see the maps with
 their basemap. Vector tracks, aircraft silhouettes, rings, and all typography are accurate.
 
+## Hosted prototype
+https://mckoss.com/dark-towers/ (GitHub Pages, from `main`) offers the desktop and mobile prototypes.
+
 ## Files
 ```
 screenshots/                        rendered views, see the table above
@@ -314,6 +317,11 @@ prototype/
   flight-map.js                     <flight-map> — Leaflet track overlay
   incident-replay.js                <incident-replay> — animated close-approach replay
   support.js                        prototype runtime (not needed in production)
+  ios-frame.jsx                     <IOSDevice> phone frame used by the mobile mockups (stand-in)
+  leaflet.js, leaflet.css           Leaflet 1.9.4, vendored so the prototype runs without a CDN
+  us-atlas.js                       us-atlas states-10m topology (window.US_ATLAS)
+  pae-basemap.js                    stored basemap snapshot of the Paine Field area
+  _ds/modernist-*/                  design-system stylesheet + bundle the .dc.html files load
 standalone/
   Dark Tower Watch (offline).html   single self-contained file, no network calls
 ```
