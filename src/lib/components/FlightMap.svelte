@@ -4,7 +4,7 @@
 	import { altView, displayAlt, NO_CORRECTION, type AltContext } from '$lib/altview.svelte';
 	import { localTime, localTimeZoned } from '$lib/time';
 	import { PAUSE_ICON, PLAY_ICON, REPLAY_ICON } from './Replay.svelte';
-	import { glyphHtml, silhouetteFor } from '$lib/replay';
+	import { assignLanes, glyphHtml, silhouetteFor } from '$lib/replay';
 	import { SEPARATION_LATERAL_NM, SEPARATION_VERTICAL_FT } from '$lib/airports';
 	import { distanceNm } from '$lib/geo';
 	import type { Incident } from '$lib/types';
@@ -77,6 +77,24 @@
 	let holdTimer: ReturnType<typeof setTimeout> | undefined;
 	const visited = new Set<string>();
 	const sortedIncidents = $derived([...incidents].sort((x, y) => x.t - y.t));
+	// Time marks under the scrubber, in two rows so labels never overlap.
+	const MARK_W = 52;
+	let marksW = $state(0);
+	const marks = $derived.by(() => {
+		if (!span) return [] as { x: number; frac: number; text: string; kind: 'start' | 'end' | 'pip'; lane: number }[];
+		const len = span.end - span.start;
+		const inner = Math.max(0, marksW - 16);
+		const items = [
+			{ frac: 0, text: localTime(tz, span.start), kind: 'start' as const, x: 8 + MARK_W / 2 },
+			...sortedIncidents.map((inc) => {
+				const frac = (inc.t - span.start) / len;
+				return { frac, text: localTime(tz, inc.t), kind: 'pip' as const, x: 8 + inner * frac };
+			}),
+			{ frac: 1, text: localTime(tz, span.end), kind: 'end' as const, x: marksW - 8 - MARK_W / 2 }
+		];
+		const lanes = assignLanes(items.map((m) => m.x), MARK_W);
+		return items.map((m, i) => ({ ...m, lane: lanes[i] }));
+	});
 	/** Intervals (as fractions of the span) when at least one airline flight is in the air, merged. */
 	const airlineBands = $derived.by(() => {
 		if (!span) return [] as { from: number; to: number }[];
@@ -452,13 +470,9 @@
 			{/if}
 		</div>
 		{#if span}
-			{@const len = span.end - span.start}
-			{@const pips = sortedIncidents.map((inc) => (inc.t - span.start) / len)}
-			<div class="replay-marks" data-testid="night-marks">
-				{#if !pips.some((p) => p < 0.08)}<span class="mark start">{localTime(tz, span.start)}</span>{/if}
-				{#if !pips.some((p) => p > 0.92)}<span class="mark end">{localTime(tz, span.end)}</span>{/if}
-				{#each sortedIncidents as inc, i (inc.id)}
-					<span class="mark pip-mark" style="--pip: {pips[i].toFixed(4)}">{localTime(tz, inc.t)}</span>
+			<div class="replay-marks" data-testid="night-marks" bind:clientWidth={marksW}>
+				{#each marks as m, i (m.kind + i)}
+					<span class="mark {m.kind === 'pip' ? 'pip-mark' : m.kind} lane-{m.lane}" style="--pip: {m.frac.toFixed(4)}">{m.text}</span>
 				{/each}
 			</div>
 		{/if}

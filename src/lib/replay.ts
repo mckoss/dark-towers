@@ -178,3 +178,21 @@ export function glyphHtml(color: string, shape: Silhouette, g: number): string {
 		`<svg class="replay-glyph" viewBox="0 0 40 40" width="${g}" height="${g}"><path fill="${color}" stroke="#f3f2f2" stroke-width="2.5" stroke-linejoin="round" paint-order="stroke" d="${SILHOUETTE_PATHS[shape]}"/></svg>`
 	);
 }
+
+/**
+ * Lay time marks out in two rows so labels never overlap: each mark, in
+ * x order, goes on row 0 unless it would collide with the previous row-0
+ * label, in which case it goes on row 1. `x` and `labelW` are in the same
+ * units (pixels). Returns a row index per mark.
+ */
+export function assignLanes(xs: number[], labelW: number): number[] {
+	const order = xs.map((x, i) => i).sort((a, b) => xs[a] - xs[b]);
+	const lastX = [-Infinity, -Infinity];
+	const lanes = new Array<number>(xs.length).fill(0);
+	for (const i of order) {
+		const lane = xs[i] - lastX[0] < labelW ? 1 : 0;
+		lanes[i] = lane;
+		lastX[lane] = xs[i];
+	}
+	return lanes;
+}

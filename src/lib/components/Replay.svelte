@@ -405,9 +405,9 @@
 			<span class="replay-pip" data-testid="replay-pip" style="--pip: {((incident.t - start) / span).toFixed(4)}" title="Closest moment"></span>
 		</div>
 		<div class="replay-marks" data-testid="replay-marks">
-			{#if pipFrac >= 0.12}<span class="mark start">{localTime(airport.tz, start)}</span>{/if}
-			{#if pipFrac <= 0.88}<span class="mark end">{localTime(airport.tz, end)}</span>{/if}
-			<span class="mark pip-mark" style="--pip: {pipFrac.toFixed(4)}">{localTime(airport.tz, incident.t)}</span>
+			<span class="mark start lane-{pipFrac < 0.12 ? 1 : 0}">{localTime(airport.tz, start)}</span>
+			<span class="mark end lane-{pipFrac > 0.88 ? 1 : 0}">{localTime(airport.tz, end)}</span>
+			<span class="mark pip-mark lane-0" style="--pip: {pipFrac.toFixed(4)}">{localTime(airport.tz, incident.t)}</span>
 		</div>
 		</div>
 		<div class="replay-speeds" role="group" aria-label="Step 15 seconds">
