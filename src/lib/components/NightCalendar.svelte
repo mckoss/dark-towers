@@ -17,13 +17,17 @@
 		if (!s) return ['No data yet'];
 		return [`${s.flights} flights`, `${s.incidents} close ${s.incidents === 1 ? 'approach' : 'approaches'}`];
 	}
-	let tip = $state<{ lines: string[]; x: number; hot: boolean } | null>(null);
+	let tip = $state<{ lines: string[]; x: number; hot: boolean; align: 'center' | 'left' | 'right' } | null>(null);
 	let gridEl: HTMLDivElement;
 	function showTip(e: Event, c: { night: string; summary: NightSummary | null }) {
 		const el = e.currentTarget as HTMLElement;
 		const r = el.getBoundingClientRect(),
 			g = gridEl.getBoundingClientRect();
-		tip = { lines: describe(c), x: r.left - g.left + r.width / 2, hot: (c.summary?.incidents ?? 0) > 0 };
+		// Keep the tip inside the strip: anchor it to the chip's left or right edge near the ends.
+		const x = r.left - g.left + r.width / 2;
+		const TIP_HALF = 80;
+		const align = x < TIP_HALF ? 'left' : g.width - x < TIP_HALF ? 'right' : 'center';
+		tip = { lines: describe(c), x: align === 'left' ? r.left - g.left : align === 'right' ? r.right - g.left : x, hot: (c.summary?.incidents ?? 0) > 0, align };
 	}
 
 	const max = $derived(Math.max(1, ...calendar.map((c) => c.summary?.flights ?? 0)));
@@ -48,7 +52,7 @@
 	</div>
 	<div class="grid" bind:this={gridEl}>
 		{#if tip}
-			<div class="tip datablock" data-testid="cal-tip" style:left="{tip.x}px" style:--db-color={tip.hot ? 'var(--accent)' : 'var(--ink)'}>
+			<div class="tip datablock {tip.align}" data-testid="cal-tip" style:left="{tip.x}px" style:--db-color={tip.hot ? 'var(--accent)' : 'var(--ink)'}>
 				{#each tip.lines as line, i (i)}<div class={i === 0 ? 'db-id' : 'db-plain'}>{line}</div>{/each}
 			</div>
 		{/if}
@@ -94,6 +98,12 @@
 		margin-top: 4px;
 		transform: translateX(-50%);
 		z-index: 5;
+	}
+	.tip.left {
+		transform: none;
+	}
+	.tip.right {
+		transform: translateX(-100%);
 	}
 	.night {
 		display: flex;
