@@ -28,7 +28,8 @@
 		'Aircraft that do not broadcast a position signal do not appear at all, so these counts are a floor, not a total.',
 		'Broadcast altitude is not corrected for local air pressure, so altitude figures carry roughly ±100 feet.',
 		'Landing and takeoff times are sometimes estimated rather than measured; where the measured time is missing, the estimate is used.',
-		'Coverage close to the ground is uneven, so the lowest parts of some flight paths are missing.'
+		'Coverage close to the ground is uneven, so the lowest parts of some flight paths are missing.',
+		'An aircraft on the runway does not count. Any moment when either aircraft was within 150 feet of the field elevation, or moving slower than 40 knots, is left out — so a landing roll beneath a passing aircraft is not flagged.'
 	];
 
 	const mike = 'mckoss@gmail.com';

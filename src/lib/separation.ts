@@ -123,6 +123,8 @@ export function findIncidents(origin: LatLon, airportIcao: string, night: string
 				flightB: B.flight.id,
 				altA: Math.round(cp.a[2]),
 				altB: Math.round(cp.b[2]),
+				gsA: Math.round(cp.a[3] ?? 0),
+				gsB: Math.round(cp.b[3] ?? 0),
 				posA: [round(posA[0], 5), round(posA[1], 5)],
 				posB: [round(posB[0], 5), round(posB[1], 5)]
 			});

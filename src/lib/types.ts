@@ -105,6 +105,9 @@ export interface Incident {
 	flightB: string;
 	altA: number;
 	altB: number;
+	/** Groundspeed (knots) of each aircraft at the closest moment. */
+	gsA: number;
+	gsB: number;
 	/** Interpolated positions at the closest moment. */
 	posA: [number, number];
 	posB: [number, number];

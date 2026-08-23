@@ -70,6 +70,8 @@ function migrate(d: Database.Database) {
 		flight_b TEXT NOT NULL REFERENCES flights(id) ON DELETE CASCADE,
 		alt_a INTEGER NOT NULL,
 		alt_b INTEGER NOT NULL,
+		gs_a INTEGER NOT NULL DEFAULT 0,
+		gs_b INTEGER NOT NULL DEFAULT 0,
 		pos_a TEXT NOT NULL,
 		pos_b TEXT NOT NULL
 	);
@@ -90,6 +92,9 @@ function migrate(d: Database.Database) {
 		message TEXT
 	);
 	`);
+	// Additive migrations for databases created before these columns existed.
+	const cols = (d.prepare(`PRAGMA table_info(incidents)`).all() as { name: string }[]).map((c) => c.name);
+	if (!cols.includes('gs_a')) d.exec(`ALTER TABLE incidents ADD COLUMN gs_a INTEGER NOT NULL DEFAULT 0; ALTER TABLE incidents ADD COLUMN gs_b INTEGER NOT NULL DEFAULT 0;`);
 }
 
 /* ---------- writes (all upserts → idempotent) ---------- */
@@ -112,8 +117,8 @@ export function replaceIncidents(airport: string, night: string, incidents: Inci
 	const tx = d.transaction(() => {
 		d.prepare(`DELETE FROM incidents WHERE airport = ? AND night = ?`).run(airport, night);
 		const ins = d.prepare(
-			`INSERT INTO incidents (id, airport, night, t, lateral_nm, vertical_ft, dist_nm, severity, flight_a, flight_b, alt_a, alt_b, pos_a, pos_b)
-			 VALUES (@id, @airport, @night, @t, @lateralNm, @verticalFt, @distNm, @severity, @flightA, @flightB, @altA, @altB, @posA, @posB)`
+			`INSERT INTO incidents (id, airport, night, t, lateral_nm, vertical_ft, dist_nm, severity, flight_a, flight_b, alt_a, alt_b, gs_a, gs_b, pos_a, pos_b)
+			 VALUES (@id, @airport, @night, @t, @lateralNm, @verticalFt, @distNm, @severity, @flightA, @flightB, @altA, @altB, @gsA, @gsB, @posA, @posB)`
 		);
 		for (const i of incidents) ins.run({ ...i, posA: JSON.stringify(i.posA), posB: JSON.stringify(i.posB) });
 	});
@@ -172,12 +177,12 @@ export function flightById(id: string): Flight | null {
 
 interface IncidentRow {
 	id: string; airport: string; night: string; t: number; lateral_nm: number; vertical_ft: number; dist_nm: number; severity: string;
-	flight_a: string; flight_b: string; alt_a: number; alt_b: number; pos_a: string; pos_b: string;
+	flight_a: string; flight_b: string; alt_a: number; alt_b: number; gs_a: number; gs_b: number; pos_a: string; pos_b: string;
 }
 function rowToIncident(r: IncidentRow): Incident {
 	return {
 		id: r.id, airport: r.airport, night: r.night, t: r.t, lateralNm: r.lateral_nm, verticalFt: r.vertical_ft, distNm: r.dist_nm,
-		severity: r.severity as Incident['severity'], flightA: r.flight_a, flightB: r.flight_b, altA: r.alt_a, altB: r.alt_b,
+		severity: r.severity as Incident['severity'], flightA: r.flight_a, flightB: r.flight_b, altA: r.alt_a, altB: r.alt_b, gsA: r.gs_a ?? 0, gsB: r.gs_b ?? 0,
 		posA: JSON.parse(r.pos_a), posB: JSON.parse(r.pos_b)
 	};
 }

@@ -23,7 +23,7 @@ function flight(id: string, over: Partial<Flight> = {}): Flight {
 function incident(id: string, a: string, b: string, over: Partial<Incident> = {}): Incident {
 	return {
 		id, airport: 'KPAE', night: '2026-08-14', t: Date.UTC(2026, 7, 15, 5, 10), lateralNm: 0.5, verticalFt: 100, distNm: 1.2,
-		severity: 'very-close', flightA: a, flightB: b, altA: 2000, altB: 2100, posA: [47.9, -122.28], posB: [47.91, -122.28], ...over
+		severity: 'very-close', flightA: a, flightB: b, altA: 2000, altB: 2100, gsA: 120, gsB: 130, posA: [47.9, -122.28], posB: [47.91, -122.28], ...over
 	};
 }
 function night(n: string, over: Partial<NightSummary> = {}): NightSummary {

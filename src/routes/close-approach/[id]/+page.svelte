@@ -63,10 +63,14 @@
 	</div>
 	<div class="facts">
 		<div class="fact">
-			<div class="table-header">Nearest approach</div>
+			<div class="table-header">Nearest approach · {localTime(airport.tz, incident.t, true)}</div>
 			<div class="fact-row">
 				<div class="figure accent tabular">{ft(incident.verticalFt)} <span class="at">at</span> {nm(incident.lateralNm)}</div>
 				<div class="caption">{ft(incident.verticalFt)} apart vertically while {nm(incident.lateralNm)} apart side to side</div>
+			</div>
+			<div class="at-moment" data-testid="nearest-moment">
+				<div class="moment-row"><span class="swatch" class:swatch-accent={colors[0] === 'accent'} class:swatch-ink={colors[0] === 'ink'}></span><span class="who">{flightLabel(a)}</span><span class="tabular">{feet(incident.altA)}</span><span class="tabular">{incident.gsA} kt</span></div>
+				<div class="moment-row"><span class="swatch" class:swatch-accent={colors[1] === 'accent'} class:swatch-ink={colors[1] === 'ink'}></span><span class="who">{flightLabel(b)}</span><span class="tabular">{feet(incident.altB)}</span><span class="tabular">{incident.gsB} kt</span></div>
 			</div>
 		</div>
 		<div class="fact">
@@ -185,6 +189,26 @@
 	}
 	.fact:last-child {
 		border-bottom: none;
+	}
+	.at-moment {
+		margin-top: 14px;
+		border-top: var(--row-rule);
+		font-size: 14px;
+	}
+	.moment-row {
+		display: grid;
+		grid-template-columns: 12px 1fr 80px 60px;
+		gap: 12px;
+		align-items: center;
+		padding: 8px 0;
+		border-bottom: var(--row-rule);
+	}
+	.moment-row .swatch {
+		width: 12px;
+		height: 12px;
+	}
+	.moment-row .who {
+		font-weight: 700;
 	}
 	.at {
 		font-size: 0.5em;

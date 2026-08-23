@@ -21,7 +21,7 @@ export const TRACK_GAP_MS = 10 * 60_000;
 export const SEPARATION_LATERAL_NM = 3;
 export const SEPARATION_VERTICAL_FT = 1000;
 /** Samples below this height above the field, or slower than this, count as "on the ground". */
-export const GROUND_AGL_FT = 75;
+export const GROUND_AGL_FT = 150;
 export const GROUND_SPEED_KT = 40;
 /** "Very close" threshold. */
 export const VERY_CLOSE_LATERAL_NM = 1;
