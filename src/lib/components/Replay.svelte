@@ -28,7 +28,7 @@
 	let { airport, a, b, incident, others = [], tiles = 'carto', height = 520, alt = { ...NO_CORRECTION, elevationFt: airport.elevationFt } }: Props = $props();
 
 	const STEPS = 300;
-	const SPEEDS = [4, 8, 16];
+	const SPEEDS = [8, 16, 32];
 	const ACCENT = '#ec3013';
 	const INK = '#201e1d';
 
@@ -51,7 +51,7 @@
 
 	let t = $state(start);
 	let playing = $state(false);
-	let speed = $state(8);
+	let speed = $state(16);
 	let sample = $derived(replay ? replay.sampleAt(t) : null);
 	let step = $derived(Math.round(((t - start) / span) * (STEPS - 1)));
 	let atEnd = $derived(t >= end);
@@ -89,6 +89,11 @@
 		playing = false;
 		cancelAnimationFrame(raf);
 		t = Math.min(end, Math.max(start, t + dir * STEP_MS));
+	}
+	/** Choosing a speed also resumes playback if it was paused. */
+	function setSpeed(s: number) {
+		speed = s;
+		if (!playing) play();
 	}
 	function scrub(e: Event) {
 		playing = false;
@@ -304,7 +309,7 @@
 		</div>
 		<div class="replay-speeds" role="group" aria-label="Replay speed">
 			{#each SPEEDS as s (s)}
-				<button class:on={speed === s} onclick={() => (speed = s)} aria-pressed={speed === s}>{s}×</button>
+				<button class:on={speed === s} onclick={() => setSpeed(s)} aria-pressed={speed === s}>{s}×</button>
 			{/each}
 		</div>
 		<div class="replay-readout tabular">
