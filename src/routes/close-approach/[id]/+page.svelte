@@ -69,7 +69,6 @@
 	<div class="meta">
 		<a class="back" href="/airport/{airport.code}">← {airport.name}</a>
 		<span class="ref">{nightLabel(incident.night)}</span>
-		<span class="ref tabular">{incident.id}</span>
 	</div>
 	<h1 class="headline">{flightLabel(a)} and {flightLabel(b)} — <span class:accent-text={incident.severity === 'very-close'}>{incident.severity === 'very-close' ? 'very close approach' : 'close approach'} at {localTimeZoned(airport.tz, incident.t)}</span></h1>
 </section>
@@ -150,14 +149,14 @@
 <section class="others">
 	<h2 class="others-heading">Other close approaches at {airport.name}</h2>
 	<div class="row table-header thead">
-		<div>Reference</div>
+		<div>When</div>
 		<div>Aircraft</div>
 		<div>Lateral</div>
 		<div>Vertical</div>
 	</div>
 	{#each related as r (r.id)}
 		<a class="row item" href="/close-approach/{r.id}">
-			<div class="ref tabular">{r.id}</div>
+			<div class="ref tabular">{nightLabel(r.night)} · {localTime(airport.tz, r.t)}</div>
 			<div class="pair">{r.identA} × {r.identB}</div>
 			<div class="num tabular">{nm(r.lateralNm)}</div>
 			<div class="num tabular">{ft(r.verticalFt)}</div>
@@ -336,7 +335,7 @@
 	}
 	.row {
 		display: grid;
-		grid-template-columns: 200px 1fr 120px 120px;
+		grid-template-columns: 260px 1fr 120px 120px;
 		align-items: center;
 		gap: 0 12px;
 	}
