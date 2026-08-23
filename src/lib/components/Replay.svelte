@@ -223,7 +223,7 @@
 				L!.marker([c.a.lat, c.a.lon], {
 					interactive: false,
 					zIndexOffset: 1000,
-					icon: L!.divIcon({ className: 'replay-marker', iconSize: [0, 0], iconAnchor: [0, 0], html: glyphHtml(color, silhouetteFor(f.category, f.type), glyph) })
+					icon: L!.divIcon({ className: 'replay-marker', iconSize: [0, 0], iconAnchor: [0, 0], html: glyphHtml(color, silhouetteFor(f), glyph) })
 				}).addTo(map);
 			const lb = (color: string, f: Flight) =>
 				L!.marker([c.a.lat, c.a.lon], {
@@ -322,7 +322,7 @@
 			const [lat, lon] = fromLocalNm(airport.pos, [v[0], v[1]]);
 			if (!g) {
 				g = {
-					mark: L.marker([lat, lon], { interactive: false, zIndexOffset: 500, icon: L.divIcon({ className: 'replay-marker', iconSize: [0, 0], iconAnchor: [0, 0], html: glyphHtml(GREY, silhouetteFor(f.category, f.type), Math.round(glyph * 0.85)) }) }).addTo(map),
+					mark: L.marker([lat, lon], { interactive: false, zIndexOffset: 500, icon: L.divIcon({ className: 'replay-marker', iconSize: [0, 0], iconAnchor: [0, 0], html: glyphHtml(GREY, silhouetteFor(f), Math.round(glyph * 0.85)) }) }).addTo(map),
 					label: L.marker([lat, lon], { interactive: false, zIndexOffset: -600, icon: L.divIcon({ className: 'replay-label', iconSize: [0, 0], iconAnchor: [0, 0], html: '' }) }).addTo(map),
 					trail: L.polyline([], { color: GREY, weight: 2, opacity: 0.8, interactive: false }).addTo(map)
 				};

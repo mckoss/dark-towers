@@ -46,7 +46,7 @@ describe('upsertFlight', () => {
 		expect(f.tail).toBe('N999');
 	});
 	it('round-trips every field', () => {
-		const f = flight('b', { operator: 'QXE', operatorName: 'Horizon Air', category: 'airline', direction: 'departure', otherCode: 'PDX', otherName: 'Portland', otherCity: 'Portland' });
+		const f = flight('b', { operator: 'QXE', operatorName: 'Horizon Air', category: 'airline', direction: 'departure', otherCode: 'PDX', otherName: 'Portland', otherCity: 'Portland', airframe: 'airplane' });
 		upsertFlight(f);
 		expect(flightById('b')).toEqual({ ...f, operatorShort: null });
 	});

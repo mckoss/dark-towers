@@ -1,4 +1,5 @@
 import type { AltimeterReading, OnFieldPoint } from './altimeter';
+import type { Airframe } from './registry';
 
 /** Shared domain types. Everything user-facing is in plain language (see README). */
 
@@ -73,7 +74,10 @@ export interface Flight {
 	night: string; // YYYY-MM-DD, the evening the night began
 	ident: string;
 	tail: string | null;
+	/** ICAO type designator from FlightAware, else make/model from the FAA registry ("BELL 429"). */
 	type: string | null;
+	/** Airplane or helicopter per the FAA registry, when the tail is US-registered and known. */
+	airframe?: Airframe | null;
 	category: FlightCategory;
 	/** ICAO operator code, e.g. ASA. */
 	operator: string | null;

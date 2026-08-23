@@ -21,6 +21,7 @@
 		"test:e2e": "playwright test",
 		"db:seed": "tsx scripts/seed.ts",
 		"nasr:update": "tsx scripts/nasr.ts",
+		"registry:update": "tsx scripts/registry.ts",
 		"aeroapi:probe": "tsx scripts/aeroapi-probe.ts"
 	},
 	"dependencies": {

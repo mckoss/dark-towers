@@ -100,6 +100,8 @@ function migrate(d: Database.Database) {
 	if (!ncols.includes('altimeter')) d.exec(`ALTER TABLE nights ADD COLUMN altimeter TEXT; ALTER TABLE nights ADD COLUMN ground_offset_ft INTEGER; ALTER TABLE nights ADD COLUMN ground_tracks INTEGER;`);
 	if (!ncols.includes('on_field')) d.exec(`ALTER TABLE nights ADD COLUMN on_field TEXT;`);
 	const rcols = (d.prepare(`PRAGMA table_info(requests)`).all() as { name: string }[]).map((c) => c.name);
+	const fcols = (d.prepare(`PRAGMA table_info(flights)`).all() as { name: string }[]).map((c) => c.name);
+	if (!fcols.includes('airframe')) d.exec(`ALTER TABLE flights ADD COLUMN airframe TEXT;`);
 	if (!rcols.includes('code')) d.exec(`ALTER TABLE requests ADD COLUMN code TEXT; ALTER TABLE requests ADD COLUMN assessment TEXT;`);
 }
 
@@ -117,13 +119,13 @@ export function deleteFlightsExcept(airport: string, night: string, keepIds: str
 export function upsertFlight(f: Flight) {
 	db()
 		.prepare(
-			`INSERT INTO flights (id, airport, night, ident, tail, type, category, operator, operator_name, direction, event_time, other_code, other_name, other_city, positions)
-			 VALUES (@id, @airport, @night, @ident, @tail, @type, @category, @operator, @operatorName, @direction, @eventTime, @otherCode, @otherName, @otherCity, @positions)
-			 ON CONFLICT(id) DO UPDATE SET airport=excluded.airport, night=excluded.night, ident=excluded.ident, tail=excluded.tail, type=excluded.type,
+			`INSERT INTO flights (id, airport, night, ident, tail, type, airframe, category, operator, operator_name, direction, event_time, other_code, other_name, other_city, positions)
+			 VALUES (@id, @airport, @night, @ident, @tail, @type, @airframe, @category, @operator, @operatorName, @direction, @eventTime, @otherCode, @otherName, @otherCity, @positions)
+			 ON CONFLICT(id) DO UPDATE SET airport=excluded.airport, night=excluded.night, ident=excluded.ident, tail=excluded.tail, type=excluded.type, airframe=excluded.airframe,
 			 category=excluded.category, operator=excluded.operator, operator_name=excluded.operator_name, direction=excluded.direction, event_time=excluded.event_time,
 			 other_code=excluded.other_code, other_name=excluded.other_name, other_city=excluded.other_city, positions=excluded.positions`
 		)
-		.run({ ...f, positions: JSON.stringify(f.positions) });
+		.run({ ...f, airframe: f.airframe ?? null, positions: JSON.stringify(f.positions) });
 }
 
 /** Replace a night's incidents wholesale (they're derived data). */
@@ -176,14 +178,14 @@ export function insertRequest(value: string, email: string | null, code: string 
 /* ---------- reads ---------- */
 
 interface FlightRow {
-	id: string; airport: string; night: string; ident: string; tail: string | null; type: string | null; category: string;
+	id: string; airport: string; night: string; ident: string; tail: string | null; type: string | null; airframe: string | null; category: string;
 	operator: string | null; operator_name: string | null; direction: string; event_time: number;
 	other_code: string | null; other_name: string | null; other_city: string | null; positions: string;
 }
 
 function rowToFlight(r: FlightRow): Flight {
 	return {
-		id: r.id, airport: r.airport, night: r.night, ident: r.ident, tail: r.tail, type: r.type,
+		id: r.id, airport: r.airport, night: r.night, ident: r.ident, tail: r.tail, type: r.type, airframe: (r.airframe as Flight['airframe']) ?? null,
 		category: r.category as Flight['category'], operator: r.operator, operatorName: r.operator_name, operatorShort: null,
 		direction: r.direction as Flight['direction'], eventTime: r.event_time,
 		otherCode: r.other_code, otherName: r.other_name, otherCity: r.other_city,

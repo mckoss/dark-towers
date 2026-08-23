@@ -18,6 +18,7 @@ import { distanceNm, fromLocalNm, toLocalNm } from '$lib/geo';
 import { dropGhosts, findIncidents } from '$lib/separation';
 import { correctionOffsetAt, groundOffsetFt, hasCorrection, onFieldPoints, type AltCorrection } from '$lib/altimeter';
 import { fetchAltimeter } from './metar';
+import { lookupTail } from './registry';
 import { nightOf, nightWindow } from '$lib/time';
 import type { AirportConfig, Flight, FlightCategory, NightSummary, Position } from '$lib/types';
 import { deleteFlightsExcept, recordRunEnd, recordRunStart, replaceIncidents, upsertFlight, upsertNight } from './db';
@@ -83,6 +84,7 @@ async function ingest(airport: AirportConfig, night: string, opts: IngestOptions
 	for (const rf of byId.values()) {
 		const base = normalizeFlight(airport, night, rf);
 		if (!base) continue;
+		describeFromRegistry(base);
 		let track: RawTrack | null = null;
 		if (opts.offline) {
 			track = hasCachedTrack(airport.icao, rf.fa_flight_id) ? await fetchTrack(airport.icao, rf.fa_flight_id) : null;
@@ -158,6 +160,18 @@ export function eventTimeOf(f: RawFlight): number | null {
 
 export function categoryOf(f: RawFlight): FlightCategory {
 	return f.type === 'Airline' ? 'airline' : 'private';
+}
+
+/**
+ * Fill in what FlightAware left blank from the FAA registry: a make/model
+ * where there is no type code, and whether the airframe is a helicopter.
+ */
+export function describeFromRegistry(f: Flight, lookup = lookupTail): Flight {
+	const reg = lookup(f.tail);
+	if (!reg) return f;
+	if (!f.type) f.type = reg.label;
+	f.airframe = reg.airframe;
+	return f;
 }
 
 export function normalizeFlight(airport: AirportConfig, night: string, f: RawFlight): Flight | null {

@@ -247,7 +247,7 @@
 			const at: LeafletNS.LatLngExpression = [v[0], v[1]];
 			if (!g) {
 				g = {
-					mark: L.marker(at, { interactive: false, zIndexOffset: 1000, icon: L.divIcon({ className: 'replay-marker', iconSize: [0, 0], iconAnchor: [0, 0], html: glyphHtml(color, silhouetteFor(f.category, f.type, f.ident), GLYPH_PX) }) }).addTo(map),
+					mark: L.marker(at, { interactive: false, zIndexOffset: 1000, icon: L.divIcon({ className: 'replay-marker', iconSize: [0, 0], iconAnchor: [0, 0], html: glyphHtml(color, silhouetteFor(f), GLYPH_PX) }) }).addTo(map),
 					label: L.marker(at, { interactive: false, zIndexOffset: -500, icon: L.divIcon({ className: 'replay-label', iconSize: [0, 0], iconAnchor: [0, 0], html: '' }) }).addTo(map),
 					trail: L.polyline([], { color, weight: f.category === 'airline' ? 4 : 3, opacity: 0.95, interactive: false }).addTo(map)
 				};

@@ -4,6 +4,8 @@ import { pressureOffsetFt } from '$lib/altimeter';
 import { cachedCapability, extendedHistoryAllowed, probeCapability } from '$lib/server/capability';
 import { currentJob, startBackfill, startCatchUp, startIngest } from '$lib/server/jobs';
 import { config, flightAwareApiKey } from '$lib/server/config';
+import { nasrData } from '$lib/server/nasr';
+import { registryData } from '$lib/server/registry';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -23,6 +25,11 @@ export const load: PageServerLoad = ({ locals }) => {
 		capability: cachedCapability(),
 		historyDays: s.history_days,
 		googleConfigured: !!s.google,
+		nasrCycle: nasrData()?.cycle ?? null,
+		registry: (() => {
+			const r = registryData();
+			return r ? { asOf: r.asOf, aircraft: Object.keys(r.tails).length } : null;
+		})(),
 		airports: listAirports().map((a) => ({ code: a.code, icao: a.icao, name: a.name, tracked: a.tracked, status: a.status })),
 		counts: nightCounts(),
 		incomplete: incompleteNights(),

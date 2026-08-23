@@ -153,19 +153,27 @@ const MILITARY_IDENTS = /^(RCH|REACH|NAVY|ARMY|USAF|EVAC|SAM|CNV|PAT|SPAR|AIO|HO
 export type AircraftKind = 'airline' | 'private' | 'military' | 'helicopter';
 
 /** Finer classification than the airline/private category, from the type designator and callsign. */
-export function aircraftKind(f: { category: string; type: string | null; ident?: string }): AircraftKind {
+export interface KindInput {
+	category: string;
+	type: string | null;
+	ident?: string;
+	airframe?: string | null;
+}
+
+export function aircraftKind(f: KindInput): AircraftKind {
 	const t = (f.type ?? '').toUpperCase();
-	if (HELICOPTER_TYPES.has(t)) return 'helicopter';
+	if (HELICOPTER_TYPES.has(t) || f.airframe === 'helicopter') return 'helicopter';
 	// Callsign prefixes only reclassify non-airline traffic; an airline flight stays an airline.
 	if (MILITARY_TYPES.has(t) || (f.category !== 'airline' && MILITARY_IDENTS.test((f.ident ?? '').toUpperCase()))) return 'military';
 	return f.category === 'airline' ? 'airline' : 'private';
 }
 
 /** Which outline to draw for an aircraft. */
-export function silhouetteFor(category: string, type: string | null, ident?: string): Silhouette {
-	const kind = aircraftKind({ category, type, ident });
+export function silhouetteFor(f: KindInput): Silhouette {
+	const kind = aircraftKind(f);
 	if (kind === 'helicopter') return 'helicopter';
 	if (kind === 'military') return 'military';
+	const { category, type } = f;
 	const t = (type ?? '').toUpperCase();
 	if (category === 'airline') return 'airliner';
 	if (/^(B7|A3|E7|E1|CRJ|DH8|AT7|MD)/.test(t)) return 'airliner';

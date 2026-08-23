@@ -87,3 +87,26 @@ export function parseCsv(text: string): string[][] {
 	}
 	return rows;
 }
+
+/**
+ * Stream a (possibly deflated) entry's text one line at a time, so a very
+ * large member (the FAA aircraft registry's 200 MB MASTER.txt) never has to
+ * be held in memory inflated.
+ */
+export async function* zipEntryLines(buf: Buffer, e: ZipEntry): AsyncGenerator<string> {
+	const p = e.localHeaderOffset;
+	if (buf.readUInt32LE(p) !== 0x04034b50) throw new Error('bad local header');
+	const nameLen = buf.readUInt16LE(p + 26);
+	const extraLen = buf.readUInt16LE(p + 28);
+	const start = p + 30 + nameLen + extraLen;
+	const data = buf.subarray(start, start + e.compressedSize);
+	const { Readable } = await import('node:stream');
+	const { createInterface } = await import('node:readline');
+	let source: NodeJS.ReadableStream;
+	if (e.method === 0) source = Readable.from([data]);
+	else if (e.method === 8) {
+		const { createInflateRaw } = await import('node:zlib');
+		source = Readable.from([data]).pipe(createInflateRaw());
+	} else throw new Error(`unsupported zip method ${e.method}`);
+	for await (const line of createInterface({ input: source, crlfDelay: Infinity })) yield line;
+}

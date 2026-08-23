@@ -25,9 +25,11 @@ describe('aircraftKind / silhouetteFor', () => {
 		expect(aircraftKind({ category: 'airline', type: 'E75L', ident: 'SKW3452' })).toBe('airline');
 		expect(aircraftKind({ category: 'private', type: 'E75L', ident: 'N1' })).toBe('private');
 		expect(aircraftKind({ category: 'airline', type: 'B738', ident: 'SAM204' })).toBe('airline');
-		expect(silhouetteFor('private', 'R44', 'N1RH')).toBe('helicopter');
-		expect(silhouetteFor('private', 'P8', 'N0')).toBe('military');
-		expect(silhouetteFor('airline', 'E75L')).toBe('airliner');
-		expect(silhouetteFor('private', 'C172')).toBe('light');
+		expect(silhouetteFor({ category: 'private', type: 'R44', ident: 'N1RH' })).toBe('helicopter');
+		expect(silhouetteFor({ category: 'private', type: 'P8', ident: 'N0' })).toBe('military');
+		expect(silhouetteFor({ category: 'airline', type: 'E75L' })).toBe('airliner');
+		expect(silhouetteFor({ category: 'private', type: 'C172' })).toBe('light');
+		// Registry-described helicopters have no ICAO code, only an airframe.
+		expect(silhouetteFor({ category: 'private', type: 'BELL 429', airframe: 'helicopter' })).toBe('helicopter');
 	});
 });

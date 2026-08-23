@@ -6,6 +6,7 @@
  */
 import cron from 'node-cron';
 import { updateNasr } from './nasr';
+import { updateRegistry } from './registry';
 import { ensureCapability } from './capability';
 import { towerHoursOn } from '$lib/airports';
 import { trackedAirports } from './airports-store';
@@ -55,8 +56,11 @@ export function startScheduler(log: (m: string) => void = console.log) {
 	task = cron.schedule('7 * * * *', () => void catchUp(log));
 	// FAA NASR facility data: new 28-day cycle picked up within a day of release.
 	nasrTask = cron.schedule('41 4 * * *', () => void updateNasr({ log }));
+	// FAA aircraft registry: refreshed monthly (cached by month).
+	cron.schedule('51 4 * * *', () => void updateRegistry({ log }));
 	log('scheduler: hourly catch-up enabled');
 	// Also catch up shortly after boot.
 	setTimeout(() => void ensureCapability({ log }).then(() => catchUp(log)), 15_000).unref();
 	setTimeout(() => void updateNasr({ log }), 30_000).unref();
+	setTimeout(() => void updateRegistry({ log }), 45_000).unref();
 }
