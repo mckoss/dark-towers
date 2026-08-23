@@ -111,7 +111,7 @@ test.describe('airport detail', () => {
 		await page.goto(`/airport/PAE?night=${NIGHT_WITH_INCIDENTS}`);
 		const play = page.getByTestId('night-play');
 		await expect(play).toBeVisible();
-		await expect(play).toHaveText(/Replay the night/);
+		await expect(play).toHaveAttribute('aria-label', 'Play');
 		// A red pip on the scrubber for every close approach that night.
 		expect(await page.getByTestId('night-pip').count()).toBeGreaterThan(0);
 		const before = await page.getByTestId('night-time').textContent();
@@ -119,7 +119,7 @@ test.describe('airport detail', () => {
 		await page.waitForTimeout(1500);
 		expect(await page.getByTestId('night-time').textContent()).not.toBe(before);
 		await play.click();
-		await expect(play).toHaveText(/Resume/);
+		await expect(play).toHaveAttribute('aria-label', 'Play');
 		// Single-step: +15 s then −15 s returns to the same clock reading.
 		const paused = await page.getByTestId('night-time').textContent();
 		await page.getByTestId('night-forward').click();
@@ -185,7 +185,7 @@ test.describe('close approach', () => {
 		await expect(page.getByTestId('replay-lateral')).toContainText('NM');
 		// Stepping pauses playback and moves the clock by 15 s.
 		await page.getByTestId('replay-forward').click();
-		await expect(play).toHaveText(/Play replay|Replay again/);
+		await expect(play).toHaveAttribute('aria-label', /Play|Replay/);
 		const stepped = await page.getByTestId('replay-time').textContent();
 		await page.getByTestId('replay-back').click();
 		expect(await page.getByTestId('replay-time').textContent()).not.toBe(stepped);

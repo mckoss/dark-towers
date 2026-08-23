@@ -3,6 +3,7 @@
 	import { dataBlockHtml, trendOf } from '$lib/datablock';
 	import { altView, displayAlt, NO_CORRECTION, type AltContext } from '$lib/altview.svelte';
 	import { localTimeZoned } from '$lib/time';
+	import { PAUSE_ICON, PLAY_ICON, REPLAY_ICON } from './Replay.svelte';
 	import { glyphHtml, silhouetteFor } from '$lib/replay';
 	import { SEPARATION_LATERAL_NM, SEPARATION_VERTICAL_FT } from '$lib/airports';
 	import { distanceNm } from '$lib/geo';
@@ -414,8 +415,8 @@
 <div class="flight-map" bind:this={el} style:height="{height}px" aria-label="Map of flight paths near the airport"></div>
 {#if replay}
 	<div class="replay-controls" data-testid="night-replay">
-		<button class="btn" data-testid="night-play" onclick={play} disabled={!span}>
-			{playing ? (holding ? 'Close approach' : 'Pause') : atEnd ? 'Replay again' : started ? 'Resume' : 'Replay the night'}
+		<button class="btn play" data-testid="night-play" onclick={play} disabled={!span} aria-label={playing ? 'Pause' : atEnd ? 'Replay' : 'Play'} title={playing ? 'Pause' : atEnd ? 'Replay' : 'Play'}>
+			{@html playing ? PAUSE_ICON : atEnd ? REPLAY_ICON : PLAY_ICON}
 		</button>
 		<div class="replay-track">
 			<input class="replay-scrubber" data-testid="night-scrubber" type="range" min="0" max={STEPS - 1} step="1" value={step} oninput={scrub} aria-label="Replay position" disabled={!span} />

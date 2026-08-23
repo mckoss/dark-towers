@@ -1,3 +1,10 @@
+<script lang="ts" module>
+	/** Standard transport icons: play (triangle), pause (two bars), replay (loop). */
+	export const PLAY_ICON = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M3 1.5v13l11-6.5z"/></svg>';
+	export const PAUSE_ICON = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M2.5 1.5h4v13h-4zM9.5 1.5h4v13h-4z"/></svg>';
+	export const REPLAY_ICON = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9"/><path fill="currentColor" d="M14.5 1.5v5h-5z"/></svg>';
+</script>
+
 <script lang="ts">
 	import { flightLabel } from '$lib/flights';
 	import { dataBlockHtml, trendOf } from '$lib/datablock';
@@ -319,8 +326,8 @@
 		{/if}
 	</div>
 	<div class="replay-controls">
-		<button class="btn" data-testid="replay-play" onclick={play} disabled={!replay}>
-			{playing ? (holding ? 'Closest moment' : 'Pause') : atEnd ? 'Replay again' : 'Play replay'}
+		<button class="btn play" data-testid="replay-play" onclick={play} disabled={!replay} aria-label={playing ? 'Pause' : atEnd ? 'Replay' : 'Play'} title={playing ? 'Pause' : atEnd ? 'Replay' : 'Play'}>
+			{@html playing ? PAUSE_ICON : atEnd ? REPLAY_ICON : PLAY_ICON}
 		</button>
 		<div class="replay-track">
 			<input

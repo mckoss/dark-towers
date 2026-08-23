@@ -337,12 +337,16 @@ p {
 	border-top: var(--rule);
 	background: var(--ground);
 }
-.replay-controls .btn {
-	padding: 11px 18px;
-	font-size: 13px;
-	letter-spacing: 0.06em;
-	text-transform: uppercase;
-	min-width: 132px;
+.replay-controls .btn.play {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 40px;
+	padding: 0;
+}
+.replay-controls .btn.play svg {
+	display: block;
 }
 .replay-controls .btn:disabled {
 	background: var(--ink-25);
