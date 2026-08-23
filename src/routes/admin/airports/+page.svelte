@@ -12,7 +12,7 @@
 </script>
 
 <svelte:head>
-	<title>Airports — Admin — Dark Tower Watch</title>
+	<title>Airports — Admin — Dark Towers</title>
 	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 

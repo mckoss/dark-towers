@@ -45,7 +45,7 @@
 </script>
 
 <svelte:head>
-	<title>{flightLabel(a)} and {flightLabel(b)} · close approach · Dark Tower Watch</title>
+	<title>{flightLabel(a)} and {flightLabel(b)} · close approach · Dark Towers</title>
 </svelte:head>
 
 <div class="back">

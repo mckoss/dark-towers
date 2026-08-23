@@ -16,7 +16,7 @@
 </script>
 
 <svelte:head>
-	<title>Airports tracked — Dark Tower Watch</title>
+	<title>Airports tracked — Dark Towers</title>
 </svelte:head>
 
 <section class="section split">

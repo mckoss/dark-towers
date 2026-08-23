@@ -19,7 +19,7 @@
 </script>
 
 <svelte:head>
-	<title>Admin — Dark Tower Watch</title>
+	<title>Admin — Dark Towers</title>
 	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 

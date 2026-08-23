@@ -87,8 +87,8 @@ describe('google oauth', () => {
 	});
 
 	it('public_origin overrides the callback origin', async () => {
-		const { google } = await load({ ...base, public_origin: 'https://darktowerwatch.org' });
-		expect(google.redirectUri('http://localhost:5173')).toBe('https://darktowerwatch.org/auth/google/callback');
+		const { google } = await load({ ...base, public_origin: 'https://dark-towers.org' });
+		expect(google.redirectUri('http://localhost:5173')).toBe('https://dark-towers.org/auth/google/callback');
 	});
 
 	it('exchangeCode validates id_token audience/issuer and returns the email', async () => {

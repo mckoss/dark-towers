@@ -6,7 +6,7 @@
 </script>
 
 <svelte:head>
-	<title>Operators — Admin — Dark Tower Watch</title>
+	<title>Operators — Admin — Dark Towers</title>
 	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 

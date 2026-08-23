@@ -1,4 +1,4 @@
-# Dark Tower Watch — design
+# Dark Towers — design
 
 Design principles, visual system and screen specifications. This file is the working spec while the
 site is being built and will be retired at v1.0 (as will QUESTIONS.md). Product backlog lives in
@@ -19,7 +19,7 @@ GitHub issues; conventions for contributors are in CLAUDE.md.
 
 
 ## Overview
-Dark Tower Watch is a data-driven advocacy site arguing for expanded FAA control-tower hours at
+Dark Towers is a data-driven advocacy site arguing for expanded FAA control-tower hours at
 airports that have scheduled passenger airline service but part-time or no-time tower coverage.
 It publishes, per airport and per night, the flights that operated with no tower on duty and every
 pair of aircraft that came closer than controller separation minima ("close approaches").
@@ -45,7 +45,7 @@ codebase exists yet, choose an appropriate stack and implement the designs there
 The prototype is written as "Design Components" (`.dc.html`): an HTML template with inline styles
 plus a small logic class. Read them as markup + behavior specs, not as a framework to adopt.
 
-`standalone/Dark Tower Watch (offline).html` is a single self-contained file (no network calls) —
+`standalone/Dark Towers (offline).html` is a single self-contained file (no network calls) —
 useful for reviewing the design without running anything.
 
 ## Fidelity
@@ -328,8 +328,8 @@ https://mckoss.com/dark-towers/ (GitHub Pages, from `main`) offers the desktop a
 ```
 screenshots/                        rendered views, see the table above
 prototype/
-  Dark Tower Watch.dc.html          desktop site — all five views, inline styles + logic class
-  Dark Tower Watch Mobile.dc.html   four mobile screens in phone frames
+  Dark Towers.dc.html          desktop site — all five views, inline styles + logic class
+  Dark Towers Mobile.dc.html   four mobile screens in phone frames
   pae-data.js                       sample dataset (KPAE, nights of 12–18 Aug, plus airport summaries)
   us-map.js                         <us-airport-map> — d3 US map with airport circles
   flight-map.js                     <flight-map> — Leaflet track overlay
@@ -341,7 +341,7 @@ prototype/
   pae-basemap.js                    stored basemap snapshot of the Paine Field area
   _ds/modernist-*/                  design-system stylesheet + bundle the .dc.html files load
 standalone/
-  Dark Tower Watch (offline).html   single self-contained file, no network calls
+  Dark Towers (offline).html   single self-contained file, no network calls
 ```
 
 ## Out of scope in the prototype

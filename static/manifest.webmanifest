@@ -1,6 +1,6 @@
 {
-	"name": "Dark Tower Watch",
-	"short_name": "Dark Tower",
+	"name": "Dark Towers",
+	"short_name": "Dark Towers",
 	"description": "Flights with no tower on duty: what landed, what took off, and how close aircraft came.",
 	"start_url": "/",
 	"scope": "/",

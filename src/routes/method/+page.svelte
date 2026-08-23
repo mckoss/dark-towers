@@ -53,8 +53,8 @@
 </script>
 
 <svelte:head>
-	<title>Method — Dark Tower Watch</title>
-	<meta name="description" content="What Dark Tower Watch counts, where the data comes from, and who is behind it." />
+	<title>Method — Dark Towers</title>
+	<meta name="description" content="What Dark Towers counts, where the data comes from, and who is behind it." />
 </svelte:head>
 
 <section class="section split">
@@ -136,7 +136,7 @@
 		<div class="kicker">Who we are</div>
 		<h2 class="who-headline">A citizen project, built on public data.</h2>
 		<p class="copy who-copy">
-			Dark Tower Watch is not run by the FAA, an airport, an airline, or any government body. It is the work of
+			Dark Towers is not run by the FAA, an airport, an airline, or any government body. It is the work of
 			two residents who live under these flight paths. Everything on the site is drawn from publicly available
 			ADS-B position data — the same signals aircraft broadcast for anyone to receive — and from published tower
 			hours and airline schedules. Nothing here is confidential, and none of it required special access.

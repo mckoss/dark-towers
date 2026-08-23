@@ -11,7 +11,7 @@
 </script>
 
 <svelte:head>
-	<title>Error {status} — Dark Tower Watch</title>
+	<title>Error {status} — Dark Towers</title>
 </svelte:head>
 
 <section class="section split">

@@ -19,10 +19,10 @@
 </script>
 
 <svelte:head>
-	<title>Dark Tower Watch — Flights with no tower on duty</title>
+	<title>Dark Towers — Flights with no tower on duty</title>
 	<meta
 		name="description"
-		content="Airliners are landing at airports where nobody is in the tower. Dark Tower Watch records the flights and close approaches that happen while control towers are closed."
+		content="Airliners are landing at airports where nobody is in the tower. Dark Towers records the flights and close approaches that happen while control towers are closed."
 	/>
 </svelte:head>
 

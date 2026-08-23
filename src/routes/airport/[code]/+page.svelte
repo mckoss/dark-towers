@@ -65,7 +65,7 @@
 </script>
 
 <svelte:head>
-	<title>{airport.code} · {airport.name} — Dark Tower Watch</title>
+	<title>{airport.code} · {airport.name} — Dark Towers</title>
 </svelte:head>
 
 <section class="section split">

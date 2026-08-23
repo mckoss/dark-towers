@@ -1,4 +1,4 @@
-# Dark Tower Watch
+# Dark Towers
 
 A data-driven advocacy site arguing for expanded FAA control-tower hours at airports that have
 scheduled passenger airline service but part-time or no-time tower coverage. For each tracked
@@ -6,7 +6,7 @@ airport and each night, it publishes the flights that operated with no tower on 
 of aircraft that came closer than controller separation minima ("close approaches"), with an animated
 replay of each one.
 
-Paine Field (KPAE, Everett WA) is the reference airport. Live prototype (design mockups):
+Live site: https://dark-towers.org · Paine Field (KPAE, Everett WA) is the reference airport. Prototype (design mockups):
 https://mckoss.com/dark-towers/ · Design spec: [DESIGN.md](DESIGN.md) · Open questions:
 [QUESTIONS.md](QUESTIONS.md) · Backlog: [GitHub issues](https://github.com/mckoss/dark-towers/issues)
 

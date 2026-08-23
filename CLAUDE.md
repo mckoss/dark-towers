@@ -1,4 +1,4 @@
-# Dark Tower Watch — project conventions
+# Dark Towers — project conventions
 
 Data-driven advocacy site: flights and close approaches at airports where airliners operate with no
 tower on duty. Read `DESIGN.md` for the design spec and editorial rules; `QUESTIONS.md` for open decisions;

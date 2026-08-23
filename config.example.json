@@ -6,7 +6,7 @@
         "client_secret": "<Google OAuth client secret>"
     },
     "session_secret": "<any long random string>",
-    "public_origin": "https://your-domain.example",
+    "public_origin": "https://dark-towers.org",
     "data_dir": "data",
     "scheduler": true,
     "history_days": 9,
