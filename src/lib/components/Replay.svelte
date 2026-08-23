@@ -275,18 +275,21 @@
 		<button class="btn" data-testid="replay-play" onclick={play} disabled={!replay}>
 			{playing ? 'Pause' : atEnd ? 'Replay again' : 'Play replay'}
 		</button>
-		<input
-			class="replay-scrubber"
-			data-testid="replay-scrubber"
-			type="range"
-			min="0"
-			max={STEPS - 1}
-			step="1"
-			value={step}
-			oninput={scrub}
-			aria-label="Replay position"
-			disabled={!replay}
-		/>
+		<div class="replay-track">
+			<input
+				class="replay-scrubber"
+				data-testid="replay-scrubber"
+				type="range"
+				min="0"
+				max={STEPS - 1}
+				step="1"
+				value={step}
+				oninput={scrub}
+				aria-label="Replay position"
+				disabled={!replay}
+			/>
+			<span class="replay-pip" data-testid="replay-pip" style="--pip: {((incident.t - start) / span).toFixed(4)}" title="Closest moment"></span>
+		</div>
 		<div class="replay-speeds" role="group" aria-label="Replay speed">
 			{#each SPEEDS as s (s)}
 				<button class:on={speed === s} onclick={() => (speed = s)} aria-pressed={speed === s}>{s}×</button>

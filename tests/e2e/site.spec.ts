@@ -113,6 +113,8 @@ test.describe('airport detail', () => {
 		await expect(play).toBeVisible();
 		await expect(play).toHaveText(/Replay the night/);
 		await expect(page.getByTestId('night-airborne')).toHaveText('—');
+		// A red pip on the scrubber for every close approach that night.
+		expect(await page.getByTestId('night-pip').count()).toBeGreaterThan(0);
 		const before = await page.getByTestId('night-time').textContent();
 		await play.click();
 		await page.waitForTimeout(1500);
@@ -170,6 +172,7 @@ test.describe('close approach', () => {
 
 		const play = page.getByTestId('replay-play');
 		await expect(play).toBeVisible();
+		await expect(page.getByTestId('replay-pip')).toBeAttached();
 		const before = await page.getByTestId('replay-time').textContent();
 		await play.click();
 		await page.waitForTimeout(1500);

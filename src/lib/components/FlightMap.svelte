@@ -408,7 +408,14 @@
 		<button class="btn" data-testid="night-play" onclick={play} disabled={!span}>
 			{playing ? (holding ? 'Close approach' : 'Pause') : atEnd ? 'Replay again' : started ? 'Resume' : 'Replay the night'}
 		</button>
-		<input class="replay-scrubber" data-testid="night-scrubber" type="range" min="0" max={STEPS - 1} step="1" value={step} oninput={scrub} aria-label="Replay position" disabled={!span} />
+		<div class="replay-track">
+			<input class="replay-scrubber" data-testid="night-scrubber" type="range" min="0" max={STEPS - 1} step="1" value={step} oninput={scrub} aria-label="Replay position" disabled={!span} />
+			{#if span}
+				{#each sortedIncidents as inc (inc.id)}
+					<span class="replay-pip" data-testid="night-pip" style="--pip: {((inc.t - span.start) / (span.end - span.start)).toFixed(4)}" title="Close approach at {localClock(tz, inc.t)}"></span>
+				{/each}
+			{/if}
+		</div>
 		<div class="replay-speeds" role="group" aria-label="Replay speed">
 			{#each SPEEDS as sp (sp)}
 				<button class:on={speed === sp} onclick={() => (speed = sp)} aria-pressed={speed === sp}>{sp}×</button>

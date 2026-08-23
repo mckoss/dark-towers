@@ -345,12 +345,32 @@ p {
 	background: var(--ink-25);
 	cursor: default;
 }
-.replay-scrubber {
+.replay-track {
+	position: relative;
 	flex: 1;
 	min-width: 160px;
+	display: flex;
+	align-items: center;
+}
+.replay-scrubber {
+	width: 100%;
 	accent-color: var(--accent);
 	cursor: pointer;
 	margin: 0;
+}
+/* Red pip on the scrubber at each close approach. The thumb travels from
+   half its width in to half its width from the end, so pips are inset the same. */
+.replay-pip {
+	position: absolute;
+	top: 50%;
+	width: 8px;
+	height: 8px;
+	margin: -4px 0 0 -4px;
+	border-radius: 50% !important;
+	background: var(--accent);
+	box-shadow: 0 0 0 2px var(--ground);
+	pointer-events: none;
+	left: calc(8px + (100% - 16px) * var(--pip));
 }
 .replay-speeds {
 	display: flex;
