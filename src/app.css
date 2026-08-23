@@ -387,8 +387,7 @@ p {
 /* Time marks under the scrubber: start and end at the extremes, a red time under each pip. */
 .replay-marks {
 	position: relative;
-	height: 14px;
-	margin-top: 2px;
+	height: 22px;
 	font-size: 11px;
 	font-weight: 600;
 	letter-spacing: 0.02em;
@@ -396,22 +395,42 @@ p {
 	font-variant-numeric: tabular-nums;
 	white-space: nowrap;
 }
+/* Each mark hangs from a short tick that touches the scrubber track. */
 .replay-marks .mark {
 	position: absolute;
 	top: 0;
+	padding-top: 10px;
 	line-height: 1;
+}
+.replay-marks .mark::before {
+	content: '';
+	position: absolute;
+	top: -2px;
+	width: 1px;
+	height: 10px;
+	background: var(--ink-45);
 }
 .replay-marks .start {
 	left: 8px;
 }
+.replay-marks .start::before {
+	left: 0;
+}
 .replay-marks .end {
 	right: 8px;
+}
+.replay-marks .end::before {
+	right: 0;
 }
 .replay-marks .pip-mark {
 	left: calc(8px + (100% - 16px) * var(--pip));
 	transform: translateX(-50%);
 	color: var(--accent);
 	font-weight: 700;
+}
+.replay-marks .pip-mark::before {
+	left: 50%;
+	background: var(--accent);
 }
 .replay-track-col {
 	flex: 1;
