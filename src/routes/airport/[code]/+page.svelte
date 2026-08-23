@@ -100,7 +100,7 @@
 	</div>
 </section>
 
-<div class="stats-kicker table-header">Over {periodPhrase} · hours the tower was closed</div>
+<div class="stats-kicker table-header">Over {periodPhrase} · when the tower was closed</div>
 <section class="section stats">
 	<div class="stat"><div class="stat-n">{fmt(data.totals.flights)}</div><div class="stat-label">Flights in and out</div></div>
 	<div class="stat"><div class="stat-n">{fmt(data.totals.airline)}</div><div class="stat-label">Passenger airline</div></div>
