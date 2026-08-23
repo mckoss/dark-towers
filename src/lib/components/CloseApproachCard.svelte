@@ -9,7 +9,7 @@
 		tz: string;
 	}
 	let { incident, identA, identB, tz }: Props = $props();
-	const severity = $derived(incident.severity === 'very-close' ? 'Very close' : 'Closer than allowed');
+	const severity = $derived(incident.severity === 'very-close' ? 'Very close' : 'Close approach');
 </script>
 
 <a class="card" href="/close-approach/{incident.id}">

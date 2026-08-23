@@ -25,7 +25,7 @@
 	const signed = (n: number) => `${n < 0 ? '−' : '+'}${Math.abs(n).toLocaleString('en-US')}'`;
 
 	const colors = $derived(pairColors(a, b));
-	const severityLabel = $derived(incident.severity === 'very-close' ? 'Very close' : 'Closer than allowed');
+	const severityLabel = $derived(incident.severity === 'very-close' ? 'Very close' : 'Close approach');
 	const nm = (n: number) => `${n.toFixed(2)} NM`;
 	const ft = (n: number) => `${Math.round(n).toLocaleString('en-US')}'`;
 	const feet = (n: number) => `${Math.round(n).toLocaleString('en-US')} ft`;
