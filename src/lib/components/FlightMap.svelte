@@ -64,7 +64,6 @@
 	let playing = $state(false);
 	let speed = $state(240);
 	let started = $state(false);
-	let airborne = $state(0);
 	const step = $derived(span ? Math.round(((t - span.start) / (span.end - span.start)) * (STEPS - 1)) : 0);
 	const atEnd = $derived(!!span && t >= span.end);
 	let raf = 0;
@@ -185,12 +184,10 @@
 			glyphs.clear();
 			for (const l of sepLines) l.remove();
 			sepLines = [];
-			airborne = 0;
 			return;
 		}
 		const alerts = alertPairs(t);
 		const alertIds = new Set(alerts.flatMap(([a, b]) => [a.id, b.id]));
-		let n = 0;
 		for (const f of flights) {
 			const entry = splines.get(f.id);
 			const active = !!entry && t >= entry.spline.t0 && t <= entry.spline.t1;
@@ -204,7 +201,6 @@
 				}
 				continue;
 			}
-			n++;
 			const color = f.category === 'airline' ? ACCENT : INK;
 			const v = entry!.spline.at(t)!;
 			const vel = entry!.spline.velocityAt(t);
@@ -243,7 +239,6 @@
 				if (inner) inner.style.transform = `translate(${Math.round(GLYPH_PX * 0.7)}px, -50%)`;
 			}
 		}
-		airborne = n;
 		for (const l of sepLines) l.remove();
 		sepLines = alerts.map(([a, b]) => {
 			const va = splines.get(a.id)!.spline.at(t)!,
@@ -443,10 +438,6 @@
 			<div>
 				<div class="replay-readout-label">Local time</div>
 				<div class="replay-readout-value" data-testid="night-time">{span ? localTimeZoned(tz, started ? t : span.start, true) : "—"}</div>
-			</div>
-			<div>
-				<div class="replay-readout-label">Aircraft flying now</div>
-				<div class="replay-readout-value figure" data-testid="night-airborne">{started ? airborne : 0}</div>
 			</div>
 		</div>
 	</div>

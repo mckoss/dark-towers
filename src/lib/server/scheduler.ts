@@ -53,8 +53,3 @@ export function startScheduler(log: (m: string) => void = console.log) {
 	// Also catch up shortly after boot.
 	setTimeout(() => void catchUp(log), 15_000).unref();
 }
-
-export function stopScheduler() {
-	task?.stop();
-	task = null;
-}

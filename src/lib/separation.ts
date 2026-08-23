@@ -156,8 +156,3 @@ function round(n: number, places: number): number {
 	const k = 10 ** places;
 	return Math.round(n * k) / k;
 }
-
-/** Convenience for callers that need a spline over raw positions. */
-export function positionsSpline(origin: LatLon, positions: Position[]): Spline {
-	return new Spline(positions.map((p) => ({ t: p.t, v: [...toLocalNm(origin, [p.lat, p.lon]), p.alt] })));
-}

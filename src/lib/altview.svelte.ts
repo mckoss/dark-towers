@@ -62,9 +62,3 @@ export function displayAlt(reportedFt: number, ctx: AltContext, mode: AltMode = 
 	// Source altitudes are quantised to 100 ft; showing finer than 50 ft above the field would be false precision.
 	return { ft: Math.max(0, Math.round((reportedFt - ctx.offsetFt - ctx.elevationFt) / 50) * 50), mode };
 }
-
-/** "650 ft AGL" / "1,100 ft ADS-B" (the raw broadcast pressure altitude). */
-export function altLabel(reportedFt: number, ctx: AltContext, mode: AltMode = altView.mode): string {
-	const d = displayAlt(reportedFt, ctx, mode);
-	return `${d.ft.toLocaleString('en-US')} ft ${d.mode === 'agl' ? 'AGL' : 'ADS-B'}`;
-}

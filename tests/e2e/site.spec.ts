@@ -112,14 +112,12 @@ test.describe('airport detail', () => {
 		const play = page.getByTestId('night-play');
 		await expect(play).toBeVisible();
 		await expect(play).toHaveText(/Replay the night/);
-		await expect(page.getByTestId('night-airborne')).toHaveText('0');
 		// A red pip on the scrubber for every close approach that night.
 		expect(await page.getByTestId('night-pip').count()).toBeGreaterThan(0);
 		const before = await page.getByTestId('night-time').textContent();
 		await play.click();
 		await page.waitForTimeout(1500);
 		expect(await page.getByTestId('night-time').textContent()).not.toBe(before);
-		await expect(page.getByTestId('night-airborne')).toHaveText(/^\d+$/);
 		await play.click();
 		await expect(play).toHaveText(/Resume/);
 		// Single-step: +15 s then −15 s returns to the same clock reading.

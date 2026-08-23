@@ -45,7 +45,10 @@ describe('AeroAPI history handling', () => {
 		const t = await fa.fetchTrack('KPAE', OLD_ID);
 		expect(spy).toHaveBeenCalledTimes(1);
 		expect(t.positions).toHaveLength(1);
-		expect(fa.readCachedTrack('KPAE', OLD_ID)?._error).toBeUndefined();
+		// The cache now holds the real track, so a second fetch is served from disk.
+		const again = await fa.fetchTrack('KPAE', OLD_ID);
+		expect(spy).toHaveBeenCalledTimes(1);
+		expect(again._error).toBeUndefined();
 	});
 
 	it('recent flights always use the live endpoint, history enabled or not', async () => {

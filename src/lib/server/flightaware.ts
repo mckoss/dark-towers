@@ -238,6 +238,3 @@ export async function fetchTrack(icao: string, faFlightId: string, opts: { log?:
 export function readCachedFlights(icao: string, night: string): RawFlight[] | null {
 	return readJson<RawFlight[]>(flightsCachePath(icao, night));
 }
-export function readCachedTrack(icao: string, faFlightId: string): RawTrack | null {
-	return readJson<RawTrack>(trackCachePath(icao, faFlightId));
-}

@@ -49,11 +49,6 @@ export function offsetAt(readings: AltimeterReading[] | null | undefined, t: num
 	return a == null ? 0 : pressureOffsetFt(a);
 }
 
-/** Reported altitude → height above a field of the given elevation, at t. */
-export function aglFt(reportedFt: number, t: number, readings: AltimeterReading[] | null | undefined, elevationFt: number): number {
-	return reportedFt - offsetAt(readings, t) - elevationFt;
-}
-
 /** Parse the Iowa State ASOS archive CSV ("station,valid,alti" rows, UTC) into readings. */
 export function parseAsosCsv(csv: string): AltimeterReading[] {
 	const out: AltimeterReading[] = [];

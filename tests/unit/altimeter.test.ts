@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aglFt, altimeterAt, correctionAt, groundOffsetFt, offsetAt, onFieldPoints, parseAsosCsv, pressureOffsetFt } from '../../src/lib/altimeter';
+import { altimeterAt, correctionAt, groundOffsetFt, offsetAt, onFieldPoints, parseAsosCsv, pressureOffsetFt } from '../../src/lib/altimeter';
 import { closestApproach } from '../../src/lib/separation';
 import { Spline } from '../../src/lib/spline';
 
@@ -27,11 +27,10 @@ describe('altimeterAt / offsetAt', () => {
 		expect(altimeterAt([], 0)).toBeNull();
 		expect(altimeterAt(null, 0)).toBeNull();
 	});
-	it('offset is zero without readings and AGL subtracts the field', () => {
+	it('offset is zero without readings', () => {
 		expect(offsetAt(null, 0)).toBe(0);
-		expect(aglFt(700, 0, null, 607)).toBe(93);
-		// 30.17 → reported reads ~231 ft low; 400 reported on a 607 ft field ≈ on the ground.
-		expect(aglFt(400, 0, [[0, 30.17]], 607)).toBeCloseTo(22, 0);
+		// 30.17 → reported reads ~229 ft low.
+		expect(offsetAt([[0, 30.17]], 0)).toBeCloseTo(-229, 0);
 	});
 });
 
