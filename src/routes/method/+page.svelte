@@ -19,7 +19,7 @@
 		{
 			n: '02',
 			title: 'Keep only the paths close to the airport',
-			text: 'Each flight’s path is trimmed to the positions within 10 nautical miles of the airport — about 11.5 road miles — and within the hours the tower was closed. Flights that pass nearby at other times are dropped.'
+			text: 'A flight counts once it comes within 10 nautical miles of the airport — about 11.5 road miles. Its path is then kept out to 20 nautical miles in both directions, so approaches, procedure turns and go-arounds are shown whole. Flights that never come inside 10 NM, or pass by while the tower was open, are dropped.'
 		},
 		{
 			n: '03',

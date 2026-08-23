@@ -187,13 +187,16 @@ export function normalizeFlight(airport: AirportConfig, night: string, f: RawFli
 }
 
 /**
- * Keep the part of a track that matters for this night: from the moment the
- * aircraft enters the 10 NM ring until it leaves the 20 NM ring (hysteresis),
- * and only while the tower was closed on this night. A point is interpolated
- * on the 10 NM boundary at entry (and on the 20 NM boundary at exit) so the
- * curve starts and ends at a ring instead of jumping to a report miles away.
- * A gap longer than TRACK_GAP_MS between reports starts a new segment.
- * Resolution is whatever ADS-B reported — nothing inside is thinned.
+ * Keep the part of a track that matters for this night. A track counts once
+ * it comes inside the 10 NM ring; from then on it is kept in both directions
+ * of time out to the 20 NM ring — back along its approach to where it crossed
+ * 20 NM inbound, and forward to where it crosses 20 NM outbound — so a path
+ * that appears on the map is never cut short of 20 NM. Points are
+ * interpolated on the 20 NM ring at both ends so the curve starts and ends
+ * on the ring instead of jumping to a report miles away. Only reports while
+ * the tower was closed on this night are kept, and a gap longer than
+ * TRACK_GAP_MS between reports starts a new segment. Resolution is whatever
+ * ADS-B reported — nothing inside is thinned.
  */
 export function clipTrack(airport: AirportConfig, night: string, track: RawTrack, radiusNm = AIRSPACE_RADIUS_NM, exitNm = Math.max(radiusNm, AIRSPACE_EXIT_NM * (radiusNm / AIRSPACE_RADIUS_NM))): Position[] {
 	const hours = towerHoursOn(airport, night);
@@ -202,6 +205,7 @@ export function clipTrack(airport: AirportConfig, night: string, track: RawTrack
 		const t = Date.parse(p.timestamp);
 		if (!Number.isFinite(t)) continue;
 		if (typeof p.latitude !== 'number' || typeof p.longitude !== 'number') continue;
+		if (nightOf(airport.tz, hours, t) !== night) continue;
 		pts.push({
 			t,
 			lat: p.latitude,
@@ -213,43 +217,44 @@ export function clipTrack(airport: AirportConfig, night: string, track: RawTrack
 		});
 	}
 	pts.sort((a, b) => a.t - b.t);
+
+	// Split into segments at gaps; clip each independently.
+	const segments: Position[][] = [];
+	for (const p of pts) {
+		const cur = segments[segments.length - 1];
+		if (cur && p.t - cur[cur.length - 1].t <= TRACK_GAP_MS) cur.push(p);
+		else segments.push([p]);
+	}
+
 	const out: Position[] = [];
-	let inside = false;
-	for (let i = 0; i < pts.length; i++) {
-		const p = pts[i];
-		const prev = i > 0 ? pts[i - 1] : null;
-		const prevOk = !!prev && nightOf(airport.tz, hours, prev.t) === night && p.t - prev.t <= TRACK_GAP_MS;
-		if (nightOf(airport.tz, hours, p.t) !== night || (prev && p.t - prev.t > TRACK_GAP_MS)) inside = false;
-		if (nightOf(airport.tz, hours, p.t) !== night) continue;
-		if (!inside) {
-			if (p.dist <= radiusNm) {
-				// Entering: interpolate the 10 NM crossing from the previous report.
-				if (prevOk && prev!.dist > radiusNm) {
-					const x = ringCrossing(airport, prev!, p, radiusNm);
-					if (x) out.push(x);
-				}
-				out.push(p);
-				inside = true;
-			}
-		} else if (p.dist > exitNm) {
-			// Leaving: interpolate the 20 NM crossing, then stop.
-			if (prevOk) {
-				const x = ringCrossing(airport, prev!, p, exitNm);
+	for (const seg of segments) {
+		let i = 0;
+		while (i < seg.length) {
+			// Next report inside the inner ring.
+			let k = i;
+			while (k < seg.length && seg[k].dist > radiusNm) k++;
+			if (k >= seg.length) break;
+			// Back to the last report outside the outer ring (inbound crossing).
+			let j = k;
+			while (j - 1 >= i && seg[j - 1].dist <= exitNm) j--;
+			if (j - 1 >= i) {
+				const x = ringCrossing(airport, seg[j - 1], seg[j], exitNm);
 				if (x) out.push(x);
 			}
-			inside = false;
-		} else {
-			out.push(p);
+			// Forward to the first report outside the outer ring (outbound crossing).
+			let m = k;
+			while (m + 1 < seg.length && seg[m + 1].dist <= exitNm) m++;
+			for (let q = j; q <= m; q++) out.push(seg[q]);
+			if (m + 1 < seg.length) {
+				const x = ringCrossing(airport, seg[m], seg[m + 1], exitNm);
+				if (x) out.push(x);
+			}
+			i = m + 1;
 		}
 	}
 	// Dedupe identical timestamps.
 	return out.filter((p, i) => i === 0 || p.t !== out[i - 1].t);
 }
-
-/**
- * Linear interpolation between an outside and an inside report at the ring
- * boundary. Returns null when a report already sits on the boundary.
- */
 function ringCrossing(airport: AirportConfig, a: Position, b: Position, radiusNm: number): Position | null {
 	const [ax, ay] = toLocalNm(airport.pos, [a.lat, a.lon]);
 	const [bx, by] = toLocalNm(airport.pos, [b.lat, b.lon]);

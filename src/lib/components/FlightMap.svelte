@@ -171,7 +171,7 @@
 	});
 </script>
 
-<div class="flight-map" bind:this={el} style:height="{height}px" aria-label="Map of flight paths within 10 nautical miles"></div>
+<div class="flight-map" bind:this={el} style:height="{height}px" aria-label="Map of flight paths near the airport"></div>
 
 <style>
 	.flight-map {

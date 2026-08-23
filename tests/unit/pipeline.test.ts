@@ -157,20 +157,18 @@ describe('clipTrack', () => {
 	}
 	const NIGHT_START = zonedToUtc(LA, 2026, 8, 14, 22); // 22:00 local, well inside the night
 
-	it('records from entry at 10 NM until exit at 20 NM (hysteresis), at full resolution', () => {
+	it('a track that comes inside 10 NM is kept out to 20 NM in both directions, at full resolution', () => {
 		const out = clipTrack(PAE, NIGHT, pass(NIGHT_START));
-		// 15 E … 15 W: the approach from 15→11 NM east is dropped; recording starts
-		// at the 10 NM report (the interpolated crossing coincides with it) and
-		// continues all the way out to 15 NM west, since that never exceeds 20 NM.
-		expect(out).toHaveLength(26);
-		expect(out[0].dist).toBeCloseTo(10, 1);
+		// 15 E … 15 W never exceeds 20 NM, so the whole pass is kept.
+		expect(out).toHaveLength(31);
+		expect(out[0].dist).toBeCloseTo(15, 1);
 		expect(out[out.length - 1].dist).toBeCloseTo(15, 1);
-		expect(out.filter((p) => p.dist > 10)).toHaveLength(5);
+		expect(out.filter((p) => p.dist > 10)).toHaveLength(10);
 		// Sorted by time, nothing thinned.
 		for (let i = 1; i < out.length; i++) expect(out[i].t - out[i - 1].t).toBe(30_000);
 	});
 
-	it('a go-around that drifts past 10 NM but not 20 NM is kept in one piece; exit is cut at 20 NM', () => {
+	it('a go-around that drifts past 10 NM but not 20 NM is kept in one piece, from 20 NM in to 20 NM out', () => {
 		// Inbound from 25 NM to 2 NM, back out to 25 NM: 25..2..25 every 1 NM / 30 s.
 		const positions: RawPosition[] = [];
 		const nms = [...Array.from({ length: 24 }, (_, i) => 25 - i), ...Array.from({ length: 24 }, (_, i) => 2 + i)];
@@ -179,28 +177,39 @@ describe('clipTrack', () => {
 			positions.push({ altitude: 20, groundspeed: 100, heading: 270, latitude: p[0], longitude: p[1], timestamp: new Date(NIGHT_START + i * 30_000).toISOString() });
 		});
 		const out = clipTrack(PAE, NIGHT, { positions });
-		// Entry at the 10 NM report; kept through 2 NM and back out through 11..20 NM; cut at the 20 NM report.
-		expect(out[0].dist).toBeCloseTo(10, 1);
+		// Kept from the 20 NM report inbound, through 2 NM, and back out to the 20 NM report.
+		expect(out[0].dist).toBeCloseTo(20, 1);
 		expect(out[out.length - 1].dist).toBeCloseTo(20, 1);
 		expect(out.every((p) => p.dist <= 20)).toBe(true);
-		expect(out.filter((p) => p.dist > 10)).toHaveLength(10); // 11..20 outbound
-		expect(out).toHaveLength(9 + 1 + 8 + 10); // 10..2 inbound, 2 (turn), 3..10 outbound, 11..20
+		expect(out.filter((p) => p.dist > 10)).toHaveLength(20); // 20..11 inbound, 11..20 outbound
+		expect(out).toHaveLength(19 + 19); // 20..2 inbound, 2..20 outbound (2 NM reported twice at the turn)
 	});
 
-	it('interpolates a point on the ring where the track crosses it', () => {
-		// Reports at 10.5 NM and 9.5 NM straddle the ring: expect a synthetic
-		// point at exactly 10 NM halfway between them in time and altitude.
+	it('interpolates points on the 20 NM ring where the track crosses it, inbound and outbound', () => {
+		// Reports at 20.5 / 19.5 NM straddle the ring inbound, and 19.5 / 20.5 outbound:
+		// expect synthetic points at exactly 20 NM halfway between them in time and altitude.
 		const t0 = NIGHT_START;
 		const mk = (nm: number, t: number, alt: number): RawPosition => {
 			const p = destination(PAE.pos, 90, nm);
 			return { altitude: alt, groundspeed: 100, heading: 270, latitude: p[0], longitude: p[1], timestamp: new Date(t).toISOString() };
 		};
-		const out = clipTrack(PAE, NIGHT, { positions: [mk(10.5, t0, 30), mk(9.5, t0 + 20_000, 20), mk(8.5, t0 + 40_000, 10)] });
-		expect(out).toHaveLength(3);
-		expect(out[0].dist).toBe(10);
-		expect(out[0].t).toBe(t0 + 10_000);
+		const out = clipTrack(PAE, NIGHT, { positions: [mk(20.5, t0, 30), mk(19.5, t0 + 20_000, 20), mk(5, t0 + 40_000, 10), mk(19.5, t0 + 60_000, 20), mk(20.5, t0 + 80_000, 30)] });
+		expect(out).toHaveLength(5);
+		expect(out[0].dist).toBe(20);
+		expect(Math.abs(out[0].t - (t0 + 10_000))).toBeLessThan(50);
 		expect(out[0].alt).toBe(2500);
-		expect(out[1].dist).toBeCloseTo(9.5, 1);
+		expect(out[out.length - 1].dist).toBe(20);
+		expect(Math.abs(out[out.length - 1].t - (t0 + 70_000))).toBeLessThan(50);
+		expect(out.filter((p) => p.dist < 20)).toHaveLength(3);
+	});
+
+	it('a track that never comes inside 10 NM is dropped entirely, even if it passes within 20 NM', () => {
+		const positions: RawPosition[] = [];
+		for (let i = 0; i < 10; i++) {
+			const p = destination(destination(PAE.pos, 0, 12), 90, -10 + i * 2); // 12 NM north, passing E→W
+			positions.push({ altitude: 30, groundspeed: 150, heading: 270, latitude: p[0], longitude: p[1], timestamp: new Date(NIGHT_START + i * 30_000).toISOString() });
+		}
+		expect(clipTrack(PAE, NIGHT, { positions })).toEqual([]);
 	});
 
 	it('expands altitude x100 and carries the other channels through', () => {
@@ -217,9 +226,9 @@ describe('clipTrack', () => {
 		const out = clipTrack(PAE, NIGHT, pass(start));
 		expect(out.length).toBeGreaterThan(0);
 		expect(out.every((p) => p.t < open)).toBe(true);
-		// indices 5..10 are inside (10 NM.. 5 NM east) → 6 points; the crossing coincides with the 10 NM report.
-		expect(out).toHaveLength(6);
-		expect(out[0].dist).toBeCloseTo(10, 1);
+		// indices 0..10 (15 NM .. 5 NM east) are before the tower opened → 11 points.
+		expect(out).toHaveLength(11);
+		expect(out[0].dist).toBeCloseTo(15, 1);
 	});
 
 	it('returns nothing for a track flown entirely while the tower was open', () => {
@@ -238,7 +247,7 @@ describe('clipTrack', () => {
 		t.positions.push({ ...t.positions[20], timestamp: 'not a date' });
 		t.positions.push({ ...t.positions[20], latitude: null as unknown as number, timestamp: new Date(NIGHT_START + 1).toISOString() });
 		const out = clipTrack(PAE, NIGHT, t);
-		expect(out).toHaveLength(26);
+		expect(out).toHaveLength(31);
 		const ts = out.map((p) => p.t);
 		expect(new Set(ts).size).toBe(ts.length);
 	});
@@ -247,9 +256,10 @@ describe('clipTrack', () => {
 		const a = pass(NIGHT_START).positions;
 		const b = pass(NIGHT_START + 40 * 60_000).positions; // resumes 15 NM east after a 25-minute gap
 		const out = clipTrack(PAE, NIGHT, { positions: [...a, ...b] });
-		expect(out).toHaveLength(52);
-		// Second pass starts at its own 10 NM entry, not at 15 NM.
-		expect(out[26].dist).toBeCloseTo(10, 1);
+		expect(out).toHaveLength(62);
+		// Second pass is clipped on its own: it starts at its own first report, 15 NM east.
+		expect(out[31].dist).toBeCloseTo(15, 1);
+		expect(out[31].t).toBe(NIGHT_START + 40 * 60_000);
 	});
 
 	it('handles a missing positions array and unsorted input', () => {
@@ -257,15 +267,15 @@ describe('clipTrack', () => {
 		const t = pass(NIGHT_START);
 		t.positions.reverse();
 		const out = clipTrack(PAE, NIGHT, t);
-		expect(out).toHaveLength(26);
+		expect(out).toHaveLength(31);
 		for (let i = 1; i < out.length; i++) expect(out[i].t).toBeGreaterThan(out[i - 1].t);
 	});
 
 	it('respects a custom radius (exit ring scales with it: 3 NM in, 6 NM out)', () => {
 		const out = clipTrack(PAE, NIGHT, pass(NIGHT_START), 3);
-		// Entry at the 3 NM report east; kept to the 6 NM report west; the 6 NM crossing coincides with it.
-		expect(out).toHaveLength(10);
-		expect(out[0].dist).toBeCloseTo(3, 1);
+		// Comes inside 3 NM, so kept from the 6 NM report east to the 6 NM report west.
+		expect(out).toHaveLength(13);
+		expect(out[0].dist).toBeCloseTo(6, 1);
 		expect(out[out.length - 1].dist).toBeCloseTo(6, 1);
 	});
 });
