@@ -387,6 +387,10 @@ p {
 	letter-spacing: 0.04em;
 	text-align: left;
 }
+.replay-speeds button:disabled {
+	color: var(--ink-45);
+	cursor: default;
+}
 .replay-speeds button + button {
 	border-left: 2px solid var(--ink);
 }

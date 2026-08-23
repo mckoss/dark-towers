@@ -82,6 +82,14 @@
 		last = 0;
 		raf = requestAnimationFrame(tick);
 	}
+	/** Pause and move the clock by ±15 s for a frame-by-frame look. */
+	const STEP_MS = 15_000;
+	function nudge(dir: -1 | 1) {
+		if (!replay) return;
+		playing = false;
+		cancelAnimationFrame(raf);
+		t = Math.min(end, Math.max(start, t + dir * STEP_MS));
+	}
 	function scrub(e: Event) {
 		playing = false;
 		cancelAnimationFrame(raf);
@@ -289,6 +297,10 @@
 				disabled={!replay}
 			/>
 			<span class="replay-pip" data-testid="replay-pip" style="--pip: {((incident.t - start) / span).toFixed(4)}" title="Closest moment"></span>
+		</div>
+		<div class="replay-speeds" role="group" aria-label="Step 15 seconds">
+			<button onclick={() => nudge(-1)} disabled={!replay} aria-label="Back 15 seconds" data-testid="replay-back" title="Back 15 seconds">−15s</button>
+			<button onclick={() => nudge(1)} disabled={!replay} aria-label="Forward 15 seconds" data-testid="replay-forward" title="Forward 15 seconds">+15s</button>
 		</div>
 		<div class="replay-speeds" role="group" aria-label="Replay speed">
 			{#each SPEEDS as s (s)}

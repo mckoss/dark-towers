@@ -122,6 +122,12 @@ test.describe('airport detail', () => {
 		await expect(page.getByTestId('night-airborne')).toHaveText(/^\d+$/);
 		await play.click();
 		await expect(play).toHaveText(/Resume/);
+		// Single-step: +15 s then −15 s returns to the same clock reading.
+		const paused = await page.getByTestId('night-time').textContent();
+		await page.getByTestId('night-forward').click();
+		expect(await page.getByTestId('night-time').textContent()).not.toBe(paused);
+		await page.getByTestId('night-back').click();
+		expect(await page.getByTestId('night-time').textContent()).toBe(paused);
 	});
 
 	test('a night without close approaches shows the honest empty state', async ({ page }) => {
@@ -179,6 +185,12 @@ test.describe('close approach', () => {
 		const after = await page.getByTestId('replay-time').textContent();
 		expect(after).not.toBe(before);
 		await expect(page.getByTestId('replay-lateral')).toContainText('NM');
+		// Stepping pauses playback and moves the clock by 15 s.
+		await page.getByTestId('replay-forward').click();
+		await expect(play).toHaveText(/Play replay|Replay again/);
+		const stepped = await page.getByTestId('replay-time').textContent();
+		await page.getByTestId('replay-back').click();
+		expect(await page.getByTestId('replay-time').textContent()).not.toBe(stepped);
 		await expect(page.getByTestId('replay-vertical')).toContainText('ft');
 		// Scrubbing to the end lands on the closest pass region and stops.
 		const scrubber = page.getByTestId('replay-scrubber');

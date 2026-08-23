@@ -126,6 +126,20 @@
 		last = 0;
 		raf = requestAnimationFrame(tick);
 	}
+	/** Pause and move the clock by ±15 s for a frame-by-frame look. */
+	const STEP_MS = 15_000;
+	function nudge(dir: -1 | 1) {
+		if (!span) return;
+		playing = false;
+		cancelAnimationFrame(raf);
+		clearHold();
+		if (!started) {
+			started = true;
+			t = span.start;
+		}
+		t = Math.min(span.end, Math.max(span.start, t + dir * STEP_MS));
+		for (const inc of incidents) if (inc.t <= t) visited.add(inc.id);
+	}
 	function scrub(e: Event) {
 		if (!span) return;
 		playing = false;
@@ -415,6 +429,10 @@
 					<span class="replay-pip" data-testid="night-pip" style="--pip: {((inc.t - span.start) / (span.end - span.start)).toFixed(4)}" title="Close approach at {localClock(tz, inc.t)}"></span>
 				{/each}
 			{/if}
+		</div>
+		<div class="replay-speeds" role="group" aria-label="Step 15 seconds">
+			<button onclick={() => nudge(-1)} disabled={!span} aria-label="Back 15 seconds" data-testid="night-back" title="Back 15 seconds">−15s</button>
+			<button onclick={() => nudge(1)} disabled={!span} aria-label="Forward 15 seconds" data-testid="night-forward" title="Forward 15 seconds">+15s</button>
 		</div>
 		<div class="replay-speeds" role="group" aria-label="Replay speed">
 			{#each SPEEDS as sp (sp)}
