@@ -67,7 +67,6 @@
 		<div class="legend-title">Close approaches, last 30 days</div>
 		<div class="legend-row"><span class="swatch swatch-accent"></span> Tracked airport — circle grows with the count</div>
 		<div class="legend-row"><span class="swatch swatch-ink"></span> Tracked airport — none found</div>
-		<div class="legend-note">Airports still under review are listed on the Airports page, not shown here.</div>
 	</div>
 </section>
 
@@ -164,12 +163,6 @@
 		height: 14px;
 		border: 1.5px solid var(--ink);
 		background: rgba(32, 30, 29, 0.12);
-	}
-	.legend-note {
-		max-width: 30ch;
-		font-size: 12px;
-		line-height: 1.4;
-		color: var(--ink-45);
 	}
 
 	.cta {

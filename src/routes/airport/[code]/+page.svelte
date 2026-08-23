@@ -3,7 +3,7 @@
 	   string comes from the airport record; nothing is hard-coded. */
 	import { goto } from '$app/navigation';
 	import { towerHoursLabel, hoursClosed, hourLabel, towerHoursOn, AIRSPACE_RADIUS_NM } from '$lib/airports';
-	import { nightLabel, shortDate } from '$lib/time';
+	import { nightLabel } from '$lib/time';
 	import { monthLabel } from '$lib/monthLabel';
 	import FlightMap from '$lib/components/FlightMap.svelte';
 	import { altContextFor } from '$lib/altview.svelte';
@@ -40,15 +40,6 @@
 		return `The tower at ${a.name} is staffed from ${hourLabel(a.towerHours.open)} to ${hourLabel(a.towerHours.close)}. For the other ${closed} hours of every day, airliners and private aircraft arrive and depart with nobody in the tower.`;
 	});
 
-	/** Which nights carry full flight-path detail, as a plain range/list. */
-	const detailNote = $derived.by(() => {
-		const nights = data.calendar.filter((c) => (c.summary?.positions ?? 0) > 0).map((c) => c.night);
-		if (!nights.length) return 'Flight counts only for these nights; flight paths are not yet available.';
-		const first = nights[0],
-			last = nights[nights.length - 1];
-		const span = nights.length === 1 ? `The night of ${shortDate(first)} has` : `The nights of ${shortDate(first)} to ${shortDate(last)} have`;
-		return `${span} full flight-path detail; other nights in the window contribute flight counts only.`;
-	});
 
 	function selectNight(n: string) {
 		focus = null;
@@ -133,7 +124,6 @@
 			</nav>
 		</div>
 		<NightCalendar calendar={data.calendar} selected={data.selectedNight} onselect={selectNight} />
-		<p class="cal-note">{detailNote}</p>
 	</section>
 
 	{#if data.selectedNight}
@@ -329,11 +319,6 @@
 		font-size: 20px;
 		font-weight: 800;
 		letter-spacing: -0.01em;
-	}
-	.cal-note {
-		margin-top: 14px;
-		font-size: 12px;
-		color: var(--ink-45);
 	}
 	.night-head {
 		padding: 20px var(--gutter);

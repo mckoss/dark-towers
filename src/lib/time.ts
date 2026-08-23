@@ -117,11 +117,6 @@ export function nightLabel(night: string): string {
 	return `${WEEKDAYS[wd]}, ${MONTHS[m - 1]} ${d}`;
 }
 
-/** "Aug 18" */
-export function shortDate(night: string): string {
-	const [, m, d] = parseDateKey(night);
-	return `${MONTHS[m - 1].slice(0, 3)} ${d}`;
-}
 
 export function weekdayShort(night: string): string {
 	const [y, m, d] = parseDateKey(night);

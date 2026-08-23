@@ -74,7 +74,6 @@
 			<div class="table-header">Nearest approach · {localTime(airport.tz, incident.t, true)}</div>
 			<div class="fact-row">
 				<div class="figure accent tabular">{ft(incident.verticalFt)} <span class="at">at</span> {nm(incident.lateralNm)}</div>
-				<div class="caption">{ft(incident.verticalFt)} apart vertically while {nm(incident.lateralNm)} apart side to side</div>
 			</div>
 			<div class="at-moment" data-testid="nearest-moment">
 				<div class="moment-row"><span class="swatch" class:swatch-accent={colors[0] === 'accent'} class:swatch-ink={colors[0] === 'ink'}></span><span class="who">{flightLabel(a)}</span><span class="tabular">{showAlt(incident.altA)}</span><span class="tabular">{incident.gsA} kt</span></div>
@@ -102,14 +101,13 @@
 			<div class="table-header">What a controller requires</div>
 			<div class="fact-row">
 				<div class="figure tabular small">3 NM <span class="at">or</span> 1,000'</div>
-				<div class="caption">aircraft must be kept at least 3 NM apart side to side, or at least 1,000' apart vertically — one is enough. This pair was inside both limits at the same time.</div>
+				<div class="caption">at least 3 NM apart side to side, or at least 1,000' apart vertically — one is enough</div>
 			</div>
 		</div>
 		<div class="fact">
 			<div class="table-header">Distance from the airport</div>
 			<div class="fact-row">
 				<div class="figure tabular">{nm(incident.distNm)}</div>
-				<div class="caption">inside the 10 NM ring</div>
 			</div>
 		</div>
 	</div>
