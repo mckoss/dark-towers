@@ -4,6 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { towerHoursLabel, hoursClosed, hourLabel, AIRSPACE_RADIUS_NM } from '$lib/airports';
 	import { nightLabel, shortDate } from '$lib/time';
+	import { monthLabel } from '$lib/monthLabel';
 	import FlightMap from '$lib/components/FlightMap.svelte';
 	import NightCalendar from '$lib/components/NightCalendar.svelte';
 	import CloseApproachCard from '$lib/components/CloseApproachCard.svelte';
@@ -12,7 +13,8 @@
 	let { data } = $props();
 
 	const airport = $derived(data.airport);
-	const hasDetail = $derived(data.totals.nights > 0);
+	const hasDetail = $derived(data.hasAnyData);
+	const periodPhrase = $derived(data.period.month ? data.period.label : 'the last 30 days');
 	const nightFlights = $derived(data.nightSummary?.flights ?? data.flights.length);
 	const nightAirline = $derived(data.nightSummary?.airline ?? data.flights.filter((f) => f.category === 'airline').length);
 	const nightPrivate = $derived(data.nightSummary?.private ?? data.flights.filter((f) => f.category === 'private').length);
@@ -41,7 +43,13 @@
 
 	function selectNight(n: string) {
 		focus = null;
-		goto(`?night=${n}`, { keepFocus: true, noScroll: true });
+		const q = new URLSearchParams({ night: n });
+		if (data.period.month) q.set('month', data.period.month);
+		goto(`?${q}`, { keepFocus: true, noScroll: true });
+	}
+
+	function windowHref(month: string | null): string {
+		return month ? `?month=${month}` : '?';
 	}
 
 	const fmt = (n: number) => n.toLocaleString('en-US');
@@ -83,7 +91,7 @@
 	</div>
 </section>
 
-<div class="stats-kicker table-header">Over the last 30 days · hours the tower was closed</div>
+<div class="stats-kicker table-header">Over {periodPhrase} · hours the tower was closed</div>
 <section class="section stats">
 	<div class="stat"><div class="stat-n">{fmt(data.totals.flights)}</div><div class="stat-label">Flights in and out</div></div>
 	<div class="stat"><div class="stat-n">{fmt(data.totals.airline)}</div><div class="stat-label">Passenger airline</div></div>
@@ -94,12 +102,27 @@
 {#if !hasDetail}
 	<section class="section empty">
 		<h2 class="empty-title">Nightly detail for {airport.code} is not published yet.</h2>
-		<p class="empty-body">The totals above cover the last 30 days. Flight paths and individual close approaches are available for Paine Field.</p>
+		<p class="empty-body">The totals above cover {periodPhrase}. Flight paths and individual close approaches are available for Paine Field.</p>
 		<a class="btn" href="/airport/PAE">See the Paine Field record</a>
 	</section>
 {:else}
 	<section class="section calendar">
-		<h2 class="cal-title">Last 30 days</h2>
+		<div class="cal-head">
+			<h2 class="cal-title">{data.period.label}</h2>
+			<nav class="cal-nav" aria-label="Time window">
+				{#if data.nav.prev}
+					<a class="cal-step" href={windowHref(data.nav.prev)} data-testid="window-prev">← {monthLabel(data.nav.prev)}</a>
+				{:else}
+					<span class="cal-step disabled">← Earlier</span>
+				{/if}
+				{#if !data.nav.isDefault}
+					{#if data.nav.next}
+						<a class="cal-step" href={windowHref(data.nav.next)} data-testid="window-next">{monthLabel(data.nav.next)} →</a>
+					{/if}
+					<a class="cal-step latest" href={windowHref(null)} data-testid="window-latest">Last 30 days →</a>
+				{/if}
+			</nav>
+		</div>
 		<NightCalendar calendar={data.calendar} selected={data.selectedNight} onselect={selectNight} />
 		<p class="cal-note">{detailNote}</p>
 	</section>
@@ -245,6 +268,42 @@
 	}
 	.empty .btn {
 		border: none;
+	}
+	.cal-head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 12px 24px;
+	}
+	.cal-nav {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0;
+	}
+	.cal-step {
+		padding: 8px 14px;
+		font-size: 13px;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		border: 2px solid var(--ink);
+		border-right: none;
+		color: var(--ink);
+	}
+	.cal-step:last-child {
+		border-right: 2px solid var(--ink);
+	}
+	.cal-step:hover {
+		background: var(--ground-alt);
+		color: var(--ink);
+	}
+	.cal-step.latest {
+		background: var(--ink);
+		color: #fff;
+	}
+	.cal-step.disabled {
+		color: var(--ink-25);
+		border-color: var(--hairline);
 	}
 	.calendar {
 		padding: 36px var(--gutter);

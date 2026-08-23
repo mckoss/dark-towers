@@ -55,7 +55,7 @@ Status key: `[x]` done & verified · `[~]` in progress / partial · `[ ]` to do 
 - [ ] Verify first autonomous nightly run in production
 
 ## 6. Backlog — requested
-- [ ] **Longer time series.** Keep and serve more than the rolling 30 nights: airport page can scroll back through earlier months (paged calendar / month picker, `?night=` deep links keep working), and per-night detail stays available for as long as raw data is retained.
+- [x] **Longer time series.** Airport page defaults to the rolling last 30 days; stepping back moves through calendar-month windows (`?month=YYYY-MM`, e.g. June 2024) with stats, calendar and night panel scoped to that window; `?night=` deep links outside the default window imply their month; 'Last 30 days →' returns. All historical data (May 2024 →) is reachable.
 - [ ] **Trend graphs.** Charts of close approaches per week (and flights per week, airline vs. private) per airport and site-wide; weekly rollup query over `nights`, rendered in the design system (flat SVG, accent for close approaches). Candidate placements: airport detail above the calendar, and a site-wide view on Home or Airports.
 - [ ] Supporting: weekly aggregate table or view in SQLite; tests for week bucketing across month/year boundaries.
 

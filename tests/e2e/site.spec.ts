@@ -108,6 +108,21 @@ test.describe('airport detail', () => {
 		await expect(page.getByText(/No two aircraft came within 3 nautical miles/)).toBeVisible();
 	});
 
+	test('can step back through calendar-month windows and return to the last 30 days', async ({ page }) => {
+		await page.goto('/airport/PAE');
+		await expect(page.getByRole('heading', { name: 'Last 30 days' })).toBeVisible();
+		await page.getByTestId('window-prev').click();
+		await expect(page).toHaveURL(/month=\d{4}-\d{2}/);
+		await expect(page.getByRole('heading', { name: /^(January|February|March|April|May|June|July|August|September|October|November|December) \d{4}$/ })).toBeVisible();
+		// Deep-linking a 2024 night implies its month window.
+		await page.goto('/airport/PAE?night=2024-06-20');
+		await expect(page.getByRole('heading', { name: 'June 2024' })).toBeVisible();
+		await expect(page.getByText('Night of Thursday, June 20')).toBeVisible();
+		await expect(page.getByText(/Over June 2024/)).toBeVisible();
+		await page.getByTestId('window-latest').click();
+		await expect(page.getByRole('heading', { name: 'Last 30 days' })).toBeVisible();
+	});
+
 	test('an airport without data explains that nightly detail is not published yet', async ({ page }) => {
 		await page.goto('/airport/BLI');
 		await expect(page.getByText(/Nightly detail for BLI is not published yet/)).toBeVisible();
