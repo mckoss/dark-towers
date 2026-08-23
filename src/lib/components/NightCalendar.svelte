@@ -13,18 +13,20 @@
 
 	const max = $derived(Math.max(1, ...calendar.map((c) => c.summary?.flights ?? 0)));
 
-	// Interpolate ground-alt (#eae9e9) → ink-25 (#bab6b6) by volume.
-	const GROUND_ALT = [0xea, 0xe9, 0xe9];
-	const INK_25 = [0xba, 0xb6, 0xb6];
+	// Interpolate a mid grey (#d6d3d3) → ink-45 (#8f8b8b) by volume. The low end
+	// is deliberately darker than an empty (no data) chip so the two never look alike.
+	const LOW = [0xd6, 0xd3, 0xd3];
+	const HIGH = [0x8f, 0x8b, 0x8b];
 	function heat(flights: number): string {
 		const k = Math.min(1, flights / max);
-		const c = GROUND_ALT.map((a, i) => Math.round(a + (INK_25[i] - a) * k));
+		const c = LOW.map((a, i) => Math.round(a + (HIGH[i] - a) * k));
 		return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
 	}
 </script>
 
 <div class="cal">
 	<div class="legend">
+		<span><i class="none"></i>No data</span>
 		<span><i style:background={heat(0)}></i>Fewer flights</span>
 		<span><i style:background={heat(max)}></i>More flights</span>
 		<span><i style:background="var(--accent)"></i>Close approach</span>
@@ -126,5 +128,9 @@
 		width: 12px;
 		height: 12px;
 		border: 1px solid var(--hairline);
+	}
+	.legend i.none {
+		background: var(--ground);
+		opacity: 0.6;
 	}
 </style>
