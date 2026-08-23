@@ -40,7 +40,18 @@
 			<dt>FlightAware key</dt><dd>{data.apiKeyPresent ? 'present' : 'MISSING'}</dd>
 			<dt>Google sign-in</dt><dd>{data.googleConfigured ? 'configured' : 'not configured'}</dd>
 			<dt>Admins</dt><dd>{data.admins.join(', ')}</dd>
-			<dt>AeroAPI history</dt><dd>{data.historyEnabled ? 'enabled (Standard+ tier)' : 'off — live window only (10 days)'}</dd>
+			<dt>Extended history</dt>
+			<dd>
+				{#if data.historyOverride != null}
+					{data.historyOverride ? 'on' : 'off'} (forced by <code>aeroapi_history</code> in config)
+				{:else if data.capability}
+					{data.capability.extendedHistory ? 'available' : 'not available'} on this key — flights older than the 10-day live window {data.capability.extendedHistory ? 'can' : 'cannot'} be fetched · checked {when(data.capability.checkedAt)}
+				{:else}
+					not yet checked on this key
+				{/if}
+				<form method="POST" action="?/probe" use:enhance class="inline"><button class="link-btn" type="submit">re-check</button></form>
+				{#if form?.probed}<span class="muted-text"> · {form.probed}</span>{/if}
+			</dd>
 			<dt>Scheduler depth</dt><dd>{data.historyDays} nights</dd>
 			<dt>Tracked airports</dt><dd>{data.airports.filter((a) => a.tracked).map((a) => a.code).join(', ') || 'none'} · <a href="/admin/airports">edit airports &amp; tower hours</a> · <a href="/admin/operators">airline names</a></dd>
 		</dl>
@@ -78,7 +89,7 @@
 			<button class="btn btn-ink" type="submit" disabled={running}>Backfill</button>
 			<span class="hint">Oldest first; skips complete nights; stops on the first API error. Use when an airport is newly approved.</span>
 		</form>
-		<p class="hint">Cached nights cost no API calls. {#if !data.historyEnabled}Nights older than 10 days need <code>"aeroapi_history": true</code> (Standard tier or above); until then they are recorded as misses and retried automatically once history is enabled.{/if}</p>
+		<p class="hint">Cached nights cost no API calls. {#if !data.historyEnabled}Nights older than 10 days need extended history, which this key does not have (Standard tier or above); until then they are recorded as misses and retried automatically once a key with extended history is in place.{/if}</p>
 	</div>
 	<div class="cell">
 		<h2 class="section-heading">Current job</h2>
@@ -167,6 +178,7 @@
 	.sub { margin-top: 24px; font-size: 16px; font-weight: 800; }
 	.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 	.chip { padding: 6px 10px; border: 1px solid var(--hairline); font-size: 13px; }
+	.inline { display: inline; margin-left: 6px; }
 	.link-btn { background: none; border: none; padding: 0; color: var(--accent-text); font: inherit; cursor: pointer; text-decoration: underline; }
 	@media (max-width: 760px) {
 		.grid { grid-template-columns: 1fr 1fr; }

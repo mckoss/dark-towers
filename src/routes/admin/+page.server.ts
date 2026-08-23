@@ -1,6 +1,7 @@
 import { listAirports } from '$lib/server/airports-store';
 import { altimeterCheck, deleteRequest, incompleteNights, listRequests, nightCounts, recentRuns } from '$lib/server/db';
 import { pressureOffsetFt } from '$lib/altimeter';
+import { cachedCapability, extendedHistoryAllowed, probeCapability } from '$lib/server/capability';
 import { currentJob, startBackfill, startCatchUp, startIngest } from '$lib/server/jobs';
 import { config, flightAwareApiKey } from '$lib/server/config';
 import { fail } from '@sveltejs/kit';
@@ -17,7 +18,9 @@ export const load: PageServerLoad = ({ locals }) => {
 		user: locals.user!,
 		admins: s.admins,
 		apiKeyPresent: !!flightAwareApiKey(),
-		historyEnabled: s.aeroapi_history,
+		historyEnabled: extendedHistoryAllowed(),
+		historyOverride: s.aeroapi_history,
+		capability: cachedCapability(),
 		historyDays: s.history_days,
 		googleConfigured: !!s.google,
 		airports: listAirports().map((a) => ({ code: a.code, icao: a.icao, name: a.name, tracked: a.tracked, status: a.status })),
@@ -48,6 +51,11 @@ export const load: PageServerLoad = ({ locals }) => {
 };
 
 export const actions: Actions = {
+	probe: async () => {
+		const cap = await probeCapability({ log: console.log });
+		if (!cap) return fail(503, { error: 'Could not reach AeroAPI to check the key.' });
+		return { probed: cap.extendedHistory ? 'Extended history is available on this key.' : `Extended history is not available on this key (${cap.detail}).` };
+	},
 	catchup: async () => {
 		if (!startCatchUp()) return fail(409, { error: 'A job is already running.' });
 		return { started: 'catch-up' };

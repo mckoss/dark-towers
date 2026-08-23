@@ -8,7 +8,8 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { RAW_DIR, config, flightAwareApiKey } from './config';
+import { RAW_DIR, flightAwareApiKey } from './config';
+import { extendedHistoryAllowed } from './capability';
 
 const BASE = 'https://aeroapi.flightaware.com/aeroapi';
 /** Live endpoints reach this far back; beyond it the /history/ variants are needed (paid tiers). */
@@ -18,7 +19,7 @@ function needsHistory(whenUtcMs: number): boolean {
 	return Date.now() - whenUtcMs > LIVE_WINDOW_MS;
 }
 function historyAllowed(): boolean {
-	return config().aeroapi_history;
+	return extendedHistoryAllowed();
 }
 /** Unix seconds embedded in a fa_flight_id (e.g. "N11571-1786769330-adhoc-2951p"), or null. */
 export function flightIdTime(faFlightId: string): number | null {
@@ -189,7 +190,7 @@ export async function fetchFlights(
 	const iso = (ms: number) => new Date(ms).toISOString().replace(/\.\d{3}Z$/, 'Z');
 	const prefix = needsHistory(startUtcMs) ? (historyAllowed() ? '/history' : null) : '';
 	if (prefix === null) {
-		throw new ApiError(400, `${icao} ${night} is older than the live API window; set "aeroapi_history": true once the account tier allows it`);
+		throw new ApiError(400, `${icao} ${night} is older than the live API window and this key does not allow extended history`);
 	}
 	let url: string | null = `${prefix}/airports/${icao}/flights?start=${iso(startUtcMs)}&end=${iso(endUtcMs)}&max_pages=1`;
 	const out: RawFlight[] = [];

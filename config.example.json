@@ -10,5 +10,5 @@
     "data_dir": "data",
     "scheduler": true,
     "history_days": 9,
-    "aeroapi_history": false
+    "aeroapi_history": null
 }

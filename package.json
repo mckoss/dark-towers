@@ -20,7 +20,8 @@
 		"import:colab": "tsx scripts/import-colab.ts",
 		"test:e2e": "playwright test",
 		"db:seed": "tsx scripts/seed.ts",
-		"nasr:update": "tsx scripts/nasr.ts"
+		"nasr:update": "tsx scripts/nasr.ts",
+		"aeroapi:probe": "tsx scripts/aeroapi-probe.ts"
 	},
 	"dependencies": {
 		"better-sqlite3": "^12.4.1",

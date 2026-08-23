@@ -27,7 +27,7 @@ Tokens and typography roles live in `src/app.css` (spec in `DESIGN.md`) — use 
 - `npm run import:colab -- <flights.json> [tracks.json]`
 
 ## Pipeline invariants
-Idempotent at every layer: cache hit ⇒ zero API calls; DB writes are upserts keyed by `fa_flight_id` / `(airport, night)` / stable incident id. Personal-tier AeroAPI: 10 queries/min, no tracks older than 10 days (cached as misses).
+Idempotent at every layer: cache hit ⇒ zero API calls; DB writes are upserts keyed by `fa_flight_id` / `(airport, night)` / stable incident id. Personal-tier AeroAPI: 10 queries/min, no tracks older than 10 days (cached as misses). Extended-history capability is probed per key and cached at `data/aeroapi-capability.json` (`src/lib/server/capability.ts`); `aeroapi_history` in config only overrides.
 
 ## Airports
 `airports.json` is the insert-only seed; the `airports` / `tower_schedules` tables are the source of truth once they exist. Edit at `/admin/airports`, then Export JSON and commit it. Tower hours are effective-dated (`towerHoursOn(airport, night)`), so always pass the night's schedule, never a static one.

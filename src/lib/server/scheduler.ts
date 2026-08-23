@@ -6,6 +6,7 @@
  */
 import cron from 'node-cron';
 import { updateNasr } from './nasr';
+import { ensureCapability } from './capability';
 import { towerHoursOn } from '$lib/airports';
 import { trackedAirports } from './airports-store';
 import { addDays, nightWindow, todayKey } from '$lib/time';
@@ -56,6 +57,6 @@ export function startScheduler(log: (m: string) => void = console.log) {
 	nasrTask = cron.schedule('41 4 * * *', () => void updateNasr({ log }));
 	log('scheduler: hourly catch-up enabled');
 	// Also catch up shortly after boot.
-	setTimeout(() => void catchUp(log), 15_000).unref();
+	setTimeout(() => void ensureCapability({ log }).then(() => catchUp(log)), 15_000).unref();
 	setTimeout(() => void updateNasr({ log }), 30_000).unref();
 }

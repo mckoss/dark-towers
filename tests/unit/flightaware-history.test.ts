@@ -66,7 +66,7 @@ describe('AeroAPI history handling', () => {
 		const fa = await load(false);
 		const spy = vi.spyOn(globalThis, 'fetch');
 		const start = Date.parse('2024-06-20T04:00:00Z');
-		await expect(fa.fetchFlights('KPAE', '2024-06-19', start, start + 36_000_000)).rejects.toThrow(/aeroapi_history/);
+		await expect(fa.fetchFlights('KPAE', '2024-06-19', start, start + 36_000_000)).rejects.toThrow(/extended history/);
 		expect(spy).not.toHaveBeenCalled();
 	});
 });

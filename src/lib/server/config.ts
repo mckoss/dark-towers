@@ -31,11 +31,11 @@ export interface Config {
 	/** How many nights back the scheduler backfills (AeroAPI personal tier reaches 10 days). Default 9. */
 	history_days: number;
 	/**
-	 * True when the AeroAPI account tier (Standard+) allows the /history/
-	 * endpoints. Enables fetching flight lists and tracks older than 10 days and
-	 * makes cached "too old" misses retryable. Default false.
+	 * Optional override for extended history (the /history/ endpoints, data
+	 * older than the 10-day live window). Normally left unset: the key's
+	 * capability is probed once and cached (see server/capability.ts).
 	 */
-	aeroapi_history: boolean;
+	aeroapi_history?: boolean;
 }
 
 let cached: Config | undefined;
@@ -71,7 +71,7 @@ export function config(): Config {
 		db_path: process.env.DB_PATH ?? s.db_path ?? path.join(dataDir, 'db', 'darktowers.sqlite'),
 		scheduler: process.env.SCHEDULER ? process.env.SCHEDULER !== 'off' : (s.scheduler ?? true),
 		history_days: Number(process.env.HISTORY_DAYS ?? s.history_days ?? 9),
-		aeroapi_history: s.aeroapi_history ?? false
+		aeroapi_history: typeof s.aeroapi_history === 'boolean' ? s.aeroapi_history : undefined
 	};
 	if (process.env.NODE_ENV !== 'test') {
 		console.log(`[config] loaded from ${source}; data_dir=${cached.data_dir}; ${cached.admins.length} admin(s); google sign-in ${cached.google ? 'configured' : 'NOT configured'}; scheduler ${cached.scheduler ? 'on' : 'off'}`);

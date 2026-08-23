@@ -42,7 +42,9 @@ FlightAware responses; `data/db/darktowers.sqlite` is derived from it.
 - **Flight data:** [FlightAware AeroAPI](https://www.flightaware.com/aeroapi/portal/documentation) —
   `/airports/{id}/flights` for arrivals and departures in each closed-tower window, and
   `/flights/{id}/track` for ADS-B positions. Personal tier: 10 queries/minute, live data only
-  (10 days); set `"aeroapi_history": true` on Standard+ to use the `/history/` endpoints.
+  (10 days). Whether the key allows *extended history* (the `/history/` endpoints, Standard tier
+  and above) is probed with one call at startup and cached per key (`npm run aeroapi:probe`,
+  or "re-check" on `/admin`); `"aeroapi_history": true|false` in config forces it if needed.
 - **Tower hours:** FAA Chart Supplement (entered by hand, effective-dated, editable in
   `/admin/airports`; seeded from `airports.json`).
 - **Tower record check:** the [FAA NASR 28-day subscription](https://www.faa.gov/air_traffic/flight_info/aeronav/aero_data/NASR_Subscription/)
