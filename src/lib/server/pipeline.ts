@@ -12,7 +12,7 @@
  * (e.g. the night was first processed before its window had ended).
  */
 import { AIRSPACE_RADIUS_NM, OPERATORS, airportByCode } from '$lib/airports';
-import { distanceNm } from '$lib/geo';
+import { distanceNm, fromLocalNm, toLocalNm } from '$lib/geo';
 import { findIncidents } from '$lib/separation';
 import { nightOf, nightWindow } from '$lib/time';
 import type { AirportConfig, Flight, FlightCategory, NightSummary, Position } from '$lib/types';
@@ -90,7 +90,7 @@ async function ingest(airport: AirportConfig, night: string, opts: IngestOptions
 	flights.sort((a, b) => a.eventTime - b.eventTime);
 
 	// 4. close approaches
-	const incidents = findIncidents(airport.pos, airport.icao, night, flights);
+	const incidents = findIncidents(airport.pos, airport.icao, night, flights, { elevationFt: airport.elevationFt });
 
 	// 5. store
 	for (const f of flights) upsertFlight(f);
@@ -165,9 +165,11 @@ export function normalizeFlight(airport: AirportConfig, night: string, f: RawFli
 }
 
 /**
- * Keep the positions inside the ring (plus one neighbour either side so the
- * curve enters and leaves smoothly), and only while the tower was closed on
- * this night. Resolution is whatever ADS-B reported — nothing is thinned.
+ * Keep the positions inside the ring, and only while the tower was closed on
+ * this night. Where the track crosses the ring, a point is interpolated on the
+ * boundary so the curve enters and leaves at the edge instead of jumping to a
+ * report many miles away. Resolution is whatever ADS-B reported — nothing
+ * inside the ring is thinned.
  */
 export function clipTrack(airport: AirportConfig, night: string, track: RawTrack, radiusNm = AIRSPACE_RADIUS_NM): Position[] {
 	const pts: Position[] = [];
@@ -194,15 +196,55 @@ export function clipTrack(airport: AirportConfig, night: string, track: RawTrack
 			inside = false;
 			continue;
 		}
+		const prev = i > 0 ? pts[i - 1] : null;
 		if (p.dist <= radiusNm) {
-			if (!inside && i > 0 && out[out.length - 1] !== pts[i - 1]) out.push(pts[i - 1]);
+			if (!inside && prev && prev.dist > radiusNm && nightOf(airport.tz, airport.towerHours, prev.t) === night) {
+				const x = ringCrossing(airport, prev, p, radiusNm);
+				if (x) out.push(x);
+			}
 			out.push(p);
 			inside = true;
-		} else if (inside) {
-			out.push(p);
+		} else if (inside && prev) {
+			const x = ringCrossing(airport, prev, p, radiusNm);
+			if (x) out.push(x);
 			inside = false;
 		}
 	}
 	// Dedupe identical timestamps.
 	return out.filter((p, i) => i === 0 || p.t !== out[i - 1].t);
+}
+
+/**
+ * Linear interpolation between an outside and an inside report at the ring
+ * boundary. Returns null when a report already sits on the boundary.
+ */
+function ringCrossing(airport: AirportConfig, a: Position, b: Position, radiusNm: number): Position | null {
+	const [ax, ay] = toLocalNm(airport.pos, [a.lat, a.lon]);
+	const [bx, by] = toLocalNm(airport.pos, [b.lat, b.lon]);
+	// Solve |a + u(b-a)| = r for u in (0,1); fall back to distance ratio.
+	const dx = bx - ax,
+		dy = by - ay;
+	const A = dx * dx + dy * dy,
+		B = 2 * (ax * dx + ay * dy),
+		C = ax * ax + ay * ay - radiusNm * radiusNm;
+	const disc = B * B - 4 * A * C;
+	let u = Math.abs(a.dist - b.dist) > 1e-9 ? (a.dist - radiusNm) / (a.dist - b.dist) : 0.5;
+	if (A > 0 && disc >= 0) {
+		const r1 = (-B - Math.sqrt(disc)) / (2 * A),
+			r2 = (-B + Math.sqrt(disc)) / (2 * A);
+		const cands = [r1, r2].filter((r) => r > 0 && r < 1);
+		if (cands.length) u = cands[0];
+	}
+	if (u < 0.005 || u > 0.995) return null;
+	const lerp = (x: number, y: number) => x + (y - x) * u;
+	const [lat, lon] = fromLocalNm(airport.pos, [lerp(ax, bx), lerp(ay, by)]);
+	return {
+		t: Math.round(lerp(a.t, b.t)),
+		lat: Math.round(lat * 1e6) / 1e6,
+		lon: Math.round(lon * 1e6) / 1e6,
+		alt: Math.round(lerp(a.alt, b.alt)),
+		gs: Math.round(lerp(a.gs, b.gs)),
+		hdg: b.hdg,
+		dist: radiusNm
+	};
 }

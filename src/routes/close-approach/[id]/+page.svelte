@@ -1,0 +1,337 @@
+<script lang="ts">
+	import Replay from '$lib/components/Replay.svelte';
+	import { OPERATORS } from '$lib/airports';
+	import { pairColors } from '$lib/replay';
+	import { localTime, nightLabel } from '$lib/time';
+	import type { Flight } from '$lib/types';
+	import type { PageData } from './$types';
+
+	let { data }: { data: PageData } = $props();
+	const { incident, airport, a, b, others, related } = $derived(data);
+
+	const colors = $derived(pairColors(a, b));
+	const severityLabel = $derived(incident.severity === 'very-close' ? 'Very close' : 'Closer than allowed');
+	const nm = (n: number) => `${n.toFixed(2)} NM`;
+	const ft = (n: number) => `${Math.round(n).toLocaleString('en-US')}'`;
+	const feet = (n: number) => `${Math.round(n).toLocaleString('en-US')} ft`;
+
+	const kindLabel = (f: Flight) => (f.category === 'airline' ? 'Passenger airline' : 'Private or training');
+	const describe = (f: Flight) => `${kindLabel(f)}${f.type ? ` · ${f.type}` : ''}`;
+	const identLabel = (f: Flight) => (f.tail && f.tail !== f.ident ? `${f.ident} (${f.tail})` : f.ident);
+
+	/** "a Horizon Air passenger flight" / "a private or training aircraft" */
+	function noun(f: Flight): string {
+		if (f.category === 'airline') {
+			const op = f.operatorName ?? (f.operator ? OPERATORS[f.operator] : null);
+			return op ? `a ${op} passenger flight` : 'a passenger airline flight';
+		}
+		return 'a private or training aircraft';
+	}
+	function movement(f: Flight): string {
+		const other = f.otherCity ?? f.otherName ?? f.otherCode;
+		if (f.direction === 'arrival') return other ? `arriving from ${other}` : 'arriving';
+		return other ? `leaving for ${other}` : 'leaving';
+	}
+	const narrative = $derived(
+		`${a.ident}, ${noun(a)} ${movement(a)}, and ${b.ident}, ${noun(b)} ${movement(b)}, ` +
+			`came within ${nm(incident.lateralNm)} of each other side to side while only ${ft(incident.verticalFt)} apart vertically. ` +
+			`The closest point was ${nm(incident.distNm)} from the field, at ${feet(incident.altA)} and ${feet(incident.altB)}. ` +
+			`With the tower closed, no controller was on duty to keep them apart.`
+	);
+</script>
+
+<svelte:head>
+	<title>{a.ident} and {b.ident} · close approach · Dark Tower Watch</title>
+</svelte:head>
+
+<div class="back">
+	<a href="/airport/{airport.code}">← {airport.name}</a>
+</div>
+
+<section class="section split">
+	<div class="cell head">
+		<div class="meta">
+			<span class="pill" class:pill-accent={incident.severity === 'very-close'} class:pill-grey={incident.severity !== 'very-close'}>{severityLabel}</span>
+			<span class="ref tabular">{incident.id}</span>
+		</div>
+		<h1 class="headline">{a.ident} and {b.ident} came within {nm(incident.lateralNm)} and {ft(incident.verticalFt)} of each other.</h1>
+		<div class="when">{nightLabel(incident.night)} · {localTime(airport.tz, incident.t)} · {airport.name} · tower closed</div>
+		<p class="body note">{narrative}</p>
+	</div>
+	<div class="facts">
+		<div class="fact">
+			<div class="table-header">How close, side to side</div>
+			<div class="fact-row">
+				<div class="figure accent tabular">{nm(incident.lateralNm)}</div>
+				<div class="caption">a controller would keep them at least 3 NM apart</div>
+			</div>
+		</div>
+		<div class="fact">
+			<div class="table-header">Vertical separation</div>
+			<div class="fact-row">
+				<div class="figure accent tabular">{ft(incident.verticalFt)}</div>
+				<div class="caption">a controller would keep them at least 1,000' apart</div>
+			</div>
+		</div>
+		<div class="fact">
+			<div class="table-header">Distance from the airport</div>
+			<div class="fact-row">
+				<div class="figure tabular">{nm(incident.distNm)}</div>
+				<div class="caption">inside the 10 NM ring</div>
+			</div>
+		</div>
+	</div>
+</section>
+
+<section class="section split">
+	<div class="replay-col">
+		{#key incident.id}
+			<Replay {airport} {a} {b} {incident} {others} />
+		{/key}
+		<div class="replay-note">
+			Replay runs in accelerated time. Each aircraft's full path is dashed; the solid trail is where it has flown so far, and the thin line between the two is their separation. Other traffic that night is greyed behind them.
+		</div>
+	</div>
+	<div>
+		{#each [{ f: a, label: 'Aircraft A', alt: incident.altA, swatch: colors[0] }, { f: b, label: 'Aircraft B', alt: incident.altB, swatch: colors[1] }] as card (card.label)}
+			<div class="card">
+				<div class="card-head">
+					<span class="swatch" class:swatch-accent={card.swatch === 'accent'} class:swatch-ink={card.swatch === 'ink'}></span>
+					<span class="table-header">{card.label}</span>
+				</div>
+				<div class="ident">{identLabel(card.f)}</div>
+				<div class="desc">{describe(card.f)}</div>
+				<div class="alt">Altitude at closest point: <strong>{feet(card.alt)}</strong></div>
+			</div>
+		{/each}
+		<div class="inset know">
+			<div class="table-header">What we know, and don't</div>
+			<p>
+				We do not know whether this event was reported to the FAA. With the tower closed there was no controller watching to file a report, and a pilot cannot report an aircraft they never saw. What we can show is what the position data recorded.
+			</p>
+		</div>
+	</div>
+</section>
+
+<section class="others">
+	<h2 class="others-heading">Other close approaches at {airport.name}</h2>
+	<div class="row table-header thead">
+		<div>Reference</div>
+		<div>Aircraft</div>
+		<div>Lateral</div>
+		<div>Vertical</div>
+	</div>
+	{#each related as r (r.id)}
+		<a class="row item" href="/close-approach/{r.id}">
+			<div class="ref tabular">{r.id}</div>
+			<div class="pair">{r.identA} × {r.identB}</div>
+			<div class="num tabular">{nm(r.lateralNm)}</div>
+			<div class="num tabular">{ft(r.verticalFt)}</div>
+		</a>
+	{:else}
+		<div class="empty">No other close approaches in the last 30 days.</div>
+	{/each}
+</section>
+
+<style>
+	.back {
+		padding: 16px var(--gutter);
+		border-bottom: var(--row-rule);
+	}
+	.back a {
+		font-size: 13px;
+		font-weight: 600;
+		border: none;
+	}
+	.meta {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+	}
+	.ref {
+		font-size: 12px;
+		font-weight: 600;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--ink-45);
+	}
+	.headline {
+		margin-top: 20px;
+		font-size: 44px;
+		font-weight: 900;
+		line-height: 1.02;
+		letter-spacing: -0.03em;
+		max-width: 20ch;
+	}
+	.when {
+		margin-top: 16px;
+		font-size: 16px;
+		color: var(--ink-60);
+	}
+	.note {
+		margin-top: 24px;
+		max-width: 58ch;
+	}
+	.facts {
+		display: grid;
+		grid-template-rows: 1fr 1fr 1fr;
+	}
+	.fact {
+		padding: 24px;
+		border-bottom: var(--row-rule);
+	}
+	.fact:last-child {
+		border-bottom: none;
+	}
+	.fact-row {
+		display: flex;
+		align-items: baseline;
+		gap: 14px;
+		margin-top: 10px;
+	}
+	.figure {
+		font-size: 48px;
+		font-weight: 900;
+		letter-spacing: -0.03em;
+		line-height: 0.9;
+		white-space: nowrap;
+	}
+	.caption {
+		font-size: 14px;
+		color: var(--ink-60);
+	}
+	.replay-col {
+		min-width: 0;
+	}
+	.replay-note {
+		padding: 14px var(--gutter);
+		border-top: var(--row-rule);
+		font-size: 12px;
+		color: var(--ink-45);
+	}
+	.card {
+		padding: 24px;
+		border-bottom: var(--row-rule);
+	}
+	.card-head {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+	.swatch {
+		display: block;
+		width: 22px;
+		height: 4px;
+	}
+	.swatch-accent {
+		background: var(--accent);
+	}
+	.swatch-ink {
+		background: var(--ink);
+	}
+	.ident {
+		margin-top: 12px;
+		font-size: 28px;
+		font-weight: 900;
+		letter-spacing: -0.02em;
+	}
+	.desc {
+		margin-top: 6px;
+		font-size: 15px;
+		color: var(--ink-60);
+	}
+	.alt {
+		margin-top: 12px;
+		font-size: 15px;
+	}
+	.know {
+		padding: 24px;
+	}
+	.know p {
+		margin-top: 12px;
+		font-size: 15px;
+		line-height: 1.6;
+		color: var(--ink-80);
+	}
+	.others {
+		padding: 36px var(--gutter) 64px;
+	}
+	.others-heading {
+		margin-bottom: 16px;
+		font-size: 20px;
+		font-weight: 800;
+		letter-spacing: -0.02em;
+	}
+	.row {
+		display: grid;
+		grid-template-columns: 200px 1fr 120px 120px;
+		align-items: center;
+		gap: 0 12px;
+	}
+	.thead {
+		padding: 10px 0;
+		border-top: var(--rule);
+		border-bottom: var(--row-rule);
+	}
+	.item {
+		padding: 16px 0;
+		border-bottom: var(--row-rule);
+		color: var(--ink);
+	}
+	.item:hover {
+		background: var(--ground-alt);
+		color: var(--ink);
+	}
+	.item .ref {
+		font-size: 13px;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: none;
+	}
+	.pair {
+		font-size: 16px;
+		font-weight: 600;
+	}
+	.num {
+		font-size: 16px;
+		font-weight: 800;
+		color: var(--accent);
+	}
+	.empty {
+		padding: 16px 0;
+		font-size: 15px;
+		color: var(--ink-60);
+		border-bottom: var(--row-rule);
+	}
+	@media (max-width: 760px) {
+		.headline {
+			font-size: 32px;
+		}
+		.facts {
+			grid-template-rows: none;
+		}
+		.fact {
+			padding: 20px var(--gutter);
+		}
+		.figure {
+			font-size: 40px;
+		}
+		.card,
+		.know {
+			padding: 20px var(--gutter);
+		}
+		.row {
+			grid-template-columns: 1fr 1fr;
+			gap: 4px 12px;
+		}
+		.thead {
+			display: none;
+		}
+		.item .ref {
+			grid-column: 1 / -1;
+		}
+		.pair {
+			grid-column: 1 / -1;
+		}
+	}
+</style>

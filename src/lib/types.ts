@@ -21,6 +21,8 @@ export interface AirportConfig {
 	tz: string;
 	/** [lat, lon] of the field reference point. */
 	pos: [number, number];
+	/** Field elevation, feet MSL (used to ignore aircraft on the ground). */
+	elevationFt: number;
 	/** null means there is no tower at any hour. */
 	towerHours: TowerHours | null;
 	carriers: string[];

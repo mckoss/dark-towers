@@ -246,3 +246,29 @@ p {
 		padding: 28px var(--gutter);
 	}
 }
+
+/* ---- Leaflet overrides ---- */
+.leaflet-container {
+	font-family: var(--font) !important;
+	background: var(--ground-alt) !important;
+}
+.leaflet-control-attribution {
+	font-size: 10px !important;
+	background: rgba(243, 242, 242, 0.85) !important;
+	color: var(--ink-45) !important;
+}
+.leaflet-control-attribution a {
+	border: none;
+}
+.leaflet-bar,
+.leaflet-bar a {
+	border-radius: 0 !important;
+	border-color: var(--ink) !important;
+	color: var(--ink) !important;
+}
+.field-marker span {
+	display: block;
+	width: 10px;
+	height: 10px;
+	background: var(--ink);
+}

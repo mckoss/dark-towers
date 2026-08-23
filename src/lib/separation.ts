@@ -2,14 +2,14 @@
  * Close-approach detection. Pure and synchronous so it can be unit tested and
  * re-run over cached data at any time.
  */
-import { SEPARATION_LATERAL_NM, SEPARATION_VERTICAL_FT, VERY_CLOSE_LATERAL_NM, VERY_CLOSE_VERTICAL_FT } from './airports';
+import { AIRSPACE_RADIUS_NM, GROUND_AGL_FT, GROUND_SPEED_KT, SEPARATION_LATERAL_NM, SEPARATION_VERTICAL_FT, VERY_CLOSE_LATERAL_NM, VERY_CLOSE_VERTICAL_FT } from './airports';
 import { distanceNm, fromLocalNm, toLocalNm, type LatLon } from './geo';
 import { Spline } from './spline';
 import type { Flight, Incident, Position, Severity } from './types';
 
 export interface TrackSpline {
 	flight: Flight;
-	spline: Spline; // channels: [east NM, north NM, alt ft]
+	spline: Spline; // channels: [east NM, north NM, alt ft, groundspeed kt]
 }
 
 export function buildTrackSpline(origin: LatLon, flight: Flight): TrackSpline | null {
@@ -17,7 +17,7 @@ export function buildTrackSpline(origin: LatLon, flight: Flight): TrackSpline | 
 		.slice()
 		.sort((a, b) => a.t - b.t)
 		.filter((p, i, arr) => i === 0 || p.t > arr[i - 1].t) // drop duplicate timestamps
-		.map((p) => ({ t: p.t, v: [...toLocalNm(origin, [p.lat, p.lon]), p.alt] }));
+		.map((p) => ({ t: p.t, v: [...toLocalNm(origin, [p.lat, p.lon]), p.alt, p.gs] }));
 	if (pts.length < 2) return null;
 	return { flight, spline: new Spline(pts) };
 }
@@ -30,16 +30,39 @@ export interface ClosestPoint {
 	b: number[];
 }
 
+export interface ApproachOptions {
+	stepMs?: number;
+	/** Field elevation; samples within GROUND_AGL_FT of it (or slower than GROUND_SPEED_KT) are ignored. */
+	elevationFt?: number;
+	/** Only moments inside this radius of the origin count. */
+	radiusNm?: number;
+}
+
+/** Two records of one physical aircraft (e.g. callsign + registration) ride on top of each other. */
+const DUPLICATE_LATERAL_NM = 0.2;
+const DUPLICATE_VERTICAL_FT = 300;
+const DUPLICATE_FRACTION = 0.8;
+
+function onGround(p: number[], elevationFt: number | undefined): boolean {
+	if (elevationFt != null && p[2] <= elevationFt + GROUND_AGL_FT) return true;
+	return p.length > 3 && p[3] < GROUND_SPEED_KT;
+}
+
 /**
  * Walk the overlapping time span of two tracks on a shared clock and return
  * the closest moment at which both aircraft were simultaneously inside the
- * lateral AND vertical minima. Returns null if that never happened.
+ * lateral AND vertical minima, airborne, and inside the ring. Returns null if
+ * that never happened, or if the two tracks are really the same aircraft.
  */
-export function closestApproach(a: Spline, b: Spline, stepMs = 1000): ClosestPoint | null {
+export function closestApproach(a: Spline, b: Spline, opts: ApproachOptions = {}): ClosestPoint | null {
+	const stepMs = opts.stepMs ?? 1000;
+	const radius = opts.radiusNm ?? AIRSPACE_RADIUS_NM;
 	const start = Math.max(a.t0, b.t0);
 	const end = Math.min(a.t1, b.t1);
 	if (end - start < 0) return null;
 	let best: ClosestPoint | null = null;
+	let samples = 0,
+		coincident = 0;
 	for (let t = start; t <= end; t += stepMs) {
 		const pa = a.at(t)!,
 			pb = b.at(t)!;
@@ -47,13 +70,21 @@ export function closestApproach(a: Spline, b: Spline, stepMs = 1000): ClosestPoi
 			dy = pa[1] - pb[1];
 		const lateral = Math.hypot(dx, dy);
 		const vertical = Math.abs(pa[2] - pb[2]);
-		if (lateral < SEPARATION_LATERAL_NM && vertical < SEPARATION_VERTICAL_FT) {
+		samples++;
+		if (lateral < DUPLICATE_LATERAL_NM && vertical < DUPLICATE_VERTICAL_FT) coincident++;
+		if (onGround(pa, opts.elevationFt) || onGround(pb, opts.elevationFt)) continue;
+		// The closest point (midpoint of the pair) must be inside the ring.
+		if (Math.hypot((pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2) > radius) continue;
+		// Compare the figures people will see (2 dp / whole feet) so a displayed
+		// "1,000 ft" can never be captioned "less than 1,000".
+		if (Math.round(lateral * 100) / 100 < SEPARATION_LATERAL_NM && Math.round(vertical) < SEPARATION_VERTICAL_FT) {
 			// Rank by lateral first (the figure people understand), vertical second.
 			if (!best || lateral < best.lateralNm || (lateral === best.lateralNm && vertical < best.verticalFt)) {
 				best = { t, lateralNm: lateral, verticalFt: vertical, a: pa, b: pb };
 			}
 		}
 	}
+	if (samples >= 5 && coincident / samples >= DUPLICATE_FRACTION) return null;
 	return best;
 }
 
@@ -62,7 +93,7 @@ export function severityOf(lateralNm: number, verticalFt: number): Severity {
 }
 
 /** Find every flagged pair among a night's flights. Deterministic and idempotent. */
-export function findIncidents(origin: LatLon, airportIcao: string, night: string, flights: Flight[]): Incident[] {
+export function findIncidents(origin: LatLon, airportIcao: string, night: string, flights: Flight[], opts: ApproachOptions = {}): Incident[] {
 	const tracks = flights.map((f) => buildTrackSpline(origin, f)).filter((t): t is TrackSpline => !!t);
 	tracks.sort((x, y) => x.flight.id.localeCompare(y.flight.id));
 	const out: Incident[] = [];
@@ -74,7 +105,7 @@ export function findIncidents(origin: LatLon, airportIcao: string, night: string
 			// One physical aircraft can carry two flight ids back to back (e.g. a
 			// touch-and-go). It cannot be close to itself.
 			if (A.flight.tail && A.flight.tail === B.flight.tail) continue;
-			const cp = closestApproach(A.spline, B.spline);
+			const cp = closestApproach(A.spline, B.spline, opts);
 			if (!cp) continue;
 			const posA = fromLocalNm(origin, [cp.a[0], cp.a[1]]);
 			const posB = fromLocalNm(origin, [cp.b[0], cp.b[1]]);
