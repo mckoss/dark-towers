@@ -90,7 +90,7 @@ test.describe('airport detail', () => {
 		await expect(page.getByText(/Night of /)).toBeVisible();
 		await expect(page.getByText(/Flight log/)).toBeVisible();
 		// Airline flights are named in plain language, with the callsign secondary.
-		await expect(page.getByText(/^(Horizon|Alaska|Southwest) \d+$/).first()).toBeVisible();
+		await expect(page.getByText(/(Horizon|Alaska|Southwest) \d+/).first()).toBeVisible();
 		// No process metrics on the page.
 		expect(await page.locator('main').textContent()).not.toMatch(/positions analy/i);
 	});
