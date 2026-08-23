@@ -1,8 +1,9 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { vi } from 'vitest';
 
-const SCRATCH = '/private/tmp/claude-501/-Users-mckoss-src-dark-towers/d2ec3309-d896-4d1b-a776-aca8bf5becac/scratchpad';
+const SCRATCH = process.env.TEST_SCRATCH_DIR ?? path.join(os.tmpdir(), 'dark-towers-tests');
 
 /**
  * Point DATA_DIR (read by src/lib/server/config.ts at import time) at a fresh
