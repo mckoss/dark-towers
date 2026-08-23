@@ -69,25 +69,58 @@
 	const atEnd = $derived(!!span && t >= span.end);
 	let raf = 0;
 	let last = 0;
+	// At each close approach the playback stops on the closest moment, the
+	// pair flashes HOLD_FLASHES times, then playback continues.
+	const HOLD_FLASHES = 5;
+	const FLASH_MS = 500;
+	let holding = $state(false);
+	let holdTimer: ReturnType<typeof setTimeout> | undefined;
+	const visited = new Set<string>();
+	const sortedIncidents = $derived([...incidents].sort((x, y) => x.t - y.t));
 	function tick(now: number) {
-		if (!playing || !span) return;
+		if (!playing || !span || holding) return;
 		const dt = last ? now - last : 0;
 		last = now;
-		t = Math.min(span.end, t + dt * speed);
+		let next = Math.min(span.end, t + dt * speed);
+		// Did the clock pass a close approach we have not paused on yet?
+		const hit = sortedIncidents.find((inc) => !visited.has(inc.id) && inc.t > t && inc.t <= next);
+		if (hit) {
+			visited.add(hit.id);
+			next = hit.t;
+			t = next;
+			holding = true;
+			holdTimer = setTimeout(() => {
+				holding = false;
+				if (playing) {
+					last = 0;
+					raf = requestAnimationFrame(tick);
+				}
+			}, HOLD_FLASHES * FLASH_MS);
+			return;
+		}
+		t = next;
 		if (t >= span.end) {
 			playing = false;
 			return;
 		}
 		raf = requestAnimationFrame(tick);
 	}
+	function clearHold() {
+		clearTimeout(holdTimer);
+		holding = false;
+	}
 	function play() {
 		if (!span) return;
 		if (playing) {
 			playing = false;
 			cancelAnimationFrame(raf);
+			clearHold();
 			return;
 		}
-		if (!started || t >= span.end) t = span.start;
+		if (!started || t >= span.end) {
+			t = span.start;
+			visited.clear();
+		}
 		started = true;
 		playing = true;
 		last = 0;
@@ -97,9 +130,13 @@
 		if (!span) return;
 		playing = false;
 		cancelAnimationFrame(raf);
+		clearHold();
 		started = true;
 		const k = Number((e.currentTarget as HTMLInputElement).value);
 		t = span.start + (k / (STEPS - 1)) * (span.end - span.start);
+		// Close approaches behind the new position count as seen; those ahead will pause again.
+		visited.clear();
+		for (const inc of incidents) if (inc.t <= t) visited.add(inc.id);
 	}
 	const glyphs = new Map<string, { mark: LeafletNS.Marker; label: LeafletNS.Marker; trail: LeafletNS.Polyline }>();
 	let sepLines: LeafletNS.Polyline[] = [];
@@ -286,6 +323,8 @@
 		if (!base || !L) return;
 		playing = false;
 		cancelAnimationFrame(raf);
+		clearHold();
+		visited.clear();
 		started = false;
 		t = span?.start ?? 0;
 		layer?.remove();
@@ -357,14 +396,17 @@
 		void altView.mode;
 		if (base) drawReplay();
 	});
-	onMount(() => () => cancelAnimationFrame(raf));
+	onMount(() => () => {
+		cancelAnimationFrame(raf);
+		clearTimeout(holdTimer);
+	});
 </script>
 
 <div class="flight-map" bind:this={el} style:height="{height}px" aria-label="Map of flight paths near the airport"></div>
 {#if replay}
 	<div class="replay-controls" data-testid="night-replay">
 		<button class="btn" data-testid="night-play" onclick={play} disabled={!span}>
-			{playing ? 'Pause' : atEnd ? 'Replay again' : started ? 'Resume' : 'Replay the night'}
+			{playing ? (holding ? 'Close approach' : 'Pause') : atEnd ? 'Replay again' : started ? 'Resume' : 'Replay the night'}
 		</button>
 		<input class="replay-scrubber" data-testid="night-scrubber" type="range" min="0" max={STEPS - 1} step="1" value={step} oninput={scrub} aria-label="Replay position" disabled={!span} />
 		<div class="replay-speeds" role="group" aria-label="Replay speed">
