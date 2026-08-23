@@ -96,11 +96,11 @@
 			{ frac: 1, text: localTime(tz, span.end), kind: 'end' as const, x: marksW - 8, lane: 2 }
 		];
 	});
-	/** Intervals (as fractions of the span) when at least one airline flight is in the air, merged. */
-	const airlineBands = $derived.by(() => {
-		if (!span) return [] as { from: number; to: number }[];
+	/** Intervals (as fractions of the span) when at least one flight of a kind is in the air, merged. */
+	function bandsFor(kind: Flight['category']): { from: number; to: number }[] {
+		if (!span) return [];
 		const ivs = flights
-			.filter((f) => f.category === 'airline' && f.positions.length > 1)
+			.filter((f) => f.category === kind && f.positions.length > 1)
 			.map((f) => ({ from: f.positions[0].t, to: f.positions[f.positions.length - 1].t }))
 			.sort((x, y) => x.from - y.from);
 		const merged: { from: number; to: number }[] = [];
@@ -111,7 +111,10 @@
 		}
 		const len = span.end - span.start;
 		return merged.map((m) => ({ from: (m.from - span.start) / len, to: (m.to - span.start) / len }));
-	});
+	}
+	const airlineBands = $derived(bandsFor('airline'));
+	// Private bands are drawn underneath; airline bands paint over them.
+	const privateBands = $derived(bandsFor('private'));
 	function tick(now: number) {
 		if (!playing || !span || holding) return;
 		const dt = last ? now - last : 0;
@@ -460,6 +463,9 @@
 		</button>
 		<div class="replay-track-col">
 		<div class="replay-track">
+			{#each privateBands as b, i (i)}
+				<span class="replay-band private" data-testid="night-private-band" style="--from: {b.from.toFixed(4)}; --to: {b.to.toFixed(4)}"></span>
+			{/each}
 			{#each airlineBands as b, i (i)}
 				<span class="replay-band" data-testid="night-airline-band" style="--from: {b.from.toFixed(4)}; --to: {b.to.toFixed(4)}"></span>
 			{/each}
