@@ -31,8 +31,10 @@
 		height?: number;
 		/** Altimeter readings for the night; with field elevation they turn reported altitudes into height above the field. */
 		alt?: AltContext;
+		/** Begin playback as soon as the map is ready (default true). */
+		autoplay?: boolean;
 	}
-	let { airport, a, b, incident, others = [], tiles = 'carto', height = 520, alt = { ...NO_CORRECTION, elevationFt: airport.elevationFt } }: Props = $props();
+	let { airport, a, b, incident, others = [], tiles = 'carto', height = 520, alt = { ...NO_CORRECTION, elevationFt: airport.elevationFt }, autoplay = true }: Props = $props();
 
 	const STEPS = 300;
 	const SPEEDS = [8, 16, 32];
@@ -232,6 +234,8 @@
 			ro.observe(mapEl);
 			ready = true;
 			draw();
+			// Start playing as soon as the map is up, unless the reader asked for reduced motion.
+			if (autoplay && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) play();
 		})();
 		return () => {
 			cancelled = true;

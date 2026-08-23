@@ -177,9 +177,10 @@ test.describe('close approach', () => {
 		const play = page.getByTestId('replay-play');
 		await expect(play).toBeVisible();
 		await expect(page.getByTestId('replay-pip')).toBeAttached();
+		// Playback starts on its own once the map is up.
+		await expect(play).toHaveAttribute('aria-label', 'Pause');
 		const before = await page.getByTestId('replay-time').textContent();
-		await play.click();
-		await page.waitForTimeout(1500);
+		await page.waitForTimeout(1000);
 		const after = await page.getByTestId('replay-time').textContent();
 		expect(after).not.toBe(before);
 		await expect(page.getByTestId('replay-lateral')).toContainText('NM');
