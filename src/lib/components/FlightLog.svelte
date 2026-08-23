@@ -40,7 +40,7 @@
 			<div class="time tabular">{localTime(tz, f.eventTime)}</div>
 			<div class="kind" class:airline={f.category === 'airline'}><span class="swatch" class:airline={f.category === 'airline'}></span>{kind(f)}</div>
 			<div class="dim">{f.direction === 'arrival' ? 'Arriving' : 'Leaving'}</div>
-			<div class="ident">{flightLabel(f)}{#if flightSubLabel(f)}<span class="tail"> {flightSubLabel(f)}</span>{/if}</div>
+			<div class="ident">{flightLabel(f)}{#if flightSubLabel(f)}<span class="tail">{flightSubLabel(f)}</span>{/if}</div>
 			<div class="dim">{f.type ?? '—'}</div>
 			<div class="dim">{other(f)}</div>
 		</div>
@@ -92,6 +92,7 @@
 		font-weight: 600;
 	}
 	.tail {
+		margin-left: 0.45em;
 		font-weight: 400;
 		color: var(--ink-45);
 	}
