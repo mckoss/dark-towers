@@ -7,8 +7,8 @@
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	const statusLabel: Record<AirportStatus, string> = { tracking: 'Tracking', queued: 'Queued', requested: 'Requested' };
-	const statusClass: Record<AirportStatus, string> = { tracking: 'pill-accent', queued: 'pill-grey', requested: 'pill-ghost' };
+	const statusLabel: Record<AirportStatus, string> = { tracking: 'Tracking', requested: 'Requested' };
+	const statusClass: Record<AirportStatus, string> = { tracking: 'pill-accent', requested: 'pill-ghost' };
 
 	const incidents = (a: AirportWithStats) => (a.stats ? String(a.stats.incidents) : '—');
 	const flights = (a: AirportWithStats) => (a.stats ? String(a.stats.flights) : '—');

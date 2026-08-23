@@ -2,7 +2,7 @@ import type { AltimeterReading, OnFieldPoint } from './altimeter';
 
 /** Shared domain types. Everything user-facing is in plain language (see README). */
 
-export type AirportStatus = 'tracking' | 'queued' | 'requested';
+export type AirportStatus = 'tracking' | 'requested';
 
 export interface TowerHours {
 	/** Local hour the tower opens (0–23). */

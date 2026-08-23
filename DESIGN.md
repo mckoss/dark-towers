@@ -272,7 +272,7 @@ play/pause timer, and speed.
 
 ## Data model
 See `prototype/pae-data.js` for the shape the UI expects.
-- `airports[]`: `code, icao, name, city, pos [lat,lon], status ('tracking'|'queued'|'requested'),
+- `airports[]`: `code, icao, name, city, pos [lat,lon], status ('tracking'|'requested'),
   towerHours ('07:00–21:00' | 'no tower'), carriers, stats { ops, airline, incidents }`
 - `nights[]`: `date, label, arrivals, departures, total, airlineOps, gaOps, positions,
   flights[], incidents (count)`

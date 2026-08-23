@@ -2,6 +2,94 @@
   "$comment": "Seed data for airports and tower-hour schedules. Insert-only: rows whose id already exists in the live database are never modified by this file. Edit online at /admin/airports and use Export JSON to refresh this file. Hours are local 24h; open/close null = no tower for that period; 'to' null = open-ended.",
   "airports": [
     {
+      "id": "BLI",
+      "code": "BLI",
+      "icao": "KBLI",
+      "name": "Bellingham International",
+      "city": "Bellingham",
+      "state": "WA",
+      "tz": "America/Los_Angeles",
+      "lat": 48.7927,
+      "lon": -122.5375,
+      "elevation_ft": 171,
+      "carriers": [
+        "Alaska",
+        "Allegiant"
+      ],
+      "status": "tracking",
+      "tracked": true,
+      "schedules": [
+        {
+          "id": "BLI-2024-01-01",
+          "from": "2024-01-01",
+          "to": null,
+          "open": 7,
+          "close": 22,
+          "note": "Hours from the FAA Chart Supplement (AirNav), Aug 2026. Tower 0700–2230; rounded to 22:00 (the half hour is counted as closed)."
+        }
+      ]
+    },
+    {
+      "id": "LGB",
+      "code": "LGB",
+      "icao": "KLGB",
+      "name": "Long Beach",
+      "city": "Long Beach",
+      "state": "CA",
+      "tz": "America/Los_Angeles",
+      "lat": 33.8177,
+      "lon": -118.1516,
+      "elevation_ft": 60,
+      "carriers": [
+        "American",
+        "Delta",
+        "Hawaiian",
+        "Southwest"
+      ],
+      "status": "tracking",
+      "tracked": true,
+      "schedules": [
+        {
+          "id": "LGB-2024-01-01",
+          "from": "2024-01-01",
+          "to": null,
+          "open": 6,
+          "close": 24,
+          "note": "Hours from the FAA Chart Supplement (AirNav), Aug 2026. Tower 0615–2345; rounded to 06:00–24:00 (the quarter hours are counted as open)."
+        }
+      ]
+    },
+    {
+      "id": "MRY",
+      "code": "MRY",
+      "icao": "KMRY",
+      "name": "Monterey Regional",
+      "city": "Monterey",
+      "state": "CA",
+      "tz": "America/Los_Angeles",
+      "lat": 36.587,
+      "lon": -121.8429,
+      "elevation_ft": 257,
+      "carriers": [
+        "Alaska",
+        "Allegiant",
+        "American",
+        "United"
+      ],
+      "status": "tracking",
+      "tracked": true,
+      "schedules": [
+        {
+          "id": "MRY-2024-01-01",
+          "from": "2024-01-01",
+          "to": null,
+          "open": 6,
+          "close": 21,
+          "note": "Hours from the FAA Chart Supplement (AirNav), Aug 2026. Tower 0600–2100."
+        }
+      ]
+    },
+    {
       "id": "PAE",
       "code": "PAE",
       "icao": "KPAE",
@@ -26,311 +114,184 @@
           "to": null,
           "open": 7,
           "close": 21,
-          "note": "Matches the Colab notebook (07:00\u201321:00 local). Verify against the FAA Chart Supplement."
+          "note": "Matches the Colab notebook (07:00–21:00 local). Verify against the FAA Chart Supplement."
         }
       ]
     },
     {
-      "id": "BLI",
-      "code": "BLI",
-      "icao": "KBLI",
-      "name": "Bellingham International",
-      "city": "Bellingham",
+      "id": "RNT",
+      "code": "RNT",
+      "icao": "KRNT",
+      "name": "Renton Municipal",
+      "city": "Renton",
       "state": "WA",
       "tz": "America/Los_Angeles",
-      "lat": 48.7929,
-      "lon": -122.5375,
-      "elevation_ft": 170,
-      "carriers": [
-        "Allegiant",
-        "Alaska"
-      ],
-      "status": "queued",
-      "tracked": false,
+      "lat": 47.4931,
+      "lon": -122.2158,
+      "elevation_ft": 32,
+      "carriers": [],
+      "status": "tracking",
+      "tracked": true,
       "schedules": [
         {
-          "id": "BLI-2024-01-01",
+          "id": "RNT-2024-01-01",
           "from": "2024-01-01",
-          "to": null,
-          "open": 6,
-          "close": 22,
-          "note": "Copied from the design prototype \u2014 UNVERIFIED. Check the FAA Chart Supplement TWR line."
-        }
-      ]
-    },
-    {
-      "id": "RDM",
-      "code": "RDM",
-      "icao": "KRDM",
-      "name": "Roberts Field",
-      "city": "Redmond",
-      "state": "OR",
-      "tz": "America/Los_Angeles",
-      "lat": 44.2541,
-      "lon": -121.15,
-      "elevation_ft": 3080,
-      "carriers": [
-        "Alaska",
-        "United",
-        "Delta"
-      ],
-      "status": "queued",
-      "tracked": false,
-      "schedules": [
+          "to": "2024-04-30",
+          "open": 7,
+          "close": 20,
+          "note": "Hours from the FAA Chart Supplement (AirNav), Aug 2026. Winter hours (Oct 1–Apr 30) 0700–2000."
+        },
         {
-          "id": "RDM-2024-01-01",
-          "from": "2024-01-01",
-          "to": null,
-          "open": 6,
-          "close": 22,
-          "note": "Copied from the design prototype \u2014 UNVERIFIED. Check the FAA Chart Supplement TWR line."
-        }
-      ]
-    },
-    {
-      "id": "SUN",
-      "code": "SUN",
-      "icao": "KSUN",
-      "name": "Friedman Memorial",
-      "city": "Hailey",
-      "state": "ID",
-      "tz": "America/Boise",
-      "lat": 43.5044,
-      "lon": -114.2961,
-      "elevation_ft": 5318,
-      "carriers": [
-        "Alaska",
-        "Delta",
-        "United"
-      ],
-      "status": "queued",
-      "tracked": false,
-      "schedules": [
-        {
-          "id": "SUN-2024-01-01",
-          "from": "2024-01-01",
-          "to": null,
+          "id": "RNT-2024-05-01",
+          "from": "2024-05-01",
+          "to": "2024-09-30",
           "open": 7,
           "close": 21,
-          "note": "Copied from the design prototype \u2014 UNVERIFIED. Check the FAA Chart Supplement TWR line."
-        }
-      ]
-    },
-    {
-      "id": "HYA",
-      "code": "HYA",
-      "icao": "KHYA",
-      "name": "Barnstable Municipal",
-      "city": "Hyannis",
-      "state": "MA",
-      "tz": "America/New_York",
-      "lat": 41.6693,
-      "lon": -70.2804,
-      "elevation_ft": 54,
-      "carriers": [
-        "Cape Air",
-        "JetBlue"
-      ],
-      "status": "queued",
-      "tracked": false,
-      "schedules": [
+          "note": "Hours from the FAA Chart Supplement (AirNav), Aug 2026. Summer hours (May 1–Sep 30) 0700–2100."
+        },
         {
-          "id": "HYA-2024-01-01",
-          "from": "2024-01-01",
-          "to": null,
-          "open": 6,
-          "close": 22,
-          "note": "Copied from the design prototype \u2014 UNVERIFIED. Check the FAA Chart Supplement TWR line."
-        }
-      ]
-    },
-    {
-      "id": "PIH",
-      "code": "PIH",
-      "icao": "KPIH",
-      "name": "Pocatello Regional",
-      "city": "Pocatello",
-      "state": "ID",
-      "tz": "America/Boise",
-      "lat": 42.9098,
-      "lon": -112.5958,
-      "elevation_ft": 4452,
-      "carriers": [
-        "SkyWest"
-      ],
-      "status": "queued",
-      "tracked": false,
-      "schedules": [
-        {
-          "id": "PIH-2024-01-01",
-          "from": "2024-01-01",
-          "to": null,
-          "open": 6,
+          "id": "RNT-2024-10-01",
+          "from": "2024-10-01",
+          "to": "2024-12-31",
+          "open": 7,
           "close": 20,
-          "note": "Copied from the design prototype \u2014 UNVERIFIED. Check the FAA Chart Supplement TWR line."
-        }
-      ]
-    },
-    {
-      "id": "MMH",
-      "code": "MMH",
-      "icao": "KMMH",
-      "name": "Mammoth Yosemite",
-      "city": "Mammoth Lakes",
-      "state": "CA",
-      "tz": "America/Los_Angeles",
-      "lat": 37.6241,
-      "lon": -118.8377,
-      "elevation_ft": 7135,
-      "carriers": [
-        "Alaska",
-        "United"
-      ],
-      "status": "requested",
-      "tracked": false,
-      "schedules": [
+          "note": "Hours from the FAA Chart Supplement (AirNav), Aug 2026. Winter hours (Oct 1–Apr 30) 0700–2000. No scheduled airline service; Boeing 737 production flights."
+        },
         {
-          "id": "MMH-2024-01-01",
-          "from": "2024-01-01",
-          "to": null,
-          "open": null,
-          "close": null,
-          "note": "Copied from the design prototype \u2014 UNVERIFIED. Check the FAA Chart Supplement TWR line."
-        }
-      ]
-    },
-    {
-      "id": "EKO",
-      "code": "EKO",
-      "icao": "KEKO",
-      "name": "Elko Regional",
-      "city": "Elko",
-      "state": "NV",
-      "tz": "America/Los_Angeles",
-      "lat": 40.8249,
-      "lon": -115.7917,
-      "elevation_ft": 5140,
-      "carriers": [
-        "SkyWest"
-      ],
-      "status": "requested",
-      "tracked": false,
-      "schedules": [
-        {
-          "id": "EKO-2024-01-01",
-          "from": "2024-01-01",
-          "to": null,
-          "open": 6,
+          "id": "RNT-2025-01-01",
+          "from": "2025-01-01",
+          "to": "2025-04-30",
+          "open": 7,
           "close": 20,
-          "note": "Copied from the design prototype \u2014 UNVERIFIED. Check the FAA Chart Supplement TWR line."
-        }
-      ]
-    },
-    {
-      "id": "HIB",
-      "code": "HIB",
-      "icao": "KHIB",
-      "name": "Range Regional",
-      "city": "Hibbing",
-      "state": "MN",
-      "tz": "America/Chicago",
-      "lat": 47.3866,
-      "lon": -92.839,
-      "elevation_ft": 1354,
-      "carriers": [
-        "Delta Connection"
-      ],
-      "status": "requested",
-      "tracked": false,
-      "schedules": [
+          "note": "Hours from the FAA Chart Supplement (AirNav), Aug 2026. Winter hours (Oct 1–Apr 30) 0700–2000."
+        },
         {
-          "id": "HIB-2024-01-01",
-          "from": "2024-01-01",
-          "to": null,
-          "open": null,
-          "close": null,
-          "note": "Copied from the design prototype \u2014 UNVERIFIED. Check the FAA Chart Supplement TWR line."
-        }
-      ]
-    },
-    {
-      "id": "OTH",
-      "code": "OTH",
-      "icao": "KOTH",
-      "name": "Southwest Oregon Regional",
-      "city": "North Bend",
-      "state": "OR",
-      "tz": "America/Los_Angeles",
-      "lat": 43.4171,
-      "lon": -124.246,
-      "elevation_ft": 17,
-      "carriers": [
-        "Advanced Air"
-      ],
-      "status": "requested",
-      "tracked": false,
-      "schedules": [
+          "id": "RNT-2025-05-01",
+          "from": "2025-05-01",
+          "to": "2025-09-30",
+          "open": 7,
+          "close": 21,
+          "note": "Hours from the FAA Chart Supplement (AirNav), Aug 2026. Summer hours (May 1–Sep 30) 0700–2100."
+        },
         {
-          "id": "OTH-2024-01-01",
-          "from": "2024-01-01",
-          "to": null,
-          "open": null,
-          "close": null,
-          "note": "Copied from the design prototype \u2014 UNVERIFIED. Check the FAA Chart Supplement TWR line."
-        }
-      ]
-    },
-    {
-      "id": "CKB",
-      "code": "CKB",
-      "icao": "KCKB",
-      "name": "North Central West Virginia",
-      "city": "Clarksburg",
-      "state": "WV",
-      "tz": "America/New_York",
-      "lat": 39.2966,
-      "lon": -80.2281,
-      "elevation_ft": 1217,
-      "carriers": [
-        "SkyWest"
-      ],
-      "status": "requested",
-      "tracked": false,
-      "schedules": [
+          "id": "RNT-2025-10-01",
+          "from": "2025-10-01",
+          "to": "2025-12-31",
+          "open": 7,
+          "close": 20,
+          "note": "Hours from the FAA Chart Supplement (AirNav), Aug 2026. Winter hours (Oct 1–Apr 30) 0700–2000. No scheduled airline service; Boeing 737 production flights."
+        },
         {
-          "id": "CKB-2024-01-01",
-          "from": "2024-01-01",
+          "id": "RNT-2026-01-01",
+          "from": "2026-01-01",
+          "to": "2026-04-30",
+          "open": 7,
+          "close": 20,
+          "note": "Hours from the FAA Chart Supplement (AirNav), Aug 2026. Winter hours (Oct 1–Apr 30) 0700–2000."
+        },
+        {
+          "id": "RNT-2026-05-01",
+          "from": "2026-05-01",
+          "to": "2026-09-30",
+          "open": 7,
+          "close": 21,
+          "note": "Hours from the FAA Chart Supplement (AirNav), Aug 2026. Summer hours (May 1–Sep 30) 0700–2100."
+        },
+        {
+          "id": "RNT-2026-10-01",
+          "from": "2026-10-01",
+          "to": "2026-12-31",
+          "open": 7,
+          "close": 20,
+          "note": "Hours from the FAA Chart Supplement (AirNav), Aug 2026. Winter hours (Oct 1–Apr 30) 0700–2000. No scheduled airline service; Boeing 737 production flights."
+        },
+        {
+          "id": "RNT-2027-01-01",
+          "from": "2027-01-01",
+          "to": "2027-04-30",
+          "open": 7,
+          "close": 20,
+          "note": "Hours from the FAA Chart Supplement (AirNav), Aug 2026. Winter hours (Oct 1–Apr 30) 0700–2000."
+        },
+        {
+          "id": "RNT-2027-05-01",
+          "from": "2027-05-01",
+          "to": "2027-09-30",
+          "open": 7,
+          "close": 21,
+          "note": "Hours from the FAA Chart Supplement (AirNav), Aug 2026. Summer hours (May 1–Sep 30) 0700–2100."
+        },
+        {
+          "id": "RNT-2027-10-01",
+          "from": "2027-10-01",
           "to": null,
           "open": 7,
-          "close": 19,
-          "note": "Copied from the design prototype \u2014 UNVERIFIED. Check the FAA Chart Supplement TWR line."
+          "close": 20,
+          "note": "Hours from the FAA Chart Supplement (AirNav), Aug 2026. Winter hours (Oct 1–Apr 30) 0700–2000. No scheduled airline service; Boeing 737 production flights."
         }
       ]
     },
     {
-      "id": "DDC",
-      "code": "DDC",
-      "icao": "KDDC",
-      "name": "Dodge City Regional",
-      "city": "Dodge City",
-      "state": "KS",
-      "tz": "America/Chicago",
-      "lat": 37.7634,
-      "lon": -99.9656,
-      "elevation_ft": 2594,
+      "id": "SBA",
+      "code": "SBA",
+      "icao": "KSBA",
+      "name": "Santa Barbara",
+      "city": "Santa Barbara",
+      "state": "CA",
+      "tz": "America/Los_Angeles",
+      "lat": 34.4262,
+      "lon": -119.8415,
+      "elevation_ft": 13,
       "carriers": [
-        "SkyWest"
+        "Alaska",
+        "American",
+        "Delta",
+        "Southwest",
+        "United"
       ],
-      "status": "requested",
-      "tracked": false,
+      "status": "tracking",
+      "tracked": true,
       "schedules": [
         {
-          "id": "DDC-2024-01-01",
+          "id": "SBA-2024-01-01",
           "from": "2024-01-01",
           "to": null,
-          "open": null,
-          "close": null,
-          "note": "Copied from the design prototype \u2014 UNVERIFIED. Check the FAA Chart Supplement TWR line."
+          "open": 6,
+          "close": 23,
+          "note": "Hours from the FAA Chart Supplement (AirNav), Aug 2026. Tower 0600–2300."
+        }
+      ]
+    },
+    {
+      "id": "SNA",
+      "code": "SNA",
+      "icao": "KSNA",
+      "name": "John Wayne (Orange County)",
+      "city": "Santa Ana",
+      "state": "CA",
+      "tz": "America/Los_Angeles",
+      "lat": 33.6757,
+      "lon": -117.8682,
+      "elevation_ft": 56,
+      "carriers": [
+        "Alaska",
+        "American",
+        "Delta",
+        "Frontier",
+        "Southwest",
+        "Spirit",
+        "United"
+      ],
+      "status": "tracking",
+      "tracked": true,
+      "schedules": [
+        {
+          "id": "SNA-2024-01-01",
+          "from": "2024-01-01",
+          "to": null,
+          "open": 6,
+          "close": 23,
+          "note": "Hours from the FAA Chart Supplement (AirNav), Aug 2026. Tower 0615–2300; rounded to 06:00 (the quarter hour is counted as open). Airline curfew: departures 07:00–22:00, arrivals to 23:00."
         }
       ]
     }

@@ -212,6 +212,19 @@ export function upsertSchedule(airportId: string, s: TowerSchedule, by: string) 
 		.run({ ...s, airport_id: airportId, now: Date.now(), by });
 }
 
+/** Remove an airport and its schedules; tombstoned so the seed file cannot resurrect it. */
+export function deleteAirport(id: string, by = '') {
+	const d = db();
+	d.transaction(() => {
+		const scheds = d.prepare(`SELECT id FROM tower_schedules WHERE airport_id = ?`).all(id) as { id: string }[];
+		d.prepare(`DELETE FROM tower_schedules WHERE airport_id = ?`).run(id);
+		d.prepare(`DELETE FROM airports WHERE id = ?`).run(id);
+		const stone = d.prepare(`INSERT OR REPLACE INTO seed_tombstones (id, deleted_at, deleted_by) VALUES (?, ?, ?)`);
+		stone.run(id, Date.now(), by);
+		for (const sch of scheds) stone.run(sch.id, Date.now(), by);
+	})();
+}
+
 export function deleteSchedule(id: string, by = '') {
 	const d = db();
 	d.transaction(() => {

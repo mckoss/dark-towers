@@ -77,7 +77,7 @@
 				<button class="head" onclick={() => toggle(a.id)} aria-expanded={!!open[a.id]}>
 					<span class="code">{a.code}</span>
 					<span class="name">{a.name} <span class="dim">· {a.city}, {a.state} · {a.icao}</span></span>
-					<span class="pill {a.status === 'tracking' ? 'pill-accent' : a.status === 'queued' ? 'pill-grey' : 'pill-ghost'}">{a.status}</span>
+					<span class="pill {a.status === 'tracking' ? 'pill-accent' : 'pill-ghost'}">{a.status}</span>
 					<span class="dim">{a.tracked ? 'tracked' : 'not tracked'} · today {hoursText(a.towerHours?.open ?? null, a.towerHours?.close ?? null)}</span>
 					<span class="caret">{open[a.id] ? '▾' : '▸'}</span>
 				</button>
@@ -95,7 +95,7 @@
 							<label>Airlines (comma-separated) <input name="carriers" value={a.carriers.join(', ')} /></label>
 							<label>Status
 								<select name="status" value={a.status}>
-									<option value="tracking">tracking</option><option value="queued">queued</option><option value="requested">requested</option>
+									<option value="tracking">tracking</option><option value="requested">requested</option>
 								</select>
 							</label>
 							<label class="check"><input type="checkbox" name="tracked" checked={a.tracked} /> Collect nightly (costs API calls)</label>

@@ -3,7 +3,7 @@ import type { AirportConfig, TowerHours, TowerSchedule } from './types';
 /**
  * Airports the site knows about. Only `tracked: true` airports are collected
  * nightly (each one costs FlightAware API calls). Others are listed on the
- * Airports page as queued or requested.
+ * Airports page as requested.
  */
 /**
  * Airports are stored in the database (seeded from airports.json, editable at

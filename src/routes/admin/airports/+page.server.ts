@@ -38,7 +38,7 @@ export const actions: Actions = {
 			elev = num(f.get('elevation_ft'));
 		if (!Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(elev)) return fail(400, { error: 'Latitude, longitude and elevation must be numbers.' });
 		const status = String(f.get('status')) as AirportStatus;
-		if (!['tracking', 'queued', 'requested'].includes(status)) return fail(400, { error: 'Bad status.' });
+		if (!['tracking', 'requested'].includes(status)) return fail(400, { error: 'Bad status.' });
 		updateAirport(
 			a.id,
 			{
