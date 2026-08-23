@@ -187,7 +187,8 @@
 		font-size: 44px;
 		font-weight: 900;
 		line-height: 1.02;
-		letter-spacing: -0.03em;
+		letter-spacing: -0.02em;
+		word-spacing: 0.08em;
 		max-width: 20ch;
 	}
 	.when {

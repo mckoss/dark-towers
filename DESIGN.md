@@ -83,9 +83,9 @@ Archivo throughout (weights 400/500/600/700/800/900), loaded from Google Fonts.
 
 | Role | Size / weight / tracking |
 | --- | --- |
-| Hero headline | 58px / 900 / -0.035em / line-height 0.98 |
-| Page headline | 42–46px / 900 / -0.03em / 1.02 |
-| Poster statement | 40px / 900 / -0.03em / 1.08 |
+| Hero headline | 58px / 900 / -0.02em, word-spacing 0.08em / line-height 0.98 |
+| Page headline | 42–46px / 900 / -0.02em, word-spacing 0.08em / 1.02 |
+| Poster statement | 40px / 900 / -0.02em, word-spacing 0.08em / 1.08 |
 | Section heading | 20–24px / 800 / -0.02em |
 | Big stat | 40–66px / 900 / -0.03em / 0.9 |
 | Body | 16–17px / 400 / line-height 1.55–1.6 |
