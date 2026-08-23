@@ -2,7 +2,7 @@
 	import { flightLabel } from '$lib/flights';
 	import { dataBlockHtml, trendOf } from '$lib/datablock';
 	import { altView, displayAlt, NO_CORRECTION, type AltContext } from '$lib/altview.svelte';
-	import { localTimeZoned } from '$lib/time';
+	import { localTime, localTimeZoned } from '$lib/time';
 	import { PAUSE_ICON, PLAY_ICON, REPLAY_ICON } from './Replay.svelte';
 	import { glyphHtml, silhouetteFor } from '$lib/replay';
 	import { SEPARATION_LATERAL_NM, SEPARATION_VERTICAL_FT } from '$lib/airports';
@@ -439,6 +439,7 @@
 		<button class="btn play" data-testid="night-play" onclick={play} disabled={!span} aria-label={playing ? 'Pause' : atEnd ? 'Replay' : 'Play'} title={playing ? 'Pause' : atEnd ? 'Replay' : 'Play'}>
 			{@html playing ? PAUSE_ICON : atEnd ? REPLAY_ICON : PLAY_ICON}
 		</button>
+		<div class="replay-track-col">
 		<div class="replay-track">
 			{#each airlineBands as b, i (i)}
 				<span class="replay-band" data-testid="night-airline-band" style="--from: {b.from.toFixed(4)}; --to: {b.to.toFixed(4)}"></span>
@@ -449,6 +450,18 @@
 					<span class="replay-pip" data-testid="night-pip" style="--pip: {((inc.t - span.start) / (span.end - span.start)).toFixed(4)}" title="Close approach at {localTimeZoned(tz, inc.t)}"></span>
 				{/each}
 			{/if}
+		</div>
+		{#if span}
+			{@const len = span.end - span.start}
+			{@const pips = sortedIncidents.map((inc) => (inc.t - span.start) / len)}
+			<div class="replay-marks" data-testid="night-marks">
+				{#if !pips.some((p) => p < 0.08)}<span class="mark start">{localTime(tz, span.start)}</span>{/if}
+				{#if !pips.some((p) => p > 0.92)}<span class="mark end">{localTime(tz, span.end)}</span>{/if}
+				{#each sortedIncidents as inc, i (inc.id)}
+					<span class="mark pip-mark" style="--pip: {pips[i].toFixed(4)}">{localTime(tz, inc.t)}</span>
+				{/each}
+			</div>
+		{/if}
 		</div>
 		<div class="replay-speeds" role="group" aria-label="Step 15 seconds">
 			<button onclick={() => nudge(-1)} disabled={!span} aria-label="Back 15 seconds" data-testid="night-back" title="Back 15 seconds">−15s</button>

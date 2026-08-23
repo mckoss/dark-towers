@@ -384,6 +384,45 @@ p {
 	display: flex;
 	align-items: center;
 }
+/* Time marks under the scrubber: start and end at the extremes, a red time under each pip. */
+.replay-marks {
+	position: relative;
+	height: 14px;
+	margin-top: 2px;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	color: var(--ink-60);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+.replay-marks .mark {
+	position: absolute;
+	top: 0;
+	line-height: 1;
+}
+.replay-marks .start {
+	left: 8px;
+}
+.replay-marks .end {
+	right: 8px;
+}
+.replay-marks .pip-mark {
+	left: calc(8px + (100% - 16px) * var(--pip));
+	transform: translateX(-50%);
+	color: var(--accent);
+	font-weight: 700;
+}
+.replay-track-col {
+	flex: 1;
+	min-width: 160px;
+	display: flex;
+	flex-direction: column;
+}
+.replay-track-col .replay-track {
+	flex: none;
+	width: 100%;
+}
 .replay-scrubber {
 	width: 100%;
 	accent-color: var(--accent);

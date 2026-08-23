@@ -19,7 +19,7 @@
 	import { buildReplay, glyphHtml, glyphSizeFor, pairColors, silhouetteFor } from '$lib/replay';
 	import { buildTrackSpline } from '$lib/separation';
 	import { fromLocalNm } from '$lib/geo';
-	import { localTimeZoned } from '$lib/time';
+	import { localTime, localTimeZoned } from '$lib/time';
 	import type { BaseMap } from '$lib/leaflet';
 	import type * as Leaflet from 'leaflet';
 
@@ -71,6 +71,8 @@
 	);
 	const otherLayers = new Map<string, { mark: Leaflet.Marker; label: Leaflet.Marker; trail: Leaflet.Polyline }>();
 
+	/** Closest moment as a fraction of the replay window (scrubber pip position). */
+	const pipFrac = untrack(() => (incident.t - start) / span);
 	let t = $state(start);
 	let playing = $state(false);
 	let speed = $state(16);
@@ -386,6 +388,7 @@
 		<button class="btn play" data-testid="replay-play" onclick={play} disabled={!replay} aria-label={playing ? 'Pause' : atEnd ? 'Replay' : 'Play'} title={playing ? 'Pause' : atEnd ? 'Replay' : 'Play'}>
 			{@html playing ? PAUSE_ICON : atEnd ? REPLAY_ICON : PLAY_ICON}
 		</button>
+		<div class="replay-track-col">
 		<div class="replay-track">
 			<input
 				class="replay-scrubber"
@@ -400,6 +403,12 @@
 				disabled={!replay}
 			/>
 			<span class="replay-pip" data-testid="replay-pip" style="--pip: {((incident.t - start) / span).toFixed(4)}" title="Closest moment"></span>
+		</div>
+		<div class="replay-marks" data-testid="replay-marks">
+			{#if pipFrac >= 0.12}<span class="mark start">{localTime(airport.tz, start)}</span>{/if}
+			{#if pipFrac <= 0.88}<span class="mark end">{localTime(airport.tz, end)}</span>{/if}
+			<span class="mark pip-mark" style="--pip: {pipFrac.toFixed(4)}">{localTime(airport.tz, incident.t)}</span>
+		</div>
 		</div>
 		<div class="replay-speeds" role="group" aria-label="Step 15 seconds">
 			<button onclick={() => nudge(-1)} disabled={!replay} aria-label="Back 15 seconds" data-testid="replay-back" title="Back 15 seconds">−15s</button>
