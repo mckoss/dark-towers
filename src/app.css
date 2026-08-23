@@ -463,10 +463,10 @@ p {
 }
 /* Faint band on the scrubber while an airline flight is in the air. */
 .replay-band {
+	/* A strip just below the native track, so the track's own outline is never painted over. */
 	position: absolute;
-	top: 50%;
-	height: 10px;
-	margin-top: -5px;
+	top: calc(50% + 7px);
+	height: 5px;
 	/* Opaque tints (accent / ink over the ground colour) so the airline band covers a private one beneath it. */
 	background: #f6c6bc;
 	pointer-events: none;
