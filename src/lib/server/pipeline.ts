@@ -16,7 +16,7 @@ import { AIRSPACE_EXIT_NM, AIRSPACE_RADIUS_NM, TRACK_GAP_MS, towerHoursOn } from
 import { getAirport } from './airports-store';
 import { distanceNm, fromLocalNm, toLocalNm } from '$lib/geo';
 import { findIncidents } from '$lib/separation';
-import { groundOffsetFt, offsetAt } from '$lib/altimeter';
+import { correctionOffsetAt, groundOffsetFt, hasCorrection, onFieldPoints, type AltCorrection } from '$lib/altimeter';
 import { fetchAltimeter } from './metar';
 import { nightOf, nightWindow } from '$lib/time';
 import type { AirportConfig, Flight, FlightCategory, NightSummary, Position } from '$lib/types';
@@ -95,12 +95,16 @@ async function ingest(airport: AirportConfig, night: string, opts: IngestOptions
 	}
 	flights.sort((a, b) => a.eventTime - b.eventTime);
 
-	// 4. pressure correction: hourly altimeter settings from the airport's
-	// weather reports (cached), falling back to self-calibration from the
-	// tracks. Only the on-the-ground test uses it; separation is raw.
+	// 4. pressure correction, best source first: reports from aircraft plainly
+	// on the field (direct measurement of the transponders), else the hourly
+	// altimeter settings from the airport's weather reports (cached), else the
+	// lowest points of tracks near the field. Only the on-the-ground test uses
+	// it; separation between two aircraft is raw.
 	const altimeter = await fetchAltimeter(airport.icao, night, win.start, win.end, { offline: opts.weather != null ? !opts.weather : opts.offline, log });
+	const onField = onFieldPoints(flights, airport.elevationFt);
 	const ground = groundOffsetFt(flights, airport.elevationFt);
-	const altOffset = altimeter && altimeter.length > 0 ? (t: number) => offsetAt(altimeter, t) : ground ? () => ground.offsetFt : undefined;
+	const correction: AltCorrection = { readings: altimeter, onField, tracksOffsetFt: ground?.offsetFt ?? null };
+	const altOffset = hasCorrection(correction) ? (t: number) => correctionOffsetAt(correction, t) : undefined;
 
 	// 5. close approaches
 	const incidents = findIncidents(airport.pos, airport.icao, night, flights, { elevationFt: airport.elevationFt, altOffset });
@@ -121,7 +125,8 @@ async function ingest(airport: AirportConfig, night: string, opts: IngestOptions
 		complete,
 		altimeter: altimeter && altimeter.length > 0 ? altimeter : null,
 		groundOffsetFt: ground ? Math.round(ground.offsetFt) : null,
-		groundTracks: ground?.tracks ?? null
+		groundTracks: ground?.tracks ?? null,
+		onField: onField.length ? onField : null
 	};
 	upsertNight(summary);
 	log(`${airport.icao} ${night}: ${summary.flights} flights, ${summary.positions} positions, ${summary.incidents} close approaches${complete ? '' : ' (incomplete)'}`);

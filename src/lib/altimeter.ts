@@ -95,3 +95,61 @@ export function groundOffsetFt(
 	const p25 = mins[Math.floor((mins.length - 1) * 0.25)];
 	return { offsetFt: p25 - elevationFt, tracks: mins.length };
 }
+
+/** An on-field report: [unix ms, feet to subtract] (reported altitude minus field elevation). */
+export type OnFieldPoint = [number, number];
+
+/** On-field reports within this much of an instant calibrate it directly. */
+export const ON_FIELD_WINDOW_MS = 3600_000;
+
+/**
+ * Direct ground references: reports from aircraft plainly on the field
+ * (inside `radiusNm` and slower than `maxKt`), each as the feet to subtract
+ * from reported altitude. Sorted by time.
+ */
+export function onFieldPoints(
+	tracks: { positions: { t: number; alt: number; gs: number; dist: number }[] }[],
+	elevationFt: number,
+	opts: { radiusNm?: number; maxKt?: number } = {}
+): OnFieldPoint[] {
+	const radius = opts.radiusNm ?? 1.2;
+	const maxKt = opts.maxKt ?? 40;
+	const out: OnFieldPoint[] = [];
+	for (const f of tracks) for (const p of f.positions) if (p.dist < radius && p.gs < maxKt) out.push([p.t, p.alt - elevationFt]);
+	out.sort((a, b) => a[0] - b[0]);
+	return out;
+}
+
+export type AltSource = 'on-field' | 'weather' | 'tracks' | 'none';
+
+/** Everything a night knows about its pressure correction. */
+export interface AltCorrection {
+	/** Hourly altimeter settings. */
+	readings: AltimeterReading[] | null;
+	/** Direct on-field reports. */
+	onField: OnFieldPoint[] | null;
+	/** Night-wide estimate from the lowest points of tracks near the field. */
+	tracksOffsetFt: number | null;
+}
+
+/**
+ * Correction at an instant, best source first: the median of on-field reports
+ * within ±1 h (a direct measurement of the transponders), else the
+ * interpolated altimeter setting, else the track estimate, else nothing.
+ */
+export function correctionAt(c: AltCorrection | null | undefined, t: number): { offsetFt: number; source: AltSource; points: number } {
+	if (!c) return { offsetFt: 0, source: 'none', points: 0 };
+	const near = (c.onField ?? []).filter(([pt]) => Math.abs(pt - t) <= ON_FIELD_WINDOW_MS).map(([, v]) => v).sort((a, b) => a - b);
+	if (near.length > 0) return { offsetFt: near[Math.floor(near.length / 2)], source: 'on-field', points: near.length };
+	if (c.readings && c.readings.length > 0) return { offsetFt: offsetAt(c.readings, t), source: 'weather', points: 0 };
+	if (c.tracksOffsetFt != null) return { offsetFt: c.tracksOffsetFt, source: 'tracks', points: 0 };
+	return { offsetFt: 0, source: 'none', points: 0 };
+}
+
+export function correctionOffsetAt(c: AltCorrection | null | undefined, t: number): number {
+	return correctionAt(c, t).offsetFt;
+}
+
+export function hasCorrection(c: AltCorrection | null | undefined): boolean {
+	return !!c && ((c.onField?.length ?? 0) > 0 || (c.readings?.length ?? 0) > 0 || c.tracksOffsetFt != null);
+}

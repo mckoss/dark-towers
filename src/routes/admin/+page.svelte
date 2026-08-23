@@ -100,11 +100,11 @@
 		{/each}
 	</div>
 	<h3 class="sub">Pressure correction check</h3>
-	<p class="hint">Feet subtracted from reported altitude to get true altitude. <em>Weather</em> is from the hourly altimeter setting (range over the night); <em>Tracks</em> is self-calibration from the lowest reported altitude of tracks near the runway (±50 ft). They should roughly agree; a large gap points at a bad field elevation or a weather outage.</p>
+	<p class="hint">Feet subtracted from ADS-B altitude to get true altitude, chosen per moment in priority order: <em>On-field</em> reports (inside 1.2 NM, under 40 kt; median over the night, count in brackets — at any instant the median of those within ±1 h applies), then <em>Weather</em> is from the hourly altimeter setting (range over the night); <em>Tracks</em> is the lowest reported altitude of tracks near the runway, 25th percentile (±50 ft). They should roughly agree; a large gap points at a bad field elevation or a weather outage.</p>
 	<div class="grid altcheck">
-		<div class="table-header">Airport</div><div class="table-header">Night</div><div class="table-header">Readings</div><div class="table-header">Altimeter</div><div class="table-header">Weather</div><div class="table-header">Tracks</div>
+		<div class="table-header">Airport</div><div class="table-header">Night</div><div class="table-header">On-field</div><div class="table-header">Altimeter</div><div class="table-header">Weather</div><div class="table-header">Tracks</div>
 		{#each data.altimeter as n (n.airport + n.night)}
-			<div>{n.airport}</div><div>{n.night}</div><div class="tabular">{n.readings}</div><div class="tabular">{n.range}</div><div class="tabular">{n.weatherFt}</div><div class="tabular">{n.groundFt != null ? `${n.groundFt} (${n.groundTracks})` : '—'}</div>
+			<div>{n.airport}</div><div>{n.night}</div><div class="tabular">{n.onFieldFt != null ? `${n.onFieldFt} (${n.onFieldPoints})` : '—'}</div><div class="tabular">{n.range}</div><div class="tabular">{n.weatherFt}</div><div class="tabular">{n.groundFt != null ? `${n.groundFt} (${n.groundTracks})` : '—'}</div>
 		{/each}
 	</div>
 	{#if data.incomplete.length}
@@ -160,7 +160,7 @@
 	.grid { display: grid; gap: 8px 20px; margin-top: 14px; font-size: 14px; align-items: baseline; }
 	.grid > * { padding-bottom: 8px; border-bottom: var(--row-rule); }
 	.counts { grid-template-columns: 80px 80px 90px 120px 120px; }
-	.altcheck { grid-template-columns: 70px 100px 80px 120px 110px 110px; max-height: 320px; overflow: auto; }
+	.altcheck { grid-template-columns: 70px 100px 100px 80px 120px 110px 110px; max-height: 320px; overflow: auto; }
 	.runs { grid-template-columns: 170px 70px 110px 80px 1fr; }
 	.requests { grid-template-columns: 170px 1fr 1fr 60px; }
 	.msg { color: var(--ink-60); }

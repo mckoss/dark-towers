@@ -6,6 +6,11 @@ import { config, flightAwareApiKey } from '$lib/server/config';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
+function median(xs: number[]): number {
+	const s = [...xs].sort((a, b) => a - b);
+	return s[Math.floor(s.length / 2)];
+}
+
 export const load: PageServerLoad = ({ locals }) => {
 	const s = config();
 	return {
@@ -31,7 +36,9 @@ export const load: PageServerLoad = ({ locals }) => {
 				/** Weather-derived offset range (feet to subtract from reported altitude). */
 				weatherFt: lo != null && hi != null ? `${Math.round(pressureOffsetFt(hi))}…${Math.round(pressureOffsetFt(lo))}` : '—',
 				groundFt: n.groundOffsetFt,
-				groundTracks: n.groundTracks
+				groundTracks: n.groundTracks,
+				onFieldFt: n.onField?.length ? median(n.onField.map(([, v]) => v)) : null,
+				onFieldPoints: n.onField?.length ?? 0
 			};
 		}),
 		runs: recentRuns(),

@@ -1,4 +1,4 @@
-import type { AltimeterReading } from './altimeter';
+import type { AltimeterReading, OnFieldPoint } from './altimeter';
 
 /** Shared domain types. Everything user-facing is in plain language (see README). */
 
@@ -132,4 +132,6 @@ export interface NightSummary {
 	/** Self-calibration from the tracks: reported altitude of the ground minus field elevation (feet), null if too few tracks. */
 	groundOffsetFt?: number | null;
 	groundTracks?: number | null;
+	/** Reports from aircraft plainly on the field, as [unix ms, reported altitude minus field elevation]. */
+	onField?: OnFieldPoint[] | null;
 }

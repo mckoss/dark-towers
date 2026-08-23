@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { flightLabel } from '$lib/flights';
 	import { dataBlockHtml, trendOf } from '$lib/datablock';
-	import { altView, displayAlt, type AltContext } from '$lib/altview.svelte';
+	import { altView, displayAlt, NO_CORRECTION, type AltContext } from '$lib/altview.svelte';
 	/*
 	 * Flight-path map (README "Maps → Flight-path map"). Leaflet base map from
 	 * $lib/leaflet (CARTO tiles, 10 NM ring, field marker, fitted bounds); each
@@ -26,7 +26,7 @@
 		onfocus?: (id: string | null) => void;
 	}
 
-	let { center, flights, focus = null, height = 520, tiles = 'carto', alt = { readings: null, elevationFt: 0 }, onfocus }: Props = $props();
+	let { center, flights, focus = null, height = 520, tiles = 'carto', alt = NO_CORRECTION, onfocus }: Props = $props();
 
 	const SAMPLE_MS = 2000;
 
@@ -79,7 +79,7 @@
 		const v = entry.spline.at(t)!;
 		const vel = entry.spline.velocityAt(t);
 		const color = f.category === 'airline' ? '#ec3013' : '#201e1d';
-		const shown = displayAlt(v[2], t, alt, altView.mode);
+		const shown = displayAlt(v[2], alt, altView.mode);
 		const html = dataBlockHtml({ label: `${flightLabel(f)}${f.type ? ' · ' + f.type : ''}`, altFt: shown.ft, altUnit: shown.mode === 'agl' ? 'AGL' : 'ADS-B', gsKt: v[3], trend: trendOf(vel ? vel[2] * 1000 : null) }, color);
 		const at: LeafletNS.LatLngExpression = [v[0], v[1]];
 		if (!hoverDot) hoverDot = L.circleMarker(at, { radius: 4, color, weight: 2, fillColor: '#f3f2f2', fillOpacity: 1, interactive: false }).addTo(base.map);

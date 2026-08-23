@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import { DB_PATH, ensureDirs } from './config';
 import type { Flight, Incident, NightSummary, Position } from '$lib/types';
-import type { AltimeterReading } from '$lib/altimeter';
+import type { AltimeterReading, OnFieldPoint } from '$lib/altimeter';
 
 let _db: Database.Database | null = null;
 
@@ -98,6 +98,7 @@ function migrate(d: Database.Database) {
 	if (!cols.includes('gs_a')) d.exec(`ALTER TABLE incidents ADD COLUMN gs_a INTEGER NOT NULL DEFAULT 0; ALTER TABLE incidents ADD COLUMN gs_b INTEGER NOT NULL DEFAULT 0;`);
 	const ncols = (d.prepare(`PRAGMA table_info(nights)`).all() as { name: string }[]).map((c) => c.name);
 	if (!ncols.includes('altimeter')) d.exec(`ALTER TABLE nights ADD COLUMN altimeter TEXT; ALTER TABLE nights ADD COLUMN ground_offset_ft INTEGER; ALTER TABLE nights ADD COLUMN ground_tracks INTEGER;`);
+	if (!ncols.includes('on_field')) d.exec(`ALTER TABLE nights ADD COLUMN on_field TEXT;`);
 }
 
 /* ---------- writes (all upserts → idempotent) ---------- */
@@ -131,11 +132,12 @@ export function replaceIncidents(airport: string, night: string, incidents: Inci
 export function upsertNight(s: NightSummary) {
 	db()
 		.prepare(
-			`INSERT INTO nights (airport, night, flights, arrivals, departures, airline, private, positions, incidents, complete, altimeter, ground_offset_ft, ground_tracks, updated_at)
-			 VALUES (@airport, @night, @flights, @arrivals, @departures, @airline, @private, @positions, @incidents, @complete, @altimeter, @groundOffsetFt, @groundTracks, @updatedAt)
+			`INSERT INTO nights (airport, night, flights, arrivals, departures, airline, private, positions, incidents, complete, altimeter, ground_offset_ft, ground_tracks, on_field, updated_at)
+			 VALUES (@airport, @night, @flights, @arrivals, @departures, @airline, @private, @positions, @incidents, @complete, @altimeter, @groundOffsetFt, @groundTracks, @onField, @updatedAt)
 			 ON CONFLICT(airport, night) DO UPDATE SET flights=excluded.flights, arrivals=excluded.arrivals, departures=excluded.departures,
 			 airline=excluded.airline, private=excluded.private, positions=excluded.positions, incidents=excluded.incidents, complete=excluded.complete,
-			 altimeter=excluded.altimeter, ground_offset_ft=excluded.ground_offset_ft, ground_tracks=excluded.ground_tracks, updated_at=excluded.updated_at`
+			 altimeter=excluded.altimeter, ground_offset_ft=excluded.ground_offset_ft, ground_tracks=excluded.ground_tracks,
+			 on_field=excluded.on_field, updated_at=excluded.updated_at`
 		)
 		.run({
 			...s,
@@ -143,6 +145,7 @@ export function upsertNight(s: NightSummary) {
 			altimeter: s.altimeter ? JSON.stringify(s.altimeter) : null,
 			groundOffsetFt: s.groundOffsetFt ?? null,
 			groundTracks: s.groundTracks ?? null,
+			onField: s.onField && s.onField.length ? JSON.stringify(s.onField) : null,
 			updatedAt: Date.now()
 		});
 }
@@ -212,15 +215,17 @@ export function incidentById(id: string): Incident | null {
 interface NightRow {
 	airport: string; night: string; flights: number; arrivals: number; departures: number; airline: number; private: number; positions: number; incidents: number; complete: number;
 	altimeter: string | null; ground_offset_ft: number | null; ground_tracks: number | null;
+	on_field: string | null;
 }
 function rowToNight(r: NightRow): NightSummary {
-	const { altimeter, ground_offset_ft, ground_tracks, ...rest } = r;
+	const { altimeter, ground_offset_ft, ground_tracks, on_field, ...rest } = r;
 	return {
 		...rest,
 		complete: !!r.complete,
 		altimeter: altimeter ? (JSON.parse(altimeter) as AltimeterReading[]) : null,
 		groundOffsetFt: ground_offset_ft ?? null,
-		groundTracks: ground_tracks ?? null
+		groundTracks: ground_tracks ?? null,
+		onField: on_field ? (JSON.parse(on_field) as OnFieldPoint[]) : null
 	};
 }
 export function nightsForAirport(airport: string, fromNight: string, toNight: string): NightSummary[] {
@@ -279,13 +284,14 @@ export function incompleteNights(limit = 60): NightSummary[] {
 	return (db().prepare(`SELECT * FROM nights WHERE complete = 0 ORDER BY night DESC LIMIT ?`).all(limit) as NightRow[]).map(rowToNight);
 }
 /** Per-night pressure-correction check: weather-derived offset at the window midpoint vs the ground-track estimate. */
-export function altimeterCheck(limit = 60): { airport: string; night: string; altimeter: AltimeterReading[] | null; groundOffsetFt: number | null; groundTracks: number | null }[] {
-	return (db().prepare(`SELECT airport, night, altimeter, ground_offset_ft, ground_tracks FROM nights ORDER BY night DESC LIMIT ?`).all(limit) as NightRow[]).map((r) => ({
+export function altimeterCheck(limit = 60): { airport: string; night: string; altimeter: AltimeterReading[] | null; groundOffsetFt: number | null; groundTracks: number | null; onField: OnFieldPoint[] | null }[] {
+	return (db().prepare(`SELECT airport, night, altimeter, ground_offset_ft, ground_tracks, on_field FROM nights ORDER BY night DESC LIMIT ?`).all(limit) as NightRow[]).map((r) => ({
 		airport: r.airport,
 		night: r.night,
 		altimeter: r.altimeter ? (JSON.parse(r.altimeter) as AltimeterReading[]) : null,
 		groundOffsetFt: r.ground_offset_ft ?? null,
-		groundTracks: r.ground_tracks ?? null
+		groundTracks: r.ground_tracks ?? null,
+		onField: r.on_field ? (JSON.parse(r.on_field) as OnFieldPoint[]) : null
 	}));
 }
 export function nightCounts(): { airport: string; nights: number; complete: number; first: string; last: string }[] {

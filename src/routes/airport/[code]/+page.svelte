@@ -6,6 +6,8 @@
 	import { nightLabel, shortDate } from '$lib/time';
 	import { monthLabel } from '$lib/monthLabel';
 	import FlightMap from '$lib/components/FlightMap.svelte';
+	import { altContextFor } from '$lib/altview.svelte';
+	import { median } from '$lib/util';
 	import NightCalendar from '$lib/components/NightCalendar.svelte';
 	import CloseApproachCard from '$lib/components/CloseApproachCard.svelte';
 	import FlightLog from '$lib/components/FlightLog.svelte';
@@ -13,6 +15,8 @@
 	let { data } = $props();
 
 	const airport = $derived(data.airport);
+	// One pressure correction for the whole map, evaluated at the middle of the night's traffic.
+	const altCtx = $derived(altContextFor(data.nightSummary, airport.elevationFt, median(data.flights.map((f) => f.eventTime)) ?? 0));
 	const hasDetail = $derived(data.hasAnyData);
 	const periodPhrase = $derived(data.period.month ? data.period.label : 'the last 30 days');
 	const nightFlights = $derived(data.nightSummary?.flights ?? data.flights.length);
@@ -135,7 +139,7 @@
 					<h2 class="night-title">Night of {nightLabel(data.selectedNight)}</h2>
 				</div>
 				{#if hasTracks}
-					<FlightMap center={airport.pos} flights={data.flights} {focus} height={560} alt={{ readings: data.nightSummary?.altimeter ?? null, elevationFt: airport.elevationFt }} onfocus={(id) => (focus = id)} />
+					<FlightMap center={airport.pos} flights={data.flights} {focus} height={560} alt={altCtx} onfocus={(id) => (focus = id)} />
 				{:else}
 					<div class="no-tracks inset">Flight paths for this night are not available.</div>
 				{/if}

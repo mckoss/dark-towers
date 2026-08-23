@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { flightLabel } from '$lib/flights';
 	import { dataBlockHtml, trendOf } from '$lib/datablock';
-	import { altView, displayAlt, type AltContext } from '$lib/altview.svelte';
+	import { altView, displayAlt, NO_CORRECTION, type AltContext } from '$lib/altview.svelte';
 	/**
 	 * Animated replay of a close approach. Both aircraft are sampled from their
 	 * own timestamped tracks at one shared clock; the map is Leaflet (browser
@@ -25,7 +25,7 @@
 		/** Altimeter readings for the night; with field elevation they turn reported altitudes into height above the field. */
 		alt?: AltContext;
 	}
-	let { airport, a, b, incident, others = [], tiles = 'carto', height = 520, alt = { readings: null, elevationFt: airport.elevationFt } }: Props = $props();
+	let { airport, a, b, incident, others = [], tiles = 'carto', height = 520, alt = { ...NO_CORRECTION, elevationFt: airport.elevationFt } }: Props = $props();
 
 	const STEPS = 300;
 	const SPEEDS = [4, 8, 16];
@@ -113,14 +113,14 @@
 		);
 	}
 	/** ATC-style data block beside each aircraft (label / altitude·trend·speed). */
-	function labelHtml(color: string, text: string, s?: { alt: number; gs: number; vs: number; active: boolean; phase: 'before' | 'active' | 'after' }, at = t): string {
+	function labelHtml(color: string, text: string, s?: { alt: number; gs: number; vs: number; active: boolean; phase: 'before' | 'active' | 'after' }): string {
 		// Before its first report or after its last, the aircraft is parked at
 		// that report; its altitude and speed then are not known, so show none.
 		if (!s || s.phase !== 'active') {
 			const note = !s ? '' : s.phase === 'after' ? ' · track ended' : ' · not yet reporting';
 			return `<div class="replay-chip" style="color:${color};border-color:${color}">${text}${note}</div>`;
 		}
-		const shown = displayAlt(s.alt, at, alt, altView.mode);
+		const shown = displayAlt(s.alt, alt, altView.mode);
 		return dataBlockHtml({ label: text, altFt: shown.ft, altUnit: shown.mode === 'agl' ? 'AGL' : 'ADS-B', gsKt: s.gs, trend: trendOf(s.vs) }, color);
 	}
 

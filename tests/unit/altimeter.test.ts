@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aglFt, altimeterAt, groundOffsetFt, offsetAt, parseAsosCsv, pressureOffsetFt } from '../../src/lib/altimeter';
+import { aglFt, altimeterAt, correctionAt, groundOffsetFt, offsetAt, onFieldPoints, parseAsosCsv, pressureOffsetFt } from '../../src/lib/altimeter';
 import { closestApproach } from '../../src/lib/separation';
 import { Spline } from '../../src/lib/spline';
 
@@ -69,5 +69,31 @@ describe('closestApproach with altOffset', () => {
 		expect(closestApproach(a, b, { elevationFt: 607 })).not.toBeNull();
 		// Low pressure night: aircraft read 300 ft high → really on the ground → excluded.
 		expect(closestApproach(a, b, { elevationFt: 607, altOffset: () => 300 })).toBeNull();
+	});
+});
+
+describe('onFieldPoints / correctionAt', () => {
+	const H = 3600_000;
+	const rep = (t: number, alt: number, gs = 20, dist = 0.3) => ({ positions: [{ t, alt, gs, dist }] });
+	it('collects slow on-field reports as [t, offset]', () => {
+		const pts = onFieldPoints([rep(2 * H, 600), rep(H, 500), rep(3 * H, 500, 120), rep(4 * H, 500, 20, 5)], 607);
+		expect(pts).toEqual([
+			[H, -107],
+			[2 * H, -7]
+		]);
+	});
+	it('uses on-field reports within an hour, else weather, else tracks', () => {
+		const c = { readings: [[0, 30.0]] as [number, number][], onField: [[H, -107], [2 * H, -7], [2 * H + 1, 93]] as [number, number][], tracksOffsetFt: -50 };
+		// Within an hour of t=2H: three reports → median.
+		expect(correctionAt(c, 2 * H)).toEqual({ offsetFt: -7, source: 'on-field', points: 3 });
+		// Only the first report is within an hour of t=0.5H... no: t=0 → report at H is exactly 1 h away → counts.
+		expect(correctionAt(c, 0)).toEqual({ offsetFt: -107, source: 'on-field', points: 1 });
+		// Nothing within an hour → weather.
+		const w = correctionAt(c, 10 * H);
+		expect(w.source).toBe('weather');
+		expect(w.offsetFt).toBeCloseTo(pressureOffsetFt(30.0), 6);
+		expect(correctionAt({ readings: [], onField: [], tracksOffsetFt: -50 }, 0)).toEqual({ offsetFt: -50, source: 'tracks', points: 0 });
+		expect(correctionAt({ readings: null, onField: null, tracksOffsetFt: null }, 0).source).toBe('none');
+		expect(correctionAt(null, 0).offsetFt).toBe(0);
 	});
 });
