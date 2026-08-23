@@ -1,3 +1,20 @@
+# Dark Tower Watch
+
+**The app** (SvelteKit 2 / Svelte 5 / TypeScript, Node server, SQLite + on-disk raw cache) lives in `src/`, `scripts/`, `tests/`. See `CLAUDE.md` for conventions, `CHECKLIST.md` for status, `QUESTIONS.md` for open decisions.
+
+```
+npm install
+cp settings.example.json settings.json     # add your FlightAware AeroAPI key (or set FLIGHTAWARE_API_KEY)
+npm run db:rebuild                         # build the SQLite db from the committed sample data (no API calls)
+npm run dev                                # http://localhost:5173
+npm test && npm run test:e2e               # vitest + Playwright
+npm run ingest -- PAE 2026-08-22           # collect one night (cached; re-runs are free)
+```
+
+The original Claude Design handoff follows; the prototype is hosted at https://mckoss.com/dark-towers/.
+
+---
+
 # Handoff: Dark Tower Watch
 
 ## Overview
