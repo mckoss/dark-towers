@@ -4,7 +4,7 @@
 	import { altView, displayAlt, NO_CORRECTION, type AltContext } from '$lib/altview.svelte';
 	import { localTime, localTimeZoned } from '$lib/time';
 	import { PAUSE_ICON, PLAY_ICON, REPLAY_ICON } from './Replay.svelte';
-	import { assignLanes, glyphHtml, silhouetteFor } from '$lib/replay';
+	import { aircraftKind, assignLanes, glyphHtml, MILITARY_BLUE, silhouetteFor } from '$lib/replay';
 	import { SEPARATION_LATERAL_NM, SEPARATION_VERTICAL_FT } from '$lib/airports';
 	import { distanceNm } from '$lib/geo';
 	import type { Incident } from '$lib/types';
@@ -240,13 +240,13 @@
 				}
 				continue;
 			}
-			const color = f.category === 'airline' ? ACCENT : INK;
+			const color = aircraftKind(f) === 'military' ? MILITARY_BLUE : f.category === 'airline' ? ACCENT : INK;
 			const v = entry!.spline.at(t)!;
 			const vel = entry!.spline.velocityAt(t);
 			const at: LeafletNS.LatLngExpression = [v[0], v[1]];
 			if (!g) {
 				g = {
-					mark: L.marker(at, { interactive: false, zIndexOffset: 1000, icon: L.divIcon({ className: 'replay-marker', iconSize: [0, 0], iconAnchor: [0, 0], html: glyphHtml(color, silhouetteFor(f.category, f.type), GLYPH_PX) }) }).addTo(map),
+					mark: L.marker(at, { interactive: false, zIndexOffset: 1000, icon: L.divIcon({ className: 'replay-marker', iconSize: [0, 0], iconAnchor: [0, 0], html: glyphHtml(color, silhouetteFor(f.category, f.type, f.ident), GLYPH_PX) }) }).addTo(map),
 					label: L.marker(at, { interactive: false, zIndexOffset: -500, icon: L.divIcon({ className: 'replay-label', iconSize: [0, 0], iconAnchor: [0, 0], html: '' }) }).addTo(map),
 					trail: L.polyline([], { color, weight: f.category === 'airline' ? 4 : 3, opacity: 0.95, interactive: false }).addTo(map)
 				};
@@ -340,7 +340,7 @@
 		if (!entry || !base || !L) return;
 		const v = entry.spline.at(t)!;
 		const vel = entry.spline.velocityAt(t);
-		const color = f.category === 'airline' ? '#ec3013' : '#201e1d';
+		const color = aircraftKind(f) === 'military' ? MILITARY_BLUE : f.category === 'airline' ? '#ec3013' : '#201e1d';
 		const shown = displayAlt(v[2], alt, altView.mode);
 		const html = dataBlockHtml({ label: `${flightLabel(f)}${f.type ? ' · ' + f.type : ''}`, altFt: shown.ft, altUnit: shown.mode === 'agl' ? 'AGL' : 'ADS-B', gsKt: v[3], trend: trendOf(vel ? vel[2] * 1000 : null), time: localTimeZoned(tz, t, true) }, color);
 		const at: LeafletNS.LatLngExpression = [v[0], v[1]];
@@ -358,10 +358,13 @@
 	}
 
 	function style(f: Flight, focused: string | null): LeafletNS.PathOptions {
-		const airline = f.category === 'airline';
-		const base: LeafletNS.PathOptions = airline
-			? { color: '#ec3013', weight: 2.5, opacity: 1 }
-			: { color: '#201e1d', weight: 1.75, opacity: 0.55 };
+		const kind = aircraftKind(f);
+		const base: LeafletNS.PathOptions =
+			kind === 'military'
+				? { color: MILITARY_BLUE, weight: 2.5, opacity: 0.9 }
+				: f.category === 'airline'
+					? { color: '#ec3013', weight: 2.5, opacity: 1 }
+					: { color: '#201e1d', weight: 1.75, opacity: 0.55 };
 		if (!focused) return base;
 		if (f.id === focused) return { ...base, weight: 4, opacity: 1 };
 		return { ...base, opacity: 0.16 };

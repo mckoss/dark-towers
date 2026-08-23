@@ -137,16 +137,39 @@ export function glyphSizeFor(pixelSeparation: number): number {
 	return Math.max(GLYPH_MIN_PX, Math.min(GLYPH_MAX_PX, Math.round(pixelSeparation * 0.7)));
 }
 
-export type Silhouette = 'airliner' | 'bizjet' | 'light';
+export type Silhouette = 'airliner' | 'bizjet' | 'light' | 'helicopter' | 'military';
+
+/** ICAO type designators of helicopters (prefix match). */
+const HELICOPTER_TYPES = /^(H269|H369|H500|H60|H47|H53|H64|UH1|B06|B105|B212|B214|B222|B230|B407|B412|B427|B429|B430|B505|R22|R44|R66|EC20|EC25|EC30|EC35|EC45|EC55|EC75|H125|H130|H135|H145|H155|H160|H175|AS32|AS50|AS55|AS65|A109|A119|A139|A149|A169|A189|S61|S64|S76|S92|MD52|MD60|MD90|BK17|B47G|EN28|EN48|R[0-9]{2}$|CH47|V22|LYNX|GAZL|PUMA|SUCO|ALO)/;
+/** ICAO type designators of military aircraft (prefix match). Airliners and bizjets in military service are not caught. */
+const MILITARY_TYPES = /^(C17|C30J|C130|C5M|K35R|KC35|K46|E3|E6|E8|P8|P3|F15|F16|F18|F22|F35|A10|B1|B2|B52|T38|TEX2|T6|T45|U2|RQ|MQ|C27J|C2|E2|EA18|AV8|H60|CH47|V22|UH1|H53|H64|C146|C12|C26|UC35|C37|C40|C32|VC25|E4|E7)/;
+/** Military callsign prefixes (ident match). */
+const MILITARY_IDENTS = /^(RCH|REACH|NAVY|ARMY|USAF|EVAC|SAM|CNV|PAT|SPAR|AIO|HOOK|DOOM|BOLT|TOPCAT|JAKE|KING|TITAN|SLAM|COBRA|VENOM|HAWG|RAIDR|RIDER|DUKE|WOLF|PACK|BISON|ELVIS|GRIZ|MOOSE|SHARK|SNTRY|DRAGN|NCHO|GOLD|FORCE|HAVOC|STEEL|VIPER|BRONCO|TALON|SHADO|CASA|TOGA|JUMBO|RRR|BLUE)\d/;
+
+export type AircraftKind = 'airline' | 'private' | 'military' | 'helicopter';
+
+/** Finer classification than the airline/private category, from the type designator and callsign. */
+export function aircraftKind(f: { category: string; type: string | null; ident?: string }): AircraftKind {
+	const t = (f.type ?? '').toUpperCase();
+	if (HELICOPTER_TYPES.test(t)) return 'helicopter';
+	if (MILITARY_TYPES.test(t) || MILITARY_IDENTS.test((f.ident ?? '').toUpperCase())) return 'military';
+	return f.category === 'airline' ? 'airline' : 'private';
+}
 
 /** Which outline to draw for an aircraft. */
-export function silhouetteFor(category: string, type: string | null): Silhouette {
+export function silhouetteFor(category: string, type: string | null, ident?: string): Silhouette {
+	const kind = aircraftKind({ category, type, ident });
+	if (kind === 'helicopter') return 'helicopter';
+	if (kind === 'military') return 'military';
 	const t = (type ?? '').toUpperCase();
 	if (category === 'airline') return 'airliner';
 	if (/^(B7|A3|E7|E1|CRJ|DH8|AT7|MD)/.test(t)) return 'airliner';
 	if (/^(C5|C6|C7|LJ|CL|GLF|G[1-6]|E5|H25|BE4|PA46|P46|PC12|TBM|SF5|EA50|PRM1|HDJ)/.test(t)) return 'bizjet';
 	return 'light';
 }
+
+/** Track / glyph colour for a flight: accent for airlines, ink for private, blue for military (helicopters follow their operator). */
+export const MILITARY_BLUE = '#1f5fbf';
 
 /** Top-down schematic outlines, nose up, in a 40×40 box (from the prototype). */
 export const SILHOUETTE_PATHS: Record<Silhouette, string> = {
@@ -157,7 +180,13 @@ export const SILHOUETTE_PATHS: Record<Silhouette, string> = {
 	bizjet:
 		'M20 1c2.3 0 3.4 3 3.4 7v6.5L37 25v5l-13.6-5v5.5l5.4 4v3.5L20 36l-8.8 2v-3.5l5.4-4v-5.5L3 30v-5l13.6-10.5V8c0-4 1.1-7 3.4-7z',
 	airliner:
-		'M20 .5c2.8 0 4 3 4 7v5.5l15 10V29l-15-5.5v6l6 4.2V37l-10-2.5L10 37v-3.3l6-4.2v-6L1 29v-6l15-10V7.5c0-4 1.2-7 4-7z'
+		'M20 .5c2.8 0 4 3 4 7v5.5l15 10V29l-15-5.5v6l6 4.2V37l-10-2.5L10 37v-3.3l6-4.2v-6L1 29v-6l15-10V7.5c0-4 1.2-7 4-7z',
+	// Rotor disc (ring, even-odd), cabin and tail boom.
+	helicopter:
+		'M20 1a16 16 0 1 0 0 32a16 16 0 1 0 0-32zM20 3a14 14 0 1 1 0 28a14 14 0 1 1 0-28zM20 8c3.6 0 5.8 3 5.8 7.5v5.5c0 3.2-2.6 5.2-5.8 5.2s-5.8-2-5.8-5.2v-5.5C14.2 11 16.4 8 20 8zM18.6 25.5h2.8v10l3.6 1.5v2.5h-10V37l3.6-1.5z',
+	// Delta-wing jet with fin: unmistakably not an airliner.
+	military:
+		'M20 .5l14.5 30H25l-5-6.5-5 6.5H5.5zM17 30.5h6v5l3 2v2H14v-2l3-2z'
 };
 
 /**
@@ -175,7 +204,7 @@ export function glyphHtml(color: string, shape: Silhouette, g: number): string {
 	const ring = Math.round(g * 1.3);
 	return (
 		`<div class="replay-ring" style="width:${ring}px;height:${ring}px"></div>` +
-		`<svg class="replay-glyph" viewBox="0 0 40 40" width="${g}" height="${g}"><path fill="${color}" stroke="#f3f2f2" stroke-width="2.5" stroke-linejoin="round" paint-order="stroke" d="${SILHOUETTE_PATHS[shape]}"/></svg>`
+		`<svg class="replay-glyph" viewBox="0 0 40 40" width="${g}" height="${g}"><path fill="${color}" fill-rule="evenodd" stroke="#f3f2f2" stroke-width="2.5" stroke-linejoin="round" paint-order="stroke" d="${SILHOUETTE_PATHS[shape]}"/></svg>`
 	);
 }
 

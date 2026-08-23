@@ -3,7 +3,7 @@
 	import MapLegend from '$lib/components/MapLegend.svelte';
 	import { AIRSPACE_RADIUS_NM } from '$lib/airports';
 	import { flightLabel, flightSubLabel } from '$lib/flights';
-	import { pairColors, WINDOW_AFTER_MS, WINDOW_BEFORE_MS } from '$lib/replay';
+	import { aircraftKind, pairColors, WINDOW_AFTER_MS, WINDOW_BEFORE_MS } from '$lib/replay';
 	import { localTime, localTimeZoned, nightLabel } from '$lib/time';
 	import { altContextFor, altView, displayAlt, setAltMode, type AltContext } from '$lib/altview.svelte';
 	import type { Flight } from '$lib/types';
@@ -35,10 +35,12 @@
 	});
 	/** Key for the replay map: the pair's two colours by kind (both accent/ink when they share a kind), other traffic, the ring. */
 	const legend = $derived.by(() => {
-		const kindLabel = (f: Flight) => (f.category === 'airline' ? 'Passenger airline' : 'Private and training aircraft');
+		const kindLabel = (f: Flight) => (aircraftKind(f) === 'military' ? 'Military' : f.category === 'airline' ? 'Passenger airline' : 'Private and training aircraft');
+		const swatch = (f: Flight, c: 'accent' | 'ink') => (aircraftKind(f) === 'military' ? ('military' as const) : c);
+		const same = a.category === b.category && aircraftKind(a) === aircraftKind(b);
 		const items = [
-			{ kind: colors[0], label: a.category === b.category ? flightLabel(a) : kindLabel(a) },
-			{ kind: colors[1], label: a.category === b.category ? flightLabel(b) : kindLabel(b) }
+			{ kind: swatch(a, colors[0]), label: same ? flightLabel(a) : kindLabel(a) },
+			{ kind: swatch(b, colors[1]), label: same ? flightLabel(b) : kindLabel(b) }
 		];
 		const grey = concurrentOthers ? [{ kind: 'grey' as const, label: 'Other aircraft flying at the time' }] : [];
 		return [...items, ...grey, { kind: 'ring' as const, label: `${AIRSPACE_RADIUS_NM} nautical mile ring` }];
@@ -47,7 +49,7 @@
 	const ft = (n: number) => `${Math.round(n).toLocaleString('en-US')}'`;
 	const feet = (n: number) => `${Math.round(n).toLocaleString('en-US')} ft`;
 
-	const kindLabel = (f: Flight) => (f.category === 'airline' ? 'Passenger airline' : 'Private or training');
+	const kindLabel = (f: Flight) => (aircraftKind(f) === 'military' ? 'Military' : aircraftKind(f) === 'helicopter' ? (f.category === 'airline' ? 'Passenger airline helicopter' : 'Helicopter') : f.category === 'airline' ? 'Passenger airline' : 'Private or training');
 	const describe = (f: Flight) => `${kindLabel(f)}${f.type ? ` · ${f.type}` : ''}`;
 
 	function movement(f: Flight): string {
@@ -85,7 +87,7 @@
 			<div class="at-moment" data-testid="nearest-moment">
 				{#each [{ f: a, alt: incident.altA, gs: incident.gsA, swatch: colors[0] }, { f: b, alt: incident.altB, gs: incident.gsB, swatch: colors[1] }] as row (row.f.id)}
 					<div class="moment-row">
-						<span class="swatch" class:swatch-accent={row.swatch === 'accent'} class:swatch-ink={row.swatch === 'ink'}></span>
+						<span class="swatch" class:swatch-military={aircraftKind(row.f) === 'military'} class:swatch-accent={aircraftKind(row.f) !== 'military' && row.swatch === 'accent'} class:swatch-ink={aircraftKind(row.f) !== 'military' && row.swatch === 'ink'}></span>
 						<span class="who">
 							<span class="who-name">{flightLabel(row.f)}{#if flightSubLabel(row.f)}<span class="who-sub">{flightSubLabel(row.f)}</span>{/if}</span>
 							<span class="who-desc">{describe(row.f)} · {movement(row.f)}</span>
@@ -282,6 +284,9 @@
 		display: block;
 		width: 22px;
 		height: 4px;
+	}
+	.swatch-military {
+		background: var(--military);
 	}
 	.swatch-accent {
 		background: var(--accent);

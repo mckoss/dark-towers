@@ -1,6 +1,6 @@
 <script lang="ts">
 	/** Colour key under a flight-path map. Items: a swatch kind plus a label. */
-	export type LegendItem = { kind: 'accent' | 'ink' | 'grey' | 'ring'; label: string };
+	export type LegendItem = { kind: 'accent' | 'ink' | 'grey' | 'military' | 'ring'; label: string };
 	let { items }: { items: LegendItem[] } = $props();
 </script>
 
@@ -46,6 +46,11 @@
 		width: 20px;
 		height: 2px;
 		background: var(--ink-25);
+	}
+	.military {
+		width: 20px;
+		height: 3px;
+		background: var(--military);
 	}
 	.ring {
 		width: 10px;

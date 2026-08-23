@@ -8,6 +8,7 @@
 	import FlightMap from '$lib/components/FlightMap.svelte';
 	import MapLegend from '$lib/components/MapLegend.svelte';
 	import { altContextFor } from '$lib/altview.svelte';
+	import { aircraftKind } from '$lib/replay';
 	import { median } from '$lib/util';
 	import NightCalendar from '$lib/components/NightCalendar.svelte';
 	import CloseApproachCard from '$lib/components/CloseApproachCard.svelte';
@@ -131,7 +132,7 @@
 				{:else}
 					<div class="no-tracks inset">Flight paths for this night are not available.</div>
 				{/if}
-				<MapLegend items={[{ kind: 'accent', label: 'Passenger airline' }, { kind: 'ink', label: 'Private and training aircraft' }, { kind: 'ring', label: `${AIRSPACE_RADIUS_NM} nautical mile ring` }]} />
+				<MapLegend items={[{ kind: 'accent', label: 'Passenger airline' }, { kind: 'ink', label: 'Private and training aircraft' }, ...(data.flights.some((f) => aircraftKind(f) === 'military') ? [{ kind: 'military' as const, label: 'Military' }] : []), { kind: 'ring', label: `${AIRSPACE_RADIUS_NM} nautical mile ring` }]} />
 			</div>
 			<div class="night-right">
 				<div class="night-head"><div class="table-header">Close approaches this night</div></div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assignLanes } from '../../src/lib/replay';
+import { aircraftKind, assignLanes, silhouetteFor } from '../../src/lib/replay';
 
 describe('assignLanes', () => {
 	it('keeps well-spaced marks on one row and drops colliding ones to the second', () => {
@@ -11,5 +11,20 @@ describe('assignLanes', () => {
 		expect(assignLanes([0, 30, 60], 50)).toEqual([0, 1, 0]);
 		// Works regardless of input order.
 		expect(assignLanes([30, 0], 50)).toEqual([1, 0]);
+	});
+});
+
+describe('aircraftKind / silhouetteFor', () => {
+	it('spots helicopters and military by type designator or callsign', () => {
+		expect(aircraftKind({ category: 'private', type: 'H269', ident: 'N123AB' })).toBe('helicopter');
+		expect(aircraftKind({ category: 'private', type: 'EC35', ident: 'N50HL' })).toBe('helicopter');
+		expect(aircraftKind({ category: 'private', type: 'C17', ident: 'RCH451' })).toBe('military');
+		expect(aircraftKind({ category: 'private', type: 'B738', ident: 'NAVY12' })).toBe('military');
+		expect(aircraftKind({ category: 'private', type: 'C172', ident: 'N12345' })).toBe('private');
+		expect(aircraftKind({ category: 'airline', type: 'E75L', ident: 'QXE2150' })).toBe('airline');
+		expect(silhouetteFor('private', 'R44', 'N1RH')).toBe('helicopter');
+		expect(silhouetteFor('private', 'P8', 'N0')).toBe('military');
+		expect(silhouetteFor('airline', 'E75L')).toBe('airliner');
+		expect(silhouetteFor('private', 'C172')).toBe('light');
 	});
 });
