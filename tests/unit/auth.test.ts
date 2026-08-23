@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const base = { api_key: 'k', admins: ['MCKoss@gmail.com ', 'kstoltz@citynetwork.com'], session_secret: 'test-secret', google: { client_id: 'cid', client_secret: 'cs' } };
+const base = { api_key: 'k', admins: ['Admin@Example.com ', 'second@example.com'], session_secret: 'test-secret', google: { client_id: 'cid', client_secret: 'cs' } };
 
 async function load(settingsJson: unknown) {
 	vi.stubEnv('SETTINGS_JSON', JSON.stringify(settingsJson));
@@ -18,8 +18,8 @@ describe('settings', () => {
 
 	it('loads from SETTINGS_JSON and normalises admin emails', async () => {
 		const { settings } = await load(base);
-		expect(settings.settings().admins).toEqual(['mckoss@gmail.com', 'kstoltz@citynetwork.com']);
-		expect(settings.isAdmin('MCKOSS@gmail.com')).toBe(true);
+		expect(settings.settings().admins).toEqual(['mckoss@gmail.com', 'second@example.com']);
+		expect(settings.isAdmin('ADMIN@example.com')).toBe(true);
 		expect(settings.isAdmin('someone@else.com')).toBe(false);
 		expect(settings.isAdmin(null)).toBe(false);
 	});
@@ -49,14 +49,14 @@ describe('session cookie', () => {
 	it('round-trips and enforces expiry', async () => {
 		const { session } = await load(base);
 		const now = 1_700_000_000_000;
-		const tok = session.encodeSession({ email: 'mckoss@gmail.com', name: 'Mike' }, now);
-		expect(session.decodeSession(tok, now + 1000)?.email).toBe('mckoss@gmail.com');
+		const tok = session.encodeSession({ email: 'admin@example.com', name: 'Mike' }, now);
+		expect(session.decodeSession(tok, now + 1000)?.email).toBe('admin@example.com');
 		expect(session.decodeSession(tok, now + 15 * 86_400_000)).toBeNull();
 	});
 
 	it('rejects tampered payloads, bad signatures and garbage', async () => {
 		const { session } = await load(base);
-		const tok = session.encodeSession({ email: 'mckoss@gmail.com', name: null });
+		const tok = session.encodeSession({ email: 'admin@example.com', name: null });
 		const [payload, sig] = tok.split('.');
 		const forged = Buffer.from(JSON.stringify({ email: 'evil@x.com', exp: Date.now() + 1e9 })).toString('base64url');
 		expect(session.decodeSession(`${forged}.${sig}`)).toBeNull();
@@ -67,7 +67,7 @@ describe('session cookie', () => {
 
 	it('a token signed with a different secret is rejected', async () => {
 		const a = await load(base);
-		const tok = a.session.encodeSession({ email: 'mckoss@gmail.com', name: null });
+		const tok = a.session.encodeSession({ email: 'admin@example.com', name: null });
 		const b = await load({ ...base, session_secret: 'other' });
 		expect(b.session.decodeSession(tok)).toBeNull();
 	});
@@ -96,10 +96,10 @@ describe('google oauth', () => {
 		const jwt = (claims: object) => `h.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.s`;
 		const fetchFn = (async (_url: string, init?: RequestInit) => {
 			expect(String(init?.body)).toContain('grant_type=authorization_code');
-			return new Response(JSON.stringify({ id_token: jwt({ iss: 'https://accounts.google.com', aud: 'cid', email: 'mckoss@gmail.com', email_verified: true, name: 'Mike' }) }));
+			return new Response(JSON.stringify({ id_token: jwt({ iss: 'https://accounts.google.com', aud: 'cid', email: 'admin@example.com', email_verified: true, name: 'Mike' }) }));
 		}) as unknown as typeof fetch;
 		const u = await google.exchangeCode('http://localhost', 'code', fetchFn);
-		expect(u).toEqual({ email: 'mckoss@gmail.com', email_verified: true, name: 'Mike' });
+		expect(u).toEqual({ email: 'admin@example.com', email_verified: true, name: 'Mike' });
 
 		const bad = (async () => new Response(JSON.stringify({ id_token: jwt({ iss: 'https://accounts.google.com', aud: 'someone-else', email: 'x@y.z' }) }))) as unknown as typeof fetch;
 		await expect(google.exchangeCode('http://localhost', 'code', bad)).rejects.toThrow(/audience/);

@@ -1,6 +1,6 @@
 {
     "api_key": "<FlightAware AeroAPI key>",
-    "admins": ["mckoss@gmail.com", "kstoltz@citynetwork.com"],
+    "admins": ["you@example.com", "colleague@example.com"],
     "google": {
         "client_id": "<Google OAuth client id>.apps.googleusercontent.com",
         "client_secret": "<Google OAuth client secret>"
