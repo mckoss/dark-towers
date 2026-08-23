@@ -68,10 +68,10 @@
 <section class="section head">
 	<div class="meta">
 		<a class="back" href="/airport/{airport.code}">← {airport.name}</a>
+		<span class="ref">{nightLabel(incident.night)}</span>
 		<span class="ref tabular">{incident.id}</span>
 	</div>
-	<h1 class="headline">{flightLabel(a)} and {flightLabel(b)}</h1>
-	<div class="when"><span class:accent-text={incident.severity === 'very-close'}>{incident.severity === 'very-close' ? 'Very close approach' : 'Close approach'} at {localTimeZoned(airport.tz, incident.t)}</span> · {nightLabel(incident.night)} · {airport.name} · tower closed</div>
+	<h1 class="headline">{flightLabel(a)} and {flightLabel(b)} — <span class:accent-text={incident.severity === 'very-close'}>{incident.severity === 'very-close' ? 'very close approach' : 'close approach'} at {localTimeZoned(airport.tz, incident.t)}</span></h1>
 </section>
 
 <section class="section split">
@@ -199,14 +199,8 @@
 		letter-spacing: -0.02em;
 		word-spacing: 0.08em;
 	}
-	.when {
-		margin-top: 6px;
-		font-size: 14px;
-		color: var(--ink-60);
-	}
-	.when .accent-text {
+	.headline .accent-text {
 		color: var(--accent);
-		font-weight: 700;
 	}
 	.facts {
 		display: grid;
