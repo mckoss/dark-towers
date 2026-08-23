@@ -97,10 +97,10 @@
 		];
 	});
 	/** Intervals (as fractions of the span) when at least one flight of a kind is in the air, merged. */
-	function bandsFor(kind: Flight['category']): { from: number; to: number }[] {
+	function bandsFor(kind: 'airline' | 'private' | 'military'): { from: number; to: number }[] {
 		if (!span) return [];
 		const ivs = flights
-			.filter((f) => f.category === kind && f.positions.length > 1)
+			.filter((f) => (kind === 'military' ? aircraftKind(f) === 'military' : f.category === kind && aircraftKind(f) !== 'military') && f.positions.length > 1)
 			.map((f) => ({ from: f.positions[0].t, to: f.positions[f.positions.length - 1].t }))
 			.sort((x, y) => x.from - y.from);
 		const merged: { from: number; to: number }[] = [];
@@ -113,8 +113,9 @@
 		return merged.map((m) => ({ from: (m.from - span.start) / len, to: (m.to - span.start) / len }));
 	}
 	const airlineBands = $derived(bandsFor('airline'));
-	// Private bands are drawn underneath; airline bands paint over them.
+	// Drawn bottom to top: private, military, airline — airline always shows through.
 	const privateBands = $derived(bandsFor('private'));
+	const militaryBands = $derived(bandsFor('military'));
 	function tick(now: number) {
 		if (!playing || !span || holding) return;
 		const dt = last ? now - last : 0;
@@ -468,6 +469,9 @@
 		<div class="replay-track">
 			{#each privateBands as b, i (i)}
 				<span class="replay-band private" data-testid="night-private-band" style="--from: {b.from.toFixed(4)}; --to: {b.to.toFixed(4)}"></span>
+			{/each}
+			{#each militaryBands as b, i (i)}
+				<span class="replay-band military" data-testid="night-military-band" style="--from: {b.from.toFixed(4)}; --to: {b.to.toFixed(4)}"></span>
 			{/each}
 			{#each airlineBands as b, i (i)}
 				<span class="replay-band" data-testid="night-airline-band" style="--from: {b.from.toFixed(4)}; --to: {b.to.toFixed(4)}"></span>

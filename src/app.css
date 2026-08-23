@@ -541,6 +541,9 @@ p {
 .replay-band.private {
 	background: #d9d6d6;
 }
+.replay-band.military {
+	background: #c3d4f0;
+}
 /* Red pip on the scrubber at each close approach. The thumb travels from
    half its width in to half its width from the end, so pips are inset the same. */
 .replay-pip {
