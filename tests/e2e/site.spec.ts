@@ -174,9 +174,8 @@ test.describe('close approach', () => {
 		await expect(page.getByTestId('alt-note')).toContainText(/ADS-B altitude: the figure each aircraft broadcast/);
 		await expect(page.getByTestId('nearest-moment')).toContainText('ft ADS-B');
 		await page.getByRole('button', { name: 'Show heights AGL' }).click();
-		await expect(page.getByText("What we know, and don't")).toBeVisible();
 		// Editorial rule: never claim what is or is not in an FAA record.
-		expect(await page.locator('main').textContent()).toMatch(/do not know whether this event was reported/i);
+		expect(await page.locator('main').textContent()).not.toMatch(/reported to the FAA|FAA record/i);
 
 		const play = page.getByTestId('replay-play');
 		await expect(play).toBeVisible();

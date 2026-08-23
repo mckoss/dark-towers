@@ -131,12 +131,6 @@
 				<div class="alt">{altView.mode === 'agl' ? 'Height AGL' : 'ADS-B altitude'} at closest point: <strong>{showAlt(card.alt)}</strong></div>
 			</div>
 		{/each}
-		<div class="inset know">
-			<div class="table-header">What we know, and don't</div>
-			<p>
-				We do not know whether this event was reported to the FAA. With the tower closed there was no controller watching to file a report, and a pilot cannot report an aircraft they never saw. What we can show is what the position data recorded.
-			</p>
-		</div>
 	</div>
 </section>
 
@@ -309,15 +303,6 @@
 	.alt {
 		margin-top: 12px;
 		font-size: 15px;
-	}
-	.know {
-		padding: 24px;
-	}
-	.know p {
-		margin-top: 12px;
-		font-size: 15px;
-		line-height: 1.6;
-		color: var(--ink-80);
 	}
 	.others {
 		padding: 36px var(--gutter) 64px;
