@@ -135,7 +135,7 @@
 					<h2 class="night-title">Night of {nightLabel(data.selectedNight)}</h2>
 				</div>
 				{#if hasTracks}
-					<FlightMap center={airport.pos} flights={data.flights} {focus} height={560} onfocus={(id) => (focus = id)} />
+					<FlightMap center={airport.pos} flights={data.flights} {focus} height={560} alt={{ readings: data.nightSummary?.altimeter ?? null, elevationFt: airport.elevationFt }} onfocus={(id) => (focus = id)} />
 				{:else}
 					<div class="no-tracks inset">Flight paths for this night are not available.</div>
 				{/if}

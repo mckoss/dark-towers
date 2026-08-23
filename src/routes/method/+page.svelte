@@ -24,12 +24,24 @@
 		}
 	];
 
+	/** The exact test. Every condition must hold at one and the same moment. */
+	const criteria = [
+		{ k: 'When', v: 'The tower was closed. Flights are checked only between the published closing and reopening times for that night.' },
+		{ k: 'Where', v: 'Both aircraft were within 10 nautical miles of the airport — the point midway between them is inside the 10 NM ring.' },
+		{ k: 'Side to side', v: 'Less than 3.00 nautical miles apart, measured over the ground.' },
+		{ k: 'Vertically', v: 'Less than 1,000 feet apart, using the altitudes the aircraft reported. Both conditions must be true at the same instant; being inside one of them alone is normal and is not counted.' },
+		{ k: 'Both flying', v: 'Each aircraft was more than 150 feet above the field (after the pressure correction) and moving faster than 40 knots. An aircraft on the runway, taxiing, or rolling out after landing does not count.' },
+		{ k: 'Two aircraft', v: 'Two records of the same aircraft never count: the same tail number, or two tracks that ride on top of each other for most of their length (a callsign and a registration for one flight).' },
+		{ k: 'Same clock', v: 'Positions are reported a few seconds apart, at different moments for each aircraft. Each path is smoothed through its reported points and both are read at the same instant, every second, so the distance is between where the aircraft actually were, not between their nearest reports.' },
+		{ k: 'Counted once', v: 'Each pair of flights is counted at most once per night, at the moment they were closest. “Very close” means under 1 nautical mile and under 500 feet at that moment.' }
+	];
+
 	const limitations = [
 		'Aircraft that do not broadcast a position signal do not appear at all, so these counts are a floor, not a total.',
-		'Broadcast altitude is not corrected for local air pressure, so altitude figures carry roughly ±100 feet.',
+		'Transponders broadcast altitude against a standard air pressure, not the day\'s actual pressure, and in steps of 100 feet. Heights above the field are corrected using the airport\'s hourly weather reports (the altimeter setting), interpolated between reports; a night with no weather report is shown uncorrected and says so. Expect about ±100 feet. The difference between two aircraft is not affected by this correction, so separation figures use the altitudes exactly as reported.',
 		'Landing and takeoff times are sometimes estimated rather than measured; where the measured time is missing, the estimate is used.',
 		'Coverage close to the ground is uneven, so the lowest parts of some flight paths are missing.',
-		'An aircraft on the runway does not count. Any moment when either aircraft was within 150 feet of the field elevation, or moving slower than 40 knots, is left out — so a landing roll beneath a passing aircraft is not flagged.'
+		'An aircraft on the runway does not count. Any moment when either aircraft was within 150 feet of the field (after the pressure correction), or moving slower than 40 knots, is left out — so a landing roll beneath a passing aircraft is not flagged.'
 	];
 
 	const mike = 'mckoss@gmail.com';
@@ -77,6 +89,20 @@
 	<p class="poster standard">
 		With a controller on duty, aircraft are kept at least 3 nautical miles apart, or 1,000 feet apart vertically.
 		When the tower is closed, nothing enforces this safety margin.
+	</p>
+</section>
+
+<section class="section cell-lg">
+	<h2 class="section-heading">What counts as a close approach</h2>
+	<p class="copy">Every close approach on this site passed all of the following tests at one and the same moment. Nothing is flagged on judgement; the same rules are applied to every flight, and re-running them over the same data gives the same result.</p>
+	<dl class="criteria">
+		{#each criteria as c (c.k)}
+			<dt>{c.k}</dt>
+			<dd>{c.v}</dd>
+		{/each}
+	</dl>
+	<p class="copy">
+		Not counted, for now: an aircraft sitting on the runway while another lands on it, and a small aircraft following closely behind a much larger one (wake turbulence). Those are governed by different rules than the 3 NM / 1,000 ft standard and need their own tests; see the project's open issues.
 	</p>
 </section>
 
@@ -202,6 +228,40 @@
 	}
 	.halves > * + * {
 		border-left: var(--rule);
+	}
+	.criteria {
+		display: grid;
+		grid-template-columns: max-content 1fr;
+		gap: 0 24px;
+		margin-top: 18px;
+		max-width: 860px;
+	}
+	.criteria dt,
+	.criteria dd {
+		padding: 10px 0;
+		border-bottom: var(--row-rule);
+		font-size: 15px;
+		line-height: 1.5;
+	}
+	.criteria dt {
+		font-weight: 800;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		font-size: 12px;
+		padding-top: 13px;
+	}
+	.criteria dd {
+		color: var(--ink-80);
+	}
+	@media (max-width: 640px) {
+		.criteria {
+			grid-template-columns: 1fr;
+			gap: 0;
+		}
+		.criteria dt {
+			border-bottom: none;
+			padding-bottom: 0;
+		}
 	}
 	.copy {
 		margin-top: 14px;

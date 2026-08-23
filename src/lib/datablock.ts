@@ -1,13 +1,15 @@
 /**
  * ATC-style data block: what a controller's scope shows beside a target.
  *   line 1  callsign / friendly label
- *   line 2  altitude (hundreds of feet, three digits) · climb/descent arrow · groundspeed (knots)
+ *   line 2  altitude (hundreds of feet, three digits; above the field unless the reader chose reported) · climb/descent arrow · groundspeed (knots)
  * A third, plain-language line spells the same out for everyone else.
  */
 export interface DataBlockInput {
 	label: string;
-	/** Feet MSL. */
+	/** Feet, already in the unit named by `altUnit`. */
 	altFt: number;
+	/** Suffix for the plain-language line: "above field" (default) or "reported". */
+	altUnit?: string;
 	/** Knots. */
 	gsKt: number;
 	/** Vertical rate sign: 1 climbing, -1 descending, 0 level/unknown. */
@@ -27,7 +29,7 @@ export function dataBlockLines(d: DataBlockInput): [string, string, string] {
 	return [
 		d.label,
 		`${altitudeHundreds(d.altFt)}${arrow} ${String(Math.round(d.gsKt)).padStart(3, ' ')}`,
-		`${Math.round(d.altFt).toLocaleString('en-US')} ft${arrow ? ' ' + arrow : ''} · ${Math.round(d.gsKt)} kt`
+		`${Math.round(d.altFt).toLocaleString('en-US')} ft ${d.altUnit ?? 'above field'}${arrow ? ' ' + arrow : ''} · ${Math.round(d.gsKt)} kt`
 	];
 }
 

@@ -141,6 +141,12 @@ test.describe('close approach', () => {
 		await expect(page.getByText(/one is enough/)).toBeVisible();
 		await expect(page.getByText(/Nearest approach · \d+:\d\d:\d\d [ap]m/)).toBeVisible();
 		await expect(page.getByTestId('nearest-moment')).toContainText('kt');
+		// Altitudes default to height above the field; the reader can switch to raw reported altitude.
+		await expect(page.getByTestId('alt-note')).toContainText(/Heights above the field/);
+		await page.getByRole('button', { name: 'Show altitudes as reported' }).click();
+		await expect(page.getByTestId('alt-note')).toContainText(/as the transponders reported/);
+		await expect(page.getByTestId('nearest-moment')).toContainText('ft reported');
+		await page.getByRole('button', { name: 'Show heights above the field' }).click();
 		await expect(page.getByText("What we know, and don't")).toBeVisible();
 		// Editorial rule: never claim what is or is not in an FAA record.
 		expect(await page.locator('main').textContent()).toMatch(/do not know whether this event was reported/i);
@@ -176,6 +182,10 @@ test.describe('method', () => {
 		await expect(page.getByText('FlightAware')).toBeVisible();
 		await expect(page.getByText(/at least 3 nautical miles apart/)).toBeVisible();
 		await expect(page.getByText('Known limitations')).toBeVisible();
+		// The exact test is spelled out, condition by condition.
+		await expect(page.getByRole('heading', { name: 'What counts as a close approach' })).toBeVisible();
+		await expect(page.locator('.criteria dt')).toHaveCount(8);
+		await expect(page.getByText(/more than 150 feet above the field/)).toBeVisible();
 		await expect(page.locator('#who-we-are')).toBeVisible();
 		await expect(page.getByRole('link', { name: 'mckoss@gmail.com' })).toHaveAttribute('href', /^mailto:mckoss@gmail\.com/);
 		await expect(page.getByRole('link', { name: 'Send us feedback' })).toHaveAttribute('href', /^mailto:.*kstoltz/);

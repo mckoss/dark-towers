@@ -155,6 +155,8 @@ export interface IncidentDetail {
 	others: Flight[];
 	/** Other close approaches at the same airport in the period. */
 	related: (Incident & { identA: string; identB: string })[];
+	/** The night's summary, carrying the altimeter readings used to show altitudes above the field. */
+	night: NightSummary | null;
 }
 
 export function incidentDetail(id: string): IncidentDetail | null {
@@ -171,7 +173,7 @@ export function incidentDetail(id: string): IncidentDetail | null {
 		.incidentsForAirport(airport.icao, period.from)
 		.filter((i) => i.id !== id)
 		.map((i) => ({ ...i, identA: labelFor(i.flightA), identB: labelFor(i.flightB) }));
-	return { incident, airport, a, b, others, related };
+	return { incident, airport, a, b, others, related, night: db.nightSummary(airport.icao, incident.night) };
 }
 
 /** Fill operatorName/operatorShort from the live operators table. */

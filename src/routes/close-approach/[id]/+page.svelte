@@ -3,11 +3,26 @@
 	import { flightLabel, flightSubLabel } from '$lib/flights';
 	import { pairColors } from '$lib/replay';
 	import { localTime, nightLabel } from '$lib/time';
+	import { altimeterAt, offsetAt } from '$lib/altimeter';
+	import { altView, displayAlt, setAltMode, type AltContext } from '$lib/altview.svelte';
 	import type { Flight } from '$lib/types';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 	const { incident, airport, a, b, others, related } = $derived(data);
+
+	// Altitudes: above the field by default (reported pressure altitude corrected
+	// by the hour's altimeter setting), or raw as reported if the reader asks.
+	const altCtx: AltContext = $derived({ readings: data.night?.altimeter ?? null, elevationFt: airport.elevationFt });
+	const hasReadings = $derived((data.night?.altimeter?.length ?? 0) > 0);
+	const altimeter = $derived(altimeterAt(altCtx.readings, incident.t));
+	const correction = $derived(Math.round(offsetAt(altCtx.readings, incident.t)));
+	const showAlt = (reported: number) => {
+		const d = displayAlt(reported, incident.t, altCtx, altView.mode);
+		return `${d.ft.toLocaleString('en-US')} ft${d.mode === 'reported' ? ' reported' : ''}`;
+	};
+	const altUnitLabel = $derived(altView.mode === 'agl' ? 'above the field' : 'as reported');
+	const signed = (n: number) => `${n < 0 ? '−' : '+'}${Math.abs(n).toLocaleString('en-US')}'`;
 
 	const colors = $derived(pairColors(a, b));
 	const severityLabel = $derived(incident.severity === 'very-close' ? 'Very close' : 'Closer than allowed');
@@ -38,7 +53,7 @@
 	const narrative = $derived(
 		`${flightLabel(a)}, ${noun(a)} ${movement(a)}, and ${flightLabel(b)}, ${noun(b)} ${movement(b)}, ` +
 			`came within ${nm(incident.lateralNm)} of each other side to side while only ${ft(incident.verticalFt)} apart vertically. ` +
-			`The closest point was ${nm(incident.distNm)} from the field, at ${feet(incident.altA)} and ${feet(incident.altB)}. ` +
+			`The closest point was ${nm(incident.distNm)} from the field, at ${showAlt(incident.altA)} and ${showAlt(incident.altB)} ${altUnitLabel}. ` +
 			`With the tower closed, no controller was on duty to keep them apart.`
 	);
 </script>
@@ -69,8 +84,23 @@
 				<div class="caption">{ft(incident.verticalFt)} apart vertically while {nm(incident.lateralNm)} apart side to side</div>
 			</div>
 			<div class="at-moment" data-testid="nearest-moment">
-				<div class="moment-row"><span class="swatch" class:swatch-accent={colors[0] === 'accent'} class:swatch-ink={colors[0] === 'ink'}></span><span class="who">{flightLabel(a)}</span><span class="tabular">{feet(incident.altA)}</span><span class="tabular">{incident.gsA} kt</span></div>
-				<div class="moment-row"><span class="swatch" class:swatch-accent={colors[1] === 'accent'} class:swatch-ink={colors[1] === 'ink'}></span><span class="who">{flightLabel(b)}</span><span class="tabular">{feet(incident.altB)}</span><span class="tabular">{incident.gsB} kt</span></div>
+				<div class="moment-row"><span class="swatch" class:swatch-accent={colors[0] === 'accent'} class:swatch-ink={colors[0] === 'ink'}></span><span class="who">{flightLabel(a)}</span><span class="tabular">{showAlt(incident.altA)}</span><span class="tabular">{incident.gsA} kt</span></div>
+				<div class="moment-row"><span class="swatch" class:swatch-accent={colors[1] === 'accent'} class:swatch-ink={colors[1] === 'ink'}></span><span class="who">{flightLabel(b)}</span><span class="tabular">{showAlt(incident.altB)}</span><span class="tabular">{incident.gsB} kt</span></div>
+			</div>
+			<div class="alt-note" data-testid="alt-note">
+				{#if altView.mode === 'agl'}
+					{#if hasReadings && altimeter != null}
+						Heights above the field ({airport.elevationFt.toLocaleString('en-US')}'): reported altitude {signed(-correction)} for the altimeter setting of {altimeter.toFixed(2)} at {localTime(airport.tz, incident.t, true)}.
+					{:else if data.night?.groundOffsetFt != null}
+						Heights above the field ({airport.elevationFt.toLocaleString('en-US')}'), uncorrected: no weather reports for this night, so reported altitudes are taken as true (aircraft on the ground read {signed(data.night.groundOffsetFt)} that night).
+					{:else}
+						Heights above the field ({airport.elevationFt.toLocaleString('en-US')}'), uncorrected: no weather reports for this night.
+					{/if}
+					<button type="button" class="alt-switch" onclick={() => setAltMode('reported')}>Show altitudes as reported</button>
+				{:else}
+					Altitudes as the transponders reported them (standard-pressure altitude, not corrected for the day's weather or the field elevation).
+					<button type="button" class="alt-switch" onclick={() => setAltMode('agl')}>Show heights above the field</button>
+				{/if}
 			</div>
 		</div>
 		<div class="fact">
@@ -93,7 +123,7 @@
 <section class="section split">
 	<div class="replay-col">
 		{#key incident.id}
-			<Replay {airport} {a} {b} {incident} {others} />
+			<Replay {airport} {a} {b} {incident} {others} alt={altCtx} />
 		{/key}
 		<div class="replay-note">
 			Replay runs in accelerated time. Each aircraft's full path is dashed; the solid trail is where it has flown so far, and the thin line between the two is their separation. Other traffic that night is greyed behind them.
@@ -108,7 +138,7 @@
 				</div>
 				<div class="ident">{identLabel(card.f)}</div>
 				<div class="desc">{describe(card.f)}</div>
-				<div class="alt">Altitude at closest point: <strong>{feet(card.alt)}</strong></div>
+				<div class="alt">{altView.mode === 'agl' ? 'Height above the field' : 'Reported altitude'} at closest point: <strong>{showAlt(card.alt)}</strong></div>
 			</div>
 		{/each}
 		<div class="inset know">
@@ -194,6 +224,23 @@
 		margin-top: 14px;
 		border-top: var(--row-rule);
 		font-size: 14px;
+	}
+	.alt-note {
+		margin-top: 12px;
+		font-size: 12px;
+		color: var(--ink-45);
+	}
+	.alt-switch {
+		display: block;
+		margin-top: 6px;
+		padding: 0;
+		border: none;
+		background: none;
+		font: inherit;
+		font-weight: 700;
+		color: var(--ink);
+		text-decoration: underline;
+		cursor: pointer;
 	}
 	.moment-row {
 		display: grid;

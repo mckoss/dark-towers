@@ -36,6 +36,12 @@ export interface ApproachOptions {
 	elevationFt?: number;
 	/** Only moments inside this radius of the origin count. */
 	radiusNm?: number;
+	/**
+	 * Feet to subtract from reported (standard-pressure) altitude at time t to
+	 * get true altitude. Used only for the on-the-ground test; separation
+	 * between two aircraft is computed on raw altitudes, where the bias cancels.
+	 */
+	altOffset?: (t: number) => number;
 }
 
 /** Two records of one physical aircraft (e.g. callsign + registration) ride on top of each other. */
@@ -43,8 +49,8 @@ const DUPLICATE_LATERAL_NM = 0.2;
 const DUPLICATE_VERTICAL_FT = 300;
 const DUPLICATE_FRACTION = 0.8;
 
-function onGround(p: number[], elevationFt: number | undefined): boolean {
-	if (elevationFt != null && p[2] <= elevationFt + GROUND_AGL_FT) return true;
+function onGround(p: number[], elevationFt: number | undefined, offsetFt: number): boolean {
+	if (elevationFt != null && p[2] - offsetFt <= elevationFt + GROUND_AGL_FT) return true;
 	return p.length > 3 && p[3] < GROUND_SPEED_KT;
 }
 
@@ -72,7 +78,8 @@ export function closestApproach(a: Spline, b: Spline, opts: ApproachOptions = {}
 		const vertical = Math.abs(pa[2] - pb[2]);
 		samples++;
 		if (lateral < DUPLICATE_LATERAL_NM && vertical < DUPLICATE_VERTICAL_FT) coincident++;
-		if (onGround(pa, opts.elevationFt) || onGround(pb, opts.elevationFt)) continue;
+		const offset = opts.altOffset ? opts.altOffset(t) : 0;
+		if (onGround(pa, opts.elevationFt, offset) || onGround(pb, opts.elevationFt, offset)) continue;
 		// The closest point (midpoint of the pair) must be inside the ring.
 		if (Math.hypot((pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2) > radius) continue;
 		// Compare the figures people will see (2 dp / whole feet) so a displayed

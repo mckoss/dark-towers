@@ -1,5 +1,6 @@
 import { listAirports } from '$lib/server/airports-store';
-import { deleteRequest, incompleteNights, listRequests, nightCounts, recentRuns } from '$lib/server/db';
+import { altimeterCheck, deleteRequest, incompleteNights, listRequests, nightCounts, recentRuns } from '$lib/server/db';
+import { pressureOffsetFt } from '$lib/altimeter';
 import { currentJob, startBackfill, startCatchUp, startIngest } from '$lib/server/jobs';
 import { config, flightAwareApiKey } from '$lib/server/config';
 import { fail } from '@sveltejs/kit';
@@ -17,6 +18,22 @@ export const load: PageServerLoad = ({ locals }) => {
 		airports: listAirports().map((a) => ({ code: a.code, icao: a.icao, name: a.name, tracked: a.tracked, status: a.status })),
 		counts: nightCounts(),
 		incomplete: incompleteNights(),
+		altimeter: altimeterCheck().map((n) => {
+			const r = n.altimeter ?? [];
+			const vals = r.map(([, v]) => v);
+			const lo = vals.length ? Math.min(...vals) : null;
+			const hi = vals.length ? Math.max(...vals) : null;
+			return {
+				airport: n.airport,
+				night: n.night,
+				readings: r.length,
+				range: lo != null && hi != null ? `${lo.toFixed(2)}–${hi.toFixed(2)}` : '—',
+				/** Weather-derived offset range (feet to subtract from reported altitude). */
+				weatherFt: lo != null && hi != null ? `${Math.round(pressureOffsetFt(hi))}…${Math.round(pressureOffsetFt(lo))}` : '—',
+				groundFt: n.groundOffsetFt,
+				groundTracks: n.groundTracks
+			};
+		}),
 		runs: recentRuns(),
 		requests: listRequests(),
 		job: currentJob()

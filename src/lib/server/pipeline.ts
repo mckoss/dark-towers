@@ -4,8 +4,9 @@
  *   1. flights in the closed-tower window   (API, cached on disk)
  *   2. each flight's track                   (API, cached on disk)
  *   3. clip tracks to the 10 NM ring and the closed window
- *   4. find close approaches on a shared clock
- *   5. upsert flights / incidents / night summary into SQLite
+ *   4. altimeter settings for the night (weather archive, cached)
+ *   5. find close approaches on a shared clock
+ *   6. upsert flights / incidents / night summary into SQLite
  *
  * Every step is idempotent: re-running a night reads from the disk cache and
  * overwrites the same database rows. Use `force` to re-fetch the flight list
@@ -15,6 +16,8 @@ import { AIRSPACE_EXIT_NM, AIRSPACE_RADIUS_NM, TRACK_GAP_MS, towerHoursOn } from
 import { getAirport } from './airports-store';
 import { distanceNm, fromLocalNm, toLocalNm } from '$lib/geo';
 import { findIncidents } from '$lib/separation';
+import { groundOffsetFt, offsetAt } from '$lib/altimeter';
+import { fetchAltimeter } from './metar';
 import { nightOf, nightWindow } from '$lib/time';
 import type { AirportConfig, Flight, FlightCategory, NightSummary, Position } from '$lib/types';
 import { recordRunEnd, recordRunStart, replaceIncidents, upsertFlight, upsertNight } from './db';
@@ -23,8 +26,10 @@ import { fetchFlights, fetchTrack, hasCachedTrack, readCachedFlights, type Logge
 export interface IngestOptions {
 	/** Re-fetch the flight list even if cached. */
 	force?: boolean;
-	/** Don't call the API at all — only process what's cached. */
+	/** Don't call the FlightAware API at all — only process what's cached. */
 	offline?: boolean;
+	/** Fetch weather (altimeter) readings when offline; default true online, false offline. */
+	weather?: boolean;
 	log?: Logger;
 }
 
@@ -90,10 +95,17 @@ async function ingest(airport: AirportConfig, night: string, opts: IngestOptions
 	}
 	flights.sort((a, b) => a.eventTime - b.eventTime);
 
-	// 4. close approaches
-	const incidents = findIncidents(airport.pos, airport.icao, night, flights, { elevationFt: airport.elevationFt });
+	// 4. pressure correction: hourly altimeter settings from the airport's
+	// weather reports (cached), falling back to self-calibration from the
+	// tracks. Only the on-the-ground test uses it; separation is raw.
+	const altimeter = await fetchAltimeter(airport.icao, night, win.start, win.end, { offline: opts.weather != null ? !opts.weather : opts.offline, log });
+	const ground = groundOffsetFt(flights, airport.elevationFt);
+	const altOffset = altimeter && altimeter.length > 0 ? (t: number) => offsetAt(altimeter, t) : ground ? () => ground.offsetFt : undefined;
 
-	// 5. store
+	// 5. close approaches
+	const incidents = findIncidents(airport.pos, airport.icao, night, flights, { elevationFt: airport.elevationFt, altOffset });
+
+	// 6. store
 	for (const f of flights) upsertFlight(f);
 	replaceIncidents(airport.icao, night, incidents);
 	const summary: NightSummary = {
@@ -106,7 +118,10 @@ async function ingest(airport: AirportConfig, night: string, opts: IngestOptions
 		private: flights.filter((f) => f.category === 'private').length,
 		positions: flights.reduce((n, f) => n + f.positions.length, 0),
 		incidents: incidents.length,
-		complete
+		complete,
+		altimeter: altimeter && altimeter.length > 0 ? altimeter : null,
+		groundOffsetFt: ground ? Math.round(ground.offsetFt) : null,
+		groundTracks: ground?.tracks ?? null
 	};
 	upsertNight(summary);
 	log(`${airport.icao} ${night}: ${summary.flights} flights, ${summary.positions} positions, ${summary.incidents} close approaches${complete ? '' : ' (incomplete)'}`);

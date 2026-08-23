@@ -1,3 +1,5 @@
+import type { AltimeterReading } from './altimeter';
+
 /** Shared domain types. Everything user-facing is in plain language (see README). */
 
 export type AirportStatus = 'tracking' | 'queued' | 'requested';
@@ -54,7 +56,7 @@ export interface Position {
 	t: number;
 	lat: number;
 	lon: number;
-	/** Feet MSL (FlightAware reports hundreds of feet; stored expanded). */
+	/** Feet, as reported: standard-pressure altitude in hundreds of feet, stored expanded. Not corrected for the day's pressure. */
 	alt: number;
 	/** Knots. */
 	gs: number;
@@ -125,4 +127,9 @@ export interface NightSummary {
 	incidents: number;
 	/** Whether the night has been fully processed (tracks fetched). */
 	complete: boolean;
+	/** Hourly altimeter settings ([unix ms, inHg]) from the airport's weather reports; null if unavailable. */
+	altimeter?: AltimeterReading[] | null;
+	/** Self-calibration from the tracks: reported altitude of the ground minus field elevation (feet), null if too few tracks. */
+	groundOffsetFt?: number | null;
+	groundTracks?: number | null;
 }
