@@ -77,6 +77,22 @@
 	let holdTimer: ReturnType<typeof setTimeout> | undefined;
 	const visited = new Set<string>();
 	const sortedIncidents = $derived([...incidents].sort((x, y) => x.t - y.t));
+	/** Intervals (as fractions of the span) when at least one airline flight is in the air, merged. */
+	const airlineBands = $derived.by(() => {
+		if (!span) return [] as { from: number; to: number }[];
+		const ivs = flights
+			.filter((f) => f.category === 'airline' && f.positions.length > 1)
+			.map((f) => ({ from: f.positions[0].t, to: f.positions[f.positions.length - 1].t }))
+			.sort((x, y) => x.from - y.from);
+		const merged: { from: number; to: number }[] = [];
+		for (const iv of ivs) {
+			const last = merged[merged.length - 1];
+			if (last && iv.from <= last.to) last.to = Math.max(last.to, iv.to);
+			else merged.push({ ...iv });
+		}
+		const len = span.end - span.start;
+		return merged.map((m) => ({ from: (m.from - span.start) / len, to: (m.to - span.start) / len }));
+	});
 	function tick(now: number) {
 		if (!playing || !span || holding) return;
 		const dt = last ? now - last : 0;
@@ -424,6 +440,9 @@
 			{@html playing ? PAUSE_ICON : atEnd ? REPLAY_ICON : PLAY_ICON}
 		</button>
 		<div class="replay-track">
+			{#each airlineBands as b, i (i)}
+				<span class="replay-band" data-testid="night-airline-band" style="--from: {b.from.toFixed(4)}; --to: {b.to.toFixed(4)}"></span>
+			{/each}
 			<input class="replay-scrubber" data-testid="night-scrubber" type="range" min="0" max={STEPS - 1} step="1" value={step} oninput={scrub} aria-label="Replay position" disabled={!span} />
 			{#if span}
 				{#each sortedIncidents as inc (inc.id)}

@@ -390,6 +390,18 @@ p {
 	cursor: pointer;
 	margin: 0;
 }
+/* Faint band on the scrubber while an airline flight is in the air. */
+.replay-band {
+	position: absolute;
+	top: 50%;
+	height: 10px;
+	margin-top: -5px;
+	background: var(--accent);
+	opacity: 0.18;
+	pointer-events: none;
+	left: calc(8px + (100% - 16px) * var(--from));
+	width: calc((100% - 16px) * (var(--to) - var(--from)));
+}
 /* Red pip on the scrubber at each close approach. The thumb travels from
    half its width in to half its width from the end, so pips are inset the same. */
 .replay-pip {
