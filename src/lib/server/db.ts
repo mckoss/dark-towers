@@ -36,6 +36,7 @@ function migrate(d: Database.Database) {
 		private INTEGER NOT NULL DEFAULT 0,
 		positions INTEGER NOT NULL DEFAULT 0,
 		incidents INTEGER NOT NULL DEFAULT 0,
+		wake_incidents INTEGER NOT NULL DEFAULT 0,
 		complete INTEGER NOT NULL DEFAULT 0,
 		updated_at INTEGER NOT NULL,
 		PRIMARY KEY (airport, night)
@@ -60,6 +61,7 @@ function migrate(d: Database.Database) {
 	CREATE INDEX IF NOT EXISTS flights_night ON flights (airport, night, event_time);
 	CREATE TABLE IF NOT EXISTS incidents (
 		id TEXT PRIMARY KEY,
+		kind TEXT NOT NULL DEFAULT 'separation',
 		airport TEXT NOT NULL,
 		night TEXT NOT NULL,
 		t INTEGER NOT NULL,
@@ -74,7 +76,11 @@ function migrate(d: Database.Database) {
 		gs_a INTEGER NOT NULL DEFAULT 0,
 		gs_b INTEGER NOT NULL DEFAULT 0,
 		pos_a TEXT NOT NULL,
-		pos_b TEXT NOT NULL
+		pos_b TEXT NOT NULL,
+		required_nm REAL,
+		leader_category TEXT,
+		follower_category TEXT,
+		trail_seconds INTEGER
 	);
 	CREATE INDEX IF NOT EXISTS incidents_night ON incidents (airport, night, t);
 	CREATE TABLE IF NOT EXISTS requests (
@@ -98,9 +104,11 @@ function migrate(d: Database.Database) {
 	// Additive migrations for databases created before these columns existed.
 	const cols = (d.prepare(`PRAGMA table_info(incidents)`).all() as { name: string }[]).map((c) => c.name);
 	if (!cols.includes('gs_a')) d.exec(`ALTER TABLE incidents ADD COLUMN gs_a INTEGER NOT NULL DEFAULT 0; ALTER TABLE incidents ADD COLUMN gs_b INTEGER NOT NULL DEFAULT 0;`);
+	if (!cols.includes('kind')) d.exec(`ALTER TABLE incidents ADD COLUMN kind TEXT NOT NULL DEFAULT 'separation'; ALTER TABLE incidents ADD COLUMN required_nm REAL; ALTER TABLE incidents ADD COLUMN leader_category TEXT; ALTER TABLE incidents ADD COLUMN follower_category TEXT; ALTER TABLE incidents ADD COLUMN trail_seconds INTEGER;`);
 	const ncols = (d.prepare(`PRAGMA table_info(nights)`).all() as { name: string }[]).map((c) => c.name);
 	if (!ncols.includes('altimeter')) d.exec(`ALTER TABLE nights ADD COLUMN altimeter TEXT; ALTER TABLE nights ADD COLUMN ground_offset_ft INTEGER; ALTER TABLE nights ADD COLUMN ground_tracks INTEGER;`);
 	if (!ncols.includes('on_field')) d.exec(`ALTER TABLE nights ADD COLUMN on_field TEXT;`);
+	if (!ncols.includes('wake_incidents')) d.exec(`ALTER TABLE nights ADD COLUMN wake_incidents INTEGER NOT NULL DEFAULT 0;`);
 	const rcols = (d.prepare(`PRAGMA table_info(requests)`).all() as { name: string }[]).map((c) => c.name);
 	const fcols = (d.prepare(`PRAGMA table_info(flights)`).all() as { name: string }[]).map((c) => c.name);
 	if (!fcols.includes('airframe')) d.exec(`ALTER TABLE flights ADD COLUMN airframe TEXT;`);
@@ -138,10 +146,10 @@ export function replaceIncidents(airport: string, night: string, incidents: Inci
 	const tx = d.transaction(() => {
 		d.prepare(`DELETE FROM incidents WHERE airport = ? AND night = ?`).run(airport, night);
 		const ins = d.prepare(
-			`INSERT INTO incidents (id, airport, night, t, lateral_nm, vertical_ft, dist_nm, severity, flight_a, flight_b, alt_a, alt_b, gs_a, gs_b, pos_a, pos_b)
-			 VALUES (@id, @airport, @night, @t, @lateralNm, @verticalFt, @distNm, @severity, @flightA, @flightB, @altA, @altB, @gsA, @gsB, @posA, @posB)`
+			`INSERT INTO incidents (id, kind, airport, night, t, lateral_nm, vertical_ft, dist_nm, severity, flight_a, flight_b, alt_a, alt_b, gs_a, gs_b, pos_a, pos_b, required_nm, leader_category, follower_category, trail_seconds)
+			 VALUES (@id, @kind, @airport, @night, @t, @lateralNm, @verticalFt, @distNm, @severity, @flightA, @flightB, @altA, @altB, @gsA, @gsB, @posA, @posB, @requiredNm, @leaderCategory, @followerCategory, @trailSeconds)`
 		);
-		for (const i of incidents) ins.run({ ...i, posA: JSON.stringify(i.posA), posB: JSON.stringify(i.posB) });
+		for (const i of incidents) ins.run({ ...i, kind: i.kind ?? 'separation', requiredNm: i.requiredNm ?? null, leaderCategory: i.leaderCategory ?? null, followerCategory: i.followerCategory ?? null, trailSeconds: i.trailSeconds ?? null, posA: JSON.stringify(i.posA), posB: JSON.stringify(i.posB) });
 	});
 	tx();
 }
@@ -149,15 +157,16 @@ export function replaceIncidents(airport: string, night: string, incidents: Inci
 export function upsertNight(s: NightSummary) {
 	db()
 		.prepare(
-			`INSERT INTO nights (airport, night, flights, arrivals, departures, airline, private, positions, incidents, complete, altimeter, ground_offset_ft, ground_tracks, on_field, updated_at)
-			 VALUES (@airport, @night, @flights, @arrivals, @departures, @airline, @private, @positions, @incidents, @complete, @altimeter, @groundOffsetFt, @groundTracks, @onField, @updatedAt)
+			`INSERT INTO nights (airport, night, flights, arrivals, departures, airline, private, positions, incidents, wake_incidents, complete, altimeter, ground_offset_ft, ground_tracks, on_field, updated_at)
+			 VALUES (@airport, @night, @flights, @arrivals, @departures, @airline, @private, @positions, @incidents, @wakeIncidents, @complete, @altimeter, @groundOffsetFt, @groundTracks, @onField, @updatedAt)
 			 ON CONFLICT(airport, night) DO UPDATE SET flights=excluded.flights, arrivals=excluded.arrivals, departures=excluded.departures,
-			 airline=excluded.airline, private=excluded.private, positions=excluded.positions, incidents=excluded.incidents, complete=excluded.complete,
+			 airline=excluded.airline, private=excluded.private, positions=excluded.positions, incidents=excluded.incidents, wake_incidents=excluded.wake_incidents, complete=excluded.complete,
 			 altimeter=excluded.altimeter, ground_offset_ft=excluded.ground_offset_ft, ground_tracks=excluded.ground_tracks,
 			 on_field=excluded.on_field, updated_at=excluded.updated_at`
 		)
 		.run({
 			...s,
+			wakeIncidents: s.wakeIncidents ?? 0,
 			complete: s.complete ? 1 : 0,
 			altimeter: s.altimeter ? JSON.stringify(s.altimeter) : null,
 			groundOffsetFt: s.groundOffsetFt ?? null,
@@ -211,15 +220,18 @@ export function flightById(id: string): Flight | null {
 }
 
 interface IncidentRow {
-	id: string; airport: string; night: string; t: number; lateral_nm: number; vertical_ft: number; dist_nm: number; severity: string;
+	id: string; kind: string; airport: string; night: string; t: number; lateral_nm: number; vertical_ft: number; dist_nm: number; severity: string;
 	flight_a: string; flight_b: string; alt_a: number; alt_b: number; gs_a: number; gs_b: number; pos_a: string; pos_b: string;
+	required_nm: number | null; leader_category: string | null; follower_category: string | null; trail_seconds: number | null;
 }
 function rowToIncident(r: IncidentRow): Incident {
-	return {
-		id: r.id, airport: r.airport, night: r.night, t: r.t, lateralNm: r.lateral_nm, verticalFt: r.vertical_ft, distNm: r.dist_nm,
+	const incident: Incident = {
+		id: r.id, kind: r.kind as Incident['kind'], airport: r.airport, night: r.night, t: r.t, lateralNm: r.lateral_nm, verticalFt: r.vertical_ft, distNm: r.dist_nm,
 		severity: r.severity as Incident['severity'], flightA: r.flight_a, flightB: r.flight_b, altA: r.alt_a, altB: r.alt_b, gsA: r.gs_a ?? 0, gsB: r.gs_b ?? 0,
 		posA: JSON.parse(r.pos_a), posB: JSON.parse(r.pos_b)
 	};
+	if (r.kind === 'wake-turbulence') Object.assign(incident, { requiredNm: r.required_nm, leaderCategory: r.leader_category, followerCategory: r.follower_category, trailSeconds: r.trail_seconds });
+	return incident;
 }
 
 export function incidentsForNight(airport: string, night: string): Incident[] {
@@ -234,14 +246,15 @@ export function incidentById(id: string): Incident | null {
 }
 
 interface NightRow {
-	airport: string; night: string; flights: number; arrivals: number; departures: number; airline: number; private: number; positions: number; incidents: number; complete: number;
+	airport: string; night: string; flights: number; arrivals: number; departures: number; airline: number; private: number; positions: number; incidents: number; wake_incidents: number; complete: number;
 	altimeter: string | null; ground_offset_ft: number | null; ground_tracks: number | null;
 	on_field: string | null;
 }
 function rowToNight(r: NightRow): NightSummary {
-	const { altimeter, ground_offset_ft, ground_tracks, on_field, ...rest } = r;
+	const { altimeter, ground_offset_ft, ground_tracks, on_field, wake_incidents, ...rest } = r;
 	return {
 		...rest,
+		wakeIncidents: wake_incidents ?? 0,
 		complete: !!r.complete,
 		altimeter: altimeter ? (JSON.parse(altimeter) as AltimeterReading[]) : null,
 		groundOffsetFt: ground_offset_ft ?? null,
@@ -262,22 +275,22 @@ export function latestNight(airport: string): string | null {
 }
 
 export interface Totals {
-	flights: number; airline: number; private: number; incidents: number; nights: number;
+	flights: number; airline: number; private: number; incidents: number; wakeIncidents: number; nights: number;
 }
 export function totalsForAirport(airport: string, fromNight: string, toNight: string): Totals {
 	const r = db()
-		.prepare(`SELECT COALESCE(SUM(flights),0) flights, COALESCE(SUM(airline),0) airline, COALESCE(SUM(private),0) private, COALESCE(SUM(incidents),0) incidents, COUNT(*) nights FROM nights WHERE airport = ? AND night >= ? AND night <= ?`)
+		.prepare(`SELECT COALESCE(SUM(flights),0) flights, COALESCE(SUM(airline),0) airline, COALESCE(SUM(private),0) private, COALESCE(SUM(incidents),0) incidents, COALESCE(SUM(wake_incidents),0) wakeIncidents, COUNT(*) nights FROM nights WHERE airport = ? AND night >= ? AND night <= ?`)
 		.get(airport, fromNight, toNight) as Totals;
 	return r;
 }
 export function totalsAll(fromNight: string, toNight: string): Totals {
 	return db()
-		.prepare(`SELECT COALESCE(SUM(flights),0) flights, COALESCE(SUM(airline),0) airline, COALESCE(SUM(private),0) private, COALESCE(SUM(incidents),0) incidents, COUNT(DISTINCT night) nights FROM nights WHERE night >= ? AND night <= ?`)
+		.prepare(`SELECT COALESCE(SUM(flights),0) flights, COALESCE(SUM(airline),0) airline, COALESCE(SUM(private),0) private, COALESCE(SUM(incidents),0) incidents, COALESCE(SUM(wake_incidents),0) wakeIncidents, COUNT(DISTINCT night) nights FROM nights WHERE night >= ? AND night <= ?`)
 		.get(fromNight, toNight) as Totals;
 }
 export function totalsByAirport(fromNight: string, toNight: string): Record<string, Totals> {
 	const rows = db()
-		.prepare(`SELECT airport, COALESCE(SUM(flights),0) flights, COALESCE(SUM(airline),0) airline, COALESCE(SUM(private),0) private, COALESCE(SUM(incidents),0) incidents, COUNT(*) nights FROM nights WHERE night >= ? AND night <= ? GROUP BY airport`)
+		.prepare(`SELECT airport, COALESCE(SUM(flights),0) flights, COALESCE(SUM(airline),0) airline, COALESCE(SUM(private),0) private, COALESCE(SUM(incidents),0) incidents, COALESCE(SUM(wake_incidents),0) wakeIncidents, COUNT(*) nights FROM nights WHERE night >= ? AND night <= ? GROUP BY airport`)
 		.all(fromNight, toNight) as (Totals & { airport: string })[];
 	const out: Record<string, Totals> = {};
 	for (const r of rows) out[r.airport] = r;

@@ -84,6 +84,7 @@ export function airportsPageData() {
 		stats: {
 			tracked: tracked.length,
 			incidents: tracked.reduce((n, a) => n + (a.stats?.incidents ?? 0), 0),
+			wakeIncidents: tracked.reduce((n, a) => n + (a.stats?.wakeIncidents ?? 0), 0),
 			requested: airports.filter((a) => !a.tracked).length,
 			nights: Math.max(0, ...tracked.map((a) => a.stats?.nights ?? 0))
 		}

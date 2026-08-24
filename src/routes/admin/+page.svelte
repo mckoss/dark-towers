@@ -78,7 +78,7 @@
 			<dt>FAA facility data</dt><dd>{data.nasrCycle ? `NASR cycle ${data.nasrCycle}` : 'not downloaded yet'} · refreshed daily at 04:41</dd>
 			<dt>FAA aircraft registry</dt><dd>{data.registry ? `${data.registry.aircraft.toLocaleString()} aircraft, as of ${data.registry.asOf}` : 'not downloaded yet'} · refreshed monthly</dd>
 			<dt>Scheduler depth</dt><dd>{data.historyDays} nights</dd>
-			<dt>Tracked airports</dt><dd>{data.airports.filter((a) => a.tracked).map((a) => a.code).join(', ') || 'none'} · <a href="/admin/airports">edit airports &amp; tower hours</a> · <a href="/admin/operators">airline names</a></dd>
+			<dt>Tracked airports</dt><dd>{data.airports.filter((a) => a.tracked).map((a) => a.code).join(', ') || 'none'} · <a href="/admin/airports">edit airports &amp; tower hours</a> · <a href="/admin/operators">airline names</a> · <a href="/admin/aircraft">aircraft wake categories</a></dd>
 		</dl>
 	</div>
 </section>

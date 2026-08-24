@@ -16,6 +16,8 @@ import { AIRSPACE_EXIT_NM, AIRSPACE_RADIUS_NM, TRACK_GAP_MS, towerHoursOn } from
 import { getAirport } from './airports-store';
 import { distanceNm, fromLocalNm, toLocalNm } from '$lib/geo';
 import { dropGhosts, findIncidents } from '$lib/separation';
+import { findWakeIncidents } from '$lib/wake';
+import { aircraftCategoryMap } from './aircraft-store';
 import { correctionOffsetAt, groundOffsetFt, hasCorrection, onFieldPoints, type AltCorrection } from '$lib/altimeter';
 import { fetchAltimeter } from './metar';
 import { lookupTail } from './registry';
@@ -116,7 +118,9 @@ async function ingest(airport: AirportConfig, night: string, opts: IngestOptions
 	const altOffset = hasCorrection(correction) ? (t: number) => correctionOffsetAt(correction, t) : undefined;
 
 	// 5. close approaches
-	const incidents = findIncidents(airport.pos, airport.icao, night, flights, { elevationFt: airport.elevationFt, altOffset });
+	const separationIncidents = findIncidents(airport.pos, airport.icao, night, flights, { elevationFt: airport.elevationFt, altOffset });
+	const wakeIncidents = findWakeIncidents(airport.pos, airport.icao, night, flights, aircraftCategoryMap(), { elevationFt: airport.elevationFt, altOffset });
+	const incidents = [...separationIncidents, ...wakeIncidents].sort((a, b) => a.t - b.t);
 
 	// 6. store
 	for (const f of flights) upsertFlight(f);
@@ -131,7 +135,8 @@ async function ingest(airport: AirportConfig, night: string, opts: IngestOptions
 		airline: flights.filter((f) => f.category === 'airline').length,
 		private: flights.filter((f) => f.category === 'private').length,
 		positions: flights.reduce((n, f) => n + f.positions.length, 0),
-		incidents: incidents.length,
+		incidents: separationIncidents.length,
+		wakeIncidents: wakeIncidents.length,
 		complete,
 		altimeter: altimeter && altimeter.length > 0 ? altimeter : null,
 		groundOffsetFt: ground ? Math.round(ground.offsetFt) : null,
@@ -139,12 +144,12 @@ async function ingest(airport: AirportConfig, night: string, opts: IngestOptions
 		onField: onField.length ? onField : null
 	};
 	upsertNight(summary);
-	log(`${airport.icao} ${night}: ${summary.flights} flights, ${summary.positions} positions, ${summary.incidents} close approaches${complete ? '' : ' (incomplete)'}`);
+	log(`${airport.icao} ${night}: ${summary.flights} flights, ${summary.positions} positions, ${summary.incidents} close approaches, ${summary.wakeIncidents} wake events${complete ? '' : ' (incomplete)'}`);
 	return { ...summary, apiCalls, skipped: false };
 }
 
 function emptySummary(airport: string, night: string): NightSummary {
-	return { airport, night, flights: 0, arrivals: 0, departures: 0, airline: 0, private: 0, positions: 0, incidents: 0, complete: false };
+	return { airport, night, flights: 0, arrivals: 0, departures: 0, airline: 0, private: 0, positions: 0, incidents: 0, wakeIncidents: 0, complete: false };
 }
 
 /** Event time per the notebook's rule: actual on/off, falling back to estimates when actuals are bogus. */

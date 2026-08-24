@@ -39,6 +39,14 @@
 		{ k: 'Same clock', v: 'Positions are reported a few seconds apart, at different moments for each aircraft. Each path is smoothed through its reported points and both are read at the same instant, every second, so the distance is between where the aircraft actually were, not between their nearest reports.' },
 		{ k: 'Counted once', v: 'Each pair of flights is counted at most once per night, at the moment they were closest. “Very close” means under 1 nautical mile and under 500 feet at that moment.' }
 	];
+	const wakeCriteria = [
+		{ k: 'Aircraft class', v: 'Each ICAO aircraft type is assigned FAA Consolidated Wake Turbulence (CWT) category A through I. A is the A380; B–D are heavy jets; E is the Boeing 757; F–G are large aircraft; H–I are small aircraft. An unknown type is conservatively Category I as a follower, but can never be the leader that creates a flag.' },
+		{ k: 'In trail', v: 'The follower must be behind the leader, travelling within 15° of the same direction, and pass within 0.50 NM of a point occupied by the leader earlier. Crossing, opposite-direction and merely nearby tracks do not count.' },
+		{ k: 'Height', v: 'The aircraft must be within 2,500 feet vertically, and the follower cannot be more than 1,000 feet below the leader. Both must also pass the same airborne and 10 NM-ring tests used for close approaches.' },
+		{ k: 'Spacing', v: 'The along-track spacing must be below the applicable FAA CWT minimum. On approach: A→B 5 NM; A→C/D 6; A→E/F/G 7; A→H/I 8. B→B 3, C/D 4, E/F/G/H 5, I 6. C→E/F/G 3.5, H 5, I 6. D→B 3, C/D 4, E/F/G 5, H/I 6. E→I and F→I are 4 NM. Blank FAA matrix cells are not flagged.' },
+		{ k: 'Departures', v: 'For two departures the FAA “directly behind” matrix is used: the approach matrix above except B/C/D→I are 5 NM, C→H is 5 NM, D→H is 5 NM, and F→I has no distance minimum. Published same-runway departure time rules (generally 2 minutes, 3 behind an A380 or for certain intersection departures) are not inferred because ADS-B tracks do not reliably identify runway threshold or intersection use.' },
+		{ k: 'Counted separately', v: 'A wake-turbulence event is not called a loss of 3 NM / 1,000 ft separation. It has its own label and count; the same pair can produce one event of each kind when both tests independently apply.' }
+	];
 
 	const limitations = [
 		'Aircraft that do not broadcast ADS-B, or whose signal no receiver picked up, do not appear at all, so these counts are a floor, not a total.',
@@ -106,8 +114,17 @@
 		{/each}
 	</dl>
 	<p class="copy">
-		Not counted, for now: an aircraft sitting on the runway while another lands on it, and a small aircraft following closely behind a much larger one (wake turbulence). Those are governed by different rules than the 3 NM / 1,000 ft standard and need their own tests; see the project's open issues.
+		Not counted: an aircraft sitting on the runway while another lands on it. Wake turbulence is tested separately below because it follows different rules from the 3 NM / 1,000 ft standard.
 	</p>
+</section>
+
+<section class="section cell-lg">
+	<h2 class="section-heading">What counts as a wake-turbulence event</h2>
+	<p class="copy">Dark Towers applies the current terminal CWT “directly behind” and “on approach” matrices in FAA Order JO 7110.65BB, section 5-5-4. The detector deliberately does not apply the reduced 2.5 NM final-approach rule or the 1.5 NM / 500 ft Class B/C VFR-to-IFR provisions: those are facility- and operation-specific exceptions that this data cannot establish. The same deterministic test is applied once per second.</p>
+	<dl class="criteria wake-criteria">
+		{#each wakeCriteria as c (c.k)}<dt>{c.k}</dt><dd>{c.v}</dd>{/each}
+	</dl>
+	<p class="copy">Controller criteria: <a href="https://www.faa.gov/air_traffic/publications/atpubs/atc_html/chap5_section_5.html">FAA JO 7110.65BB §5-5-4</a>. Departure timing rules: <a href="https://www.faa.gov/air_traffic/publications/atpubs/atc_html/chap3_section_9.html">§3-9-6</a>. Wake procedures and cautionary advisories: <a href="https://www.faa.gov/air_traffic/publications/atpubs/atc_html/chap2_section_1.html">§§2-1-19–20</a>.</p>
 </section>
 
 <section class="section halves">

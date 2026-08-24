@@ -22,7 +22,7 @@ function flight(id: string, over: Partial<Flight> = {}): Flight {
 }
 function incident(id: string, a: string, b: string, over: Partial<Incident> = {}): Incident {
 	return {
-		id, airport: 'KPAE', night: '2026-08-14', t: Date.UTC(2026, 7, 15, 5, 10), lateralNm: 0.5, verticalFt: 100, distNm: 1.2,
+		id, kind: 'separation', airport: 'KPAE', night: '2026-08-14', t: Date.UTC(2026, 7, 15, 5, 10), lateralNm: 0.5, verticalFt: 100, distNm: 1.2,
 		severity: 'very-close', flightA: a, flightB: b, altA: 2000, altB: 2100, gsA: 120, gsB: 130, posA: [47.9, -122.28], posB: [47.91, -122.28], ...over
 	};
 }
@@ -125,10 +125,10 @@ describe('nights', () => {
 		upsertNight(night('2026-08-12', { flights: 4, airline: 2, private: 2, incidents: 2 }));
 		upsertNight(night('2026-08-13', { flights: 8, airline: 0, private: 8, incidents: 0 }));
 		upsertNight(night('2026-08-12', { airport: 'KBLI', flights: 100, airline: 50, private: 50, incidents: 9 }));
-		expect(totalsForAirport('KPAE', '2026-08-11', '2026-08-12')).toEqual({ flights: 6, airline: 3, private: 3, incidents: 3, nights: 2 });
-		expect(totalsForAirport('KPAE', '2026-08-10', '2026-08-13')).toEqual({ flights: 15, airline: 4, private: 11, incidents: 3, nights: 4 });
-		expect(totalsForAirport('KPAE', '2026-09-01', '2026-09-30')).toEqual({ flights: 0, airline: 0, private: 0, incidents: 0, nights: 0 });
-		expect(totalsAll('2026-08-12', '2026-08-12')).toEqual({ flights: 104, airline: 52, private: 52, incidents: 11, nights: 1 });
+		expect(totalsForAirport('KPAE', '2026-08-11', '2026-08-12')).toEqual({ flights: 6, airline: 3, private: 3, incidents: 3, wakeIncidents: 0, nights: 2 });
+		expect(totalsForAirport('KPAE', '2026-08-10', '2026-08-13')).toEqual({ flights: 15, airline: 4, private: 11, incidents: 3, wakeIncidents: 0, nights: 4 });
+		expect(totalsForAirport('KPAE', '2026-09-01', '2026-09-30')).toEqual({ flights: 0, airline: 0, private: 0, incidents: 0, wakeIncidents: 0, nights: 0 });
+		expect(totalsAll('2026-08-12', '2026-08-12')).toEqual({ flights: 104, airline: 52, private: 52, incidents: 11, wakeIncidents: 0, nights: 1 });
 		const by = totalsByAirport('2026-08-01', '2026-08-31');
 		expect(by.KBLI.flights).toBe(100);
 		expect(by.KPAE.nights).toBe(4);

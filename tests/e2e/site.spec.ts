@@ -158,7 +158,7 @@ test.describe('airport detail', () => {
 
 	test('a night without close approaches shows the honest empty state', async ({ page }) => {
 		await page.goto('/airport/PAE?night=2026-08-16');
-		await expect(page.getByText(/No two aircraft came within 3 nautical miles/)).toBeVisible();
+		await expect(page.getByText(/No separation or wake-turbulence events were detected/)).toBeVisible();
 	});
 
 	test('can step back through calendar-month windows and return to the last 30 days', async ({ page }) => {
@@ -251,7 +251,8 @@ test.describe('method', () => {
 		await expect(page.getByText('Known limitations')).toBeVisible();
 		// The exact test is spelled out, condition by condition.
 		await expect(page.getByRole('heading', { name: 'What counts as a close approach' })).toBeVisible();
-		await expect(page.locator('.criteria dt')).toHaveCount(8);
+		await expect(page.locator('.criteria dt')).toHaveCount(14);
+		await expect(page.getByRole('heading', { name: 'What counts as a wake-turbulence event' })).toBeVisible();
 		await expect(page.getByText(/more than 150 feet above the field/)).toBeVisible();
 		await expect(page.locator('#who-we-are')).toBeVisible();
 		await expect(page.getByRole('link', { name: 'mckoss@gmail.com' })).toHaveAttribute('href', /^mailto:mckoss@gmail\.com/);

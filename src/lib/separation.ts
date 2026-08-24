@@ -171,7 +171,8 @@ export function findIncidents(origin: LatLon, airportIcao: string, night: string
 			const posB = fromLocalNm(origin, [cp.b[0], cp.b[1]]);
 			const mid: LatLon = [(posA[0] + posB[0]) / 2, (posA[1] + posB[1]) / 2];
 			out.push({
-				id: incidentId(airportIcao, night, A.flight.id, B.flight.id),
+				id: incidentId(airportIcao, night, A.flight.id, B.flight.id, 'separation'),
+				kind: 'separation',
 				airport: airportIcao,
 				night,
 				t: cp.t,
@@ -195,10 +196,12 @@ export function findIncidents(origin: LatLon, airportIcao: string, night: string
 }
 
 /** Stable id: same inputs always yield the same incident id. */
-export function incidentId(airport: string, night: string, a: string, b: string): string {
+export function incidentId(airport: string, night: string, a: string, b: string, kind = 'separation'): string {
 	const [x, y] = [a, b].sort();
 	let h = 2166136261;
-	for (const ch of `${airport}|${night}|${x}|${y}`) {
+	// Preserve every published separation-event URL; only the new event kind
+	// needs a suffix to avoid colliding with the same pair's separation event.
+	for (const ch of `${airport}|${night}|${x}|${y}${kind === 'separation' ? '' : `|${kind}`}`) {
 		h ^= ch.charCodeAt(0);
 		h = Math.imul(h, 16777619);
 	}

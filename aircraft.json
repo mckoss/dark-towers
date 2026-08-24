@@ -1,0 +1,32 @@
+{
+  "$comment": "FAA CWT categories used by JO 7110.65BB. The database is authoritative after first seed.",
+  "aircraft": [
+    { "type": "A388", "category": "A", "description": "Airbus A380-800" },
+    { "type": "B744", "category": "B", "description": "Boeing 747-400" },
+    { "type": "B748", "category": "B", "description": "Boeing 747-8" },
+    { "type": "B772", "category": "B", "description": "Boeing 777-200" },
+    { "type": "B773", "category": "B", "description": "Boeing 777-300" },
+    { "type": "B77L", "category": "B", "description": "Boeing 777-200LR/F" },
+    { "type": "B77W", "category": "B", "description": "Boeing 777-300ER" },
+    { "type": "B788", "category": "B", "description": "Boeing 787-8" },
+    { "type": "B789", "category": "B", "description": "Boeing 787-9" },
+    { "type": "B78X", "category": "D", "description": "Boeing 787-10" },
+    { "type": "B752", "category": "E", "description": "Boeing 757-200" },
+    { "type": "B753", "category": "E", "description": "Boeing 757-300" },
+    { "type": "B737", "category": "F", "description": "Boeing 737-700" },
+    { "type": "B738", "category": "F", "description": "Boeing 737-800" },
+    { "type": "B739", "category": "F", "description": "Boeing 737-900" },
+    { "type": "E170", "category": "G", "description": "Embraer 170" },
+    { "type": "E75L", "category": "G", "description": "Embraer 175" },
+    { "type": "C208", "category": "H", "description": "Cessna 208 Caravan" },
+    { "type": "PC12", "category": "H", "description": "Pilatus PC-12" },
+    { "type": "SW4", "category": "H", "description": "Swearingen Metro" },
+    { "type": "C150", "category": "I", "description": "Cessna 150" },
+    { "type": "C152", "category": "I", "description": "Cessna 152" },
+    { "type": "C172", "category": "I", "description": "Cessna 172" },
+    { "type": "C182", "category": "I", "description": "Cessna 182" },
+    { "type": "P28A", "category": "I", "description": "Piper PA-28" },
+    { "type": "SR22", "category": "I", "description": "Cirrus SR22" },
+    { "type": "S22T", "category": "I", "description": "Cirrus SR22T" }
+  ]
+}
