@@ -31,9 +31,33 @@ describe('buildNasr', () => {
 			'XYZ,,CLOSED FIELD,NOWHERE,CA,0,0,0,,A,CP'
 		].join('\n');
 		const atc = ['FACILITY_ID,FACILITY_TYPE,TWR_HRS,ICAO_ID', 'PAE,ATCT,0700-2100,KPAE', 'SEA,ATCT,24,KSEA'].join('\n');
-		const d = buildNasr('2026-08-06', apt, atc);
+		const runways = [
+			'ARPT_ID,RWY_ID,RWY_LEN,RWY_WIDTH,SURFACE_TYPE_CODE',
+			'PAE,16R/34L,9010,150,ASPH-CONC',
+			'MMH,09/27,7000,100,ASPH'
+		].join('\n');
+		const runwayEnds = [
+			'ARPT_ID,RWY_ID,RWY_END_ID,LAT_DECIMAL,LONG_DECIMAL',
+			'PAE,16R/34L,16R,47.913,-122.286',
+			'PAE,16R/34L,34L,47.888,-122.285',
+			'MMH,09/27,09,37.624,-118.851',
+			'MMH,09/27,27,37.624,-118.826'
+		].join('\n');
+		const d = buildNasr('2026-08-06', apt, atc, runways, runwayEnds);
 		expect(Object.keys(d.airports).sort()).toEqual(['MMH', 'PAE', 'SEA']);
 		expect(d.airports.PAE).toMatchObject({ icao: 'KPAE', tower: 'part-time', towerHours: '0700-2100', elevFt: 607, part139: true });
+		expect(d.airports.PAE.runways).toEqual([
+			{
+				id: '16R/34L',
+				ends: [
+					{ id: '16R', pos: [47.913, -122.286] },
+					{ id: '34L', pos: [47.888, -122.285] }
+				],
+				lengthFt: 9010,
+				widthFt: 150,
+				surface: 'ASPH-CONC'
+			}
+		]);
 		expect(d.airports.SEA.tower).toBe('full-time');
 		expect(d.airports.MMH).toMatchObject({ tower: 'none', towerHours: '' });
 		expect(towerKindOf('ATCT-TRACON', '0600-2300')).toBe('part-time');

@@ -7,7 +7,7 @@
 	import { aircraftKind, assignLanes, glyphHtml, MILITARY_BLUE, silhouetteFor } from '$lib/replay';
 	import { SEPARATION_LATERAL_NM, SEPARATION_VERTICAL_FT } from '$lib/airports';
 	import { distanceNm } from '$lib/geo';
-	import type { Incident } from '$lib/types';
+	import type { Incident, Runway } from '$lib/types';
 	/*
 	 * Flight-path map (README "Maps → Flight-path map"). Leaflet base map from
 	 * $lib/leaflet (CARTO tiles, 10 NM ring, field marker, fitted bounds); each
@@ -35,10 +35,12 @@
 		incidents?: Incident[];
 		/** Show the whole-night replay controls under the map. */
 		replay?: boolean;
+		/** FAA runway geometry for the airport at the center of the map. */
+		runways?: Runway[];
 		onfocus?: (id: string | null) => void;
 	}
 
-	let { center, flights, focus = null, height = 520, tiles = 'carto', alt = NO_CORRECTION, tz = 'UTC', incidents = [], replay = false, onfocus }: Props = $props();
+	let { center, flights, focus = null, height = 520, tiles = 'carto', alt = NO_CORRECTION, tz = 'UTC', incidents = [], replay = false, runways = [], onfocus }: Props = $props();
 
 	const SAMPLE_MS = 2000;
 
@@ -431,7 +433,7 @@
 			const mod = await import('$lib/leaflet');
 			if (cancelled) return;
 			L = mod.L;
-			base = mod.createBaseMap(el, center, { tiles, radiusNm: 10 });
+			base = mod.createBaseMap(el, center, { tiles, radiusNm: 10, runways });
 			base.map.on('zoomstart', () => {
 				mapZooming = true;
 			});

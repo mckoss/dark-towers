@@ -194,7 +194,7 @@
 			const mod = await import('$lib/leaflet');
 			if (cancelled || !replay) return;
 			L = mod.L;
-			base = mod.createBaseMap(mapEl, airport.pos, { tiles, interactive: false });
+			base = mod.createBaseMap(mapEl, airport.pos, { tiles, interactive: false, runways: airport.runways });
 			const map = base.map;
 
 			// Each aircraft's full path, dashed.
