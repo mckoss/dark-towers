@@ -19,8 +19,8 @@ export const TOKENS = {
 	ink25: '#bab6b6',
 	accent: '#ec3013',
 	accentText: '#ae1800',
-	runway: '#f0a500',
-	runwayEdge: '#5d3c00'
+	runway: '#6f9fbd',
+	runwayFill: '#a8c7da'
 };
 
 export interface BaseMapOptions {
@@ -76,11 +76,11 @@ export function createBaseMap(el: HTMLElement, center: LatLon, opts: BaseMapOpti
 	for (const runway of opts.runways ?? []) {
 		L.polygon(runwayOutline(runway), {
 			className: 'runway-surface',
-			color: TOKENS.runwayEdge,
-			weight: 2,
-			opacity: 0.95,
-			fillColor: TOKENS.runway,
-			fillOpacity: 0.82,
+			color: TOKENS.runway,
+			weight: 1,
+			opacity: 0.55,
+			fillColor: TOKENS.runwayFill,
+			fillOpacity: 0.58,
 			lineCap: 'square',
 			lineJoin: 'miter',
 			interactive: false
@@ -90,18 +90,10 @@ export function createBaseMap(el: HTMLElement, center: LatLon, opts: BaseMapOpti
 		// screen width at the 10 NM overview scale. The geographic polygon above
 		// still expands to its true declared width as the reader zooms in.
 		L.polyline(centerline, {
-			className: 'runway-casing',
-			color: TOKENS.runwayEdge,
-			weight: 8,
-			opacity: 0.95,
-			lineCap: 'butt',
-			interactive: false
-		}).addTo(map);
-		L.polyline(centerline, {
 			className: 'runway-highlight',
 			color: TOKENS.runway,
-			weight: 5,
-			opacity: 1,
+			weight: 7,
+			opacity: 0.72,
 			lineCap: 'butt',
 			interactive: false
 		}).addTo(map);

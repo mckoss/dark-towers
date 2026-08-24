@@ -55,8 +55,7 @@
 	.runway {
 		width: 20px;
 		height: 5px;
-		background: #f0a500;
-		border: 1px solid #5d3c00;
+		background: rgb(111 159 189 / 72%);
 	}
 	.ring {
 		width: 10px;

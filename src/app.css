@@ -283,14 +283,13 @@ p {
 	display: block;
 	transform: translate(-50%, -50%);
 	padding: 2px 4px;
-	background: #5d3c00;
-	border: 1px solid #f0a500;
-	color: #fff7e0;
+	background: rgb(168 199 218 / 90%);
+	color: #234c66;
 	font: 800 10px/1 var(--font);
 	letter-spacing: 0.04em;
 	white-space: nowrap;
 	pointer-events: none;
-	box-shadow: 0 1px 2px rgb(32 30 29 / 35%);
+	box-shadow: 0 1px 2px rgb(35 76 102 / 22%);
 }
 
 .datablock {
