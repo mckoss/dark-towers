@@ -280,11 +280,11 @@ test.describe('airport detail', () => {
 
 	test('flight log links seek a shareable whole-night replay and leave it paused', async ({ page }) => {
 		await page.goto(`/airport/PAE?night=${NIGHT_WITH_INCIDENTS}`);
-		const flight = page.locator('section.log a.row').first();
+		const flight = page.locator('section.log a.row-link').first();
 		const href = await flight.getAttribute('href');
 		expect(href).toMatch(/^\?night=2026-08-17&t=\d+#night-replay$/);
 		const requested = new URL(href!, 'http://localhost').searchParams.get('t');
-		await flight.click();
+		await flight.click({ position: { x: 5, y: 5 } });
 		await expect(page).toHaveURL(new RegExp(`night=${NIGHT_WITH_INCIDENTS}&t=${requested}#night-replay`));
 		await expect(page.getByTestId('night-play')).toHaveAttribute('aria-label', 'Play');
 		await expect(page.getByTestId('night-time')).toHaveAttribute('data-t', requested!);
@@ -383,6 +383,34 @@ test.describe('airport detail', () => {
 	});
 });
 
+test.describe('aircraft', () => {
+	test('identity popover links to FAA details and Dark Towers history', async ({ page }) => {
+		await page.goto(`/airport/PAE?night=${NIGHT_WITH_INCIDENTS}`);
+		const identity = page.locator('a.identity-link[href="/aircraft/N456LF"]').first();
+		await identity.focus();
+		await expect(identity.locator('..').getByRole('tooltip')).toContainText('EVERETT ROTOR LLC');
+		await identity.click();
+		await expect(page).toHaveURL(/\/aircraft\/N456LF$/);
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('N456LF');
+		await expect(page.getByText('EVERETT ROTOR LLC')).toBeVisible();
+		await expect(page.getByText('EVERETT, WA')).toBeVisible();
+		expect(await page.locator('main').textContent()).not.toMatch(/100 OMITTED|98201/);
+		await expect(page.getByRole('link', { name: 'View on FlightAware' })).toHaveAttribute('href', 'https://www.flightaware.com/resources/registration/N456LF');
+		const red = page.getByTestId('aircraft-sighting').filter({ has: page.getByRole('link', { name: 'Close approach' }) });
+		await expect(red.first()).toHaveCSS('background-color', 'rgb(255, 242, 239)');
+		await expect(red.first().getByRole('link', { name: 'Watch flight' })).toHaveAttribute('href', /\/airport\/PAE\?night=.*&t=\d+#night-replay/);
+	});
+
+	test('history is newest first and unknown registrations are 404', async ({ page }) => {
+		await page.goto('/aircraft/N11571');
+		const times = await page.getByTestId('aircraft-sighting').evaluateAll((rows) => rows.map((row) => Number(row.getAttribute('data-event-time'))));
+		expect(times.length).toBeGreaterThan(1);
+		expect(times).toEqual([...times].sort((a, b) => b - a));
+		const response = await page.goto('/aircraft/N999ZZ');
+		expect(response?.status()).toBe(404);
+	});
+});
+
 test.describe('close approach', () => {
 	test('opens from a card with an interactive, paused replay', async ({ page }) => {
 		await page.goto(`/airport/PAE?night=${NIGHT_WITH_INCIDENTS}`);
@@ -422,6 +450,8 @@ test.describe('close approach', () => {
 		const replayLabels = page.locator('.replay-label .db-id');
 		await expect(replayLabels.nth(0)).toContainText(' · ');
 		await expect(replayLabels.nth(1)).toContainText(' · ');
+		const aircraftLink = page.locator('.replay-label .db-identity a[href^="/aircraft/N"]').first();
+		await expect(aircraftLink).toBeVisible();
 		await expect(page.locator('.replay-label .db-plain').first()).toContainText(/ft AGL/);
 		const atcLine = page.locator('.replay-label-offset.visible .db-atc').first();
 		await expect(atcLine).toBeVisible();

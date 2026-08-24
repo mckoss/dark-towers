@@ -18,6 +18,15 @@ export interface DataBlockInput {
 	trend?: number;
 	/** Local time at this position, already formatted (e.g. "9:36:50 pm"); shown as a last line when given. */
 	time?: string;
+	/** Optional current-registry link and compact facts for the identity line. */
+	aircraft?: {
+		href: string;
+		registration: string;
+		description: string;
+		ownerName?: string | null;
+		ownerLocation?: string | null;
+		asOf?: string | null;
+	};
 }
 
 export function altitudeHundreds(altFt: number): string {
@@ -46,7 +55,12 @@ function esc(s: string): string {
 export function dataBlockHtml(d: DataBlockInput, color: string): string {
 	const [l1, l2, l3] = dataBlockLines(d);
 	const time = d.time ? `<div class="db-time">${esc(d.time)}</div>` : '';
-	return `<div class="datablock" style="--db-color:${color}"><div class="db-id">${esc(l1)}</div><div class="db-atc">${esc(l2)}</div><div class="db-plain">${esc(l3)}</div>${time}</div>`;
+	const owner = d.aircraft?.ownerName ? `<span>Registered to ${esc(d.aircraft.ownerName)}</span>` : '';
+	const location = d.aircraft?.ownerLocation ? `<span>${esc(d.aircraft.ownerLocation)}</span>` : '';
+	const identity = d.aircraft
+		? `<span class="db-identity"><a href="${esc(d.aircraft.href)}">${esc(l1)}</a><span class="db-aircraft-popover" role="tooltip"><strong>${esc(d.aircraft.registration)} · ${esc(d.aircraft.description)}</strong>${owner}${location}${d.aircraft.asOf ? `<span class="as-of">FAA registry · ${esc(d.aircraft.asOf)}</span>` : ''}</span></span>`
+		: esc(l1);
+	return `<div class="datablock" style="--db-color:${color}"><div class="db-id">${identity}</div><div class="db-atc">${esc(l2)}</div><div class="db-plain">${esc(l3)}</div>${time}</div>`;
 }
 
 /** Vertical trend from a vertical speed in ft/s; below ±1.5 ft/s (~±100 fpm) counts as level. */
