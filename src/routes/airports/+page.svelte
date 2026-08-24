@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { towerHoursLabel } from '$lib/airports';
-	import type { AirportWithStats } from '$lib/server/queries';
+	import type { AirportListRow } from '$lib/server/queries';
 	import type { AirportStatus } from '$lib/types';
 	import type { ActionData, PageData } from './$types';
 
@@ -10,9 +9,9 @@
 	const statusLabel: Record<AirportStatus, string> = { tracking: 'Tracking', requested: 'Requested' };
 	const statusClass: Record<AirportStatus, string> = { tracking: 'pill-accent', requested: 'pill-ghost' };
 
-	const incidents = (a: AirportWithStats) => (a.stats ? String(a.stats.incidents) : '—');
-	const flights = (a: AirportWithStats) => (a.stats ? String(a.stats.flights) : '—');
-	const hasIncidents = (a: AirportWithStats) => (a.stats?.incidents ?? 0) > 0;
+	const incidents = (a: AirportListRow) => (a.stats ? String(a.stats.incidents) : '—');
+	const flights = (a: AirportListRow) => (a.stats ? String(a.stats.flights) : '—');
+	const hasIncidents = (a: AirportListRow) => (a.stats?.incidents ?? 0) > 0;
 	const candidate = $derived(form?.candidate ?? data.candidate);
 	const matches = $derived(form?.matches ?? []);
 	const requestError = $derived(form?.error ?? data.requestError);
@@ -74,8 +73,8 @@
 					<a class="row tracked" href="/airport/{a.code}" title="Open the {a.code} record">
 						<div class="code">{a.code}</div>
 						<div class="name">{a.name}</div>
-						<div class="dim city">{a.city}, {a.state}<span class="m-hours"> · {towerHoursLabel(a)}</span></div>
-						<div class="dim hours">{towerHoursLabel(a)}</div>
+						<div class="dim city">{a.city}, {a.state}<span class="m-hours"> · {a.towerLabel}</span></div>
+						<div class="dim hours">{a.towerLabel}</div>
 						<div class="tabular num">{flights(a)}</div>
 						<div class="inc tabular" class:accent={hasIncidents(a)} class:muted={!hasIncidents(a)}>{incidents(a)}</div>
 						<div><span class="pill {statusClass[a.status]}">{statusLabel[a.status]}</span></div>
@@ -85,8 +84,8 @@
 					<div class="row inert">
 						<div class="code">{a.code}</div>
 						<div class="name">{a.name}</div>
-						<div class="dim city">{a.city}, {a.state}<span class="m-hours"> · {towerHoursLabel(a)}</span></div>
-						<div class="dim hours">{towerHoursLabel(a)}</div>
+						<div class="dim city">{a.city}, {a.state}<span class="m-hours"> · {a.towerLabel}</span></div>
+						<div class="dim hours">{a.towerLabel}</div>
 						<div class="tabular num">{flights(a)}</div>
 						<div class="inc tabular" class:accent={hasIncidents(a)} class:muted={!hasIncidents(a)}>{incidents(a)}</div>
 						<div><span class="pill {statusClass[a.status]}">{statusLabel[a.status]}</span></div>
