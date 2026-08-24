@@ -13,6 +13,9 @@
 	const incidents = (a: AirportWithStats) => (a.stats ? String(a.stats.incidents) : '—');
 	const flights = (a: AirportWithStats) => (a.stats ? String(a.stats.flights) : '—');
 	const hasIncidents = (a: AirportWithStats) => (a.stats?.incidents ?? 0) > 0;
+	const candidate = $derived(form?.candidate ?? data.candidate);
+	const requestError = $derived(form?.error ?? data.requestError);
+	const signInHref = $derived(candidate ? `/auth/google?next=${encodeURIComponent(`/airports?request=${candidate.id}#request-airport`)}` : '');
 </script>
 
 <svelte:head>
@@ -94,20 +97,48 @@
 	</div>
 </section>
 
-<section class="section field split request">
+<section class="section field split request" id="request-airport">
 	<div class="cell-lg">
 		<h2 class="poster">If your airport has passenger flights and part-time or no-time tower service, put it on the map.</h2>
 	</div>
 	<div class="cell-lg">
 		{#if form?.submitted}
 			<div class="confirm" data-testid="request-ok">{form.message}</div>
+		{:else if candidate}
+			<div class="candidate" data-testid="request-candidate">
+				<div class="kicker">Confirm the FAA record</div>
+				<h3>{candidate.id} · {candidate.name}</h3>
+				<dl>
+					<dt>Location</dt><dd>{candidate.city}, {candidate.state}</dd>
+					<dt>Codes</dt><dd>{candidate.id}{candidate.icao ? ` · ${candidate.icao}` : ''}</dd>
+					<dt>Elevation</dt><dd>{candidate.elevFt.toLocaleString()} ft</dd>
+					<dt>Tower</dt><dd>{candidate.towerLabel}</dd>
+					<dt>Passenger service</dt><dd>FAA Part 139 air-carrier airport</dd>
+				</dl>
+				<p class="candidate-note">This airport is not already listed and meets the tower and passenger-service checks. Confirm the record above to continue; these airport details cannot be edited.</p>
+				{#if data.user}
+					<form method="POST" action="?/submit" use:enhance>
+						<input type="hidden" name="code" value={candidate.id} />
+						<label>Your name <input type="text" name="name" value={data.user.name ?? ''} maxlength="120" autocomplete="name" required /></label>
+						<label>Verified email <output>{data.user.email}</output></label>
+						<label>Comment (optional) <textarea name="comment" maxlength="2000" rows="4" placeholder="Tell us anything useful about passenger service or tower hours"></textarea></label>
+						<button type="submit" class="btn btn-ink">Submit airport request</button>
+					</form>
+				{:else if data.googleConfigured}
+					<p class="candidate-note">Google sign-in is required before submitting so the request includes a verified email address.</p>
+					<a class="btn btn-ink" href={signInHref}>Continue with Google</a>
+				{:else}
+					<div class="confirm error" role="alert">Google sign-in is temporarily unavailable, so this request cannot be submitted yet.</div>
+				{/if}
+				<a class="lookup-again" href="/airports#request-airport">Look up a different airport</a>
+				{#if requestError}<div class="confirm error" role="alert">{requestError}</div>{/if}
+			</div>
 		{:else}
-			<form method="POST" use:enhance>
+			<form method="POST" action="?/lookup" use:enhance>
 				<input type="text" name="value" placeholder="Airport code, or city and state" maxlength="120" required aria-label="Airport code, or city and state" />
-				<input type="email" name="email" placeholder="Email (optional)" maxlength="200" aria-label="Email (optional)" />
-				<button type="submit" class="btn btn-ink">Send request</button>
-				{#if form?.error}
-					<div class="confirm error" role="alert">{form.error}</div>
+				<button type="submit" class="btn btn-ink">Look up airport</button>
+				{#if requestError}
+					<div class="confirm error" role="alert">{requestError}</div>
 				{/if}
 			</form>
 		{/if}
@@ -219,7 +250,7 @@
 		flex-direction: column;
 		gap: 12px;
 	}
-	input {
+	input, textarea, output {
 		width: 100%;
 		padding: 14px;
 		border: 2px solid transparent;
@@ -228,12 +259,21 @@
 		font-family: inherit;
 		font-size: 15px;
 	}
+	textarea { resize: vertical; }
+	output { display: block; background: rgba(255, 255, 255, 0.65); }
 	input::placeholder {
 		color: var(--ink-45);
 	}
+	form label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 	form .btn {
 		align-self: flex-start;
 	}
+	.candidate h3 { margin-top: 8px; font-size: 24px; line-height: 1.1; }
+	.candidate dl { display: grid; grid-template-columns: max-content 1fr; gap: 7px 18px; margin: 18px 0 0; font-size: 14px; }
+	.candidate dt { color: var(--ink-60); }
+	.candidate dd { margin: 0; font-weight: 650; }
+	.candidate-note { margin: 16px 0; font-size: 13px; line-height: 1.5; }
+	.lookup-again { display: inline-block; margin-top: 16px; color: inherit; font-size: 13px; text-decoration: underline; }
 	.confirm {
 		padding: 16px 18px;
 		background: rgba(255, 255, 255, 0.18);

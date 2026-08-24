@@ -7,7 +7,7 @@ const dbm = await import('$lib/server/db');
 const {
 	openMemoryDb, upsertFlight, replaceIncidents, upsertNight, totalsForAirport, latestNight, flightById, flightsForNight,
 	incidentsForNight, incidentById, incidentsForAirport, nightSummary, nightsForAirport, totalsAll, totalsByAirport,
-	recordRunStart, recordRunEnd, insertRequest
+	recordRunStart, recordRunEnd, insertRequest, listRequests, requestExists
 } = dbm;
 
 function pos(t: number, alt = 2000): Position {
@@ -156,7 +156,11 @@ describe('runs and requests', () => {
 	});
 	it('stores requests', () => {
 		insertRequest('KXYZ', null);
-		insertRequest('Somewhere', 'a@b.c');
+		insertRequest('ABC', 'verified@example.com', 'ABC', 'none: no tower', 'Ada Reader', 'Please add this airport.');
 		expect(dbm.db().prepare('SELECT COUNT(*) n FROM requests').get()).toEqual({ n: 2 });
+		expect(listRequests()[0]).toMatchObject({ code: 'ABC', email: 'verified@example.com', name: 'Ada Reader', comment: 'Please add this airport.' });
+		expect(requestExists('abc')).toBe(true);
+		expect(requestExists('KXYZ')).toBe(true);
+		expect(requestExists('NOPE')).toBe(false);
 	});
 });

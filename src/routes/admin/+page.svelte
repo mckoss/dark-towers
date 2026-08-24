@@ -181,9 +181,9 @@
 <section class="section cell">
 	<h2 class="section-heading">Airport requests ({data.requests.length})</h2>
 	<div class="grid requests">
-		<div class="table-header">When</div><div class="table-header">Request</div><div class="table-header">FAA tower record</div><div class="table-header">Email</div><div></div>
+		<div class="table-header">When</div><div class="table-header">Request</div><div class="table-header">FAA tower record</div><div class="table-header">Requester</div><div class="table-header">Comment</div><div></div>
 		{#each data.requests as r (r.id)}
-			<div class="tabular">{when(r.created_at)}</div><div>{r.value}{#if r.code && r.code !== r.value} <span class="muted-text">→ {r.code}</span>{/if}</div><div class="tabular">{r.assessment ?? '—'}</div><div>{r.email ?? '—'}</div>
+			<div class="tabular">{when(r.created_at)}</div><div>{r.value}{#if r.code && r.code !== r.value} <span class="muted-text">→ {r.code}</span>{/if}</div><div class="tabular">{r.assessment ?? '—'}</div><div>{r.name ?? '—'}<br /><span class="muted-text">{r.email ?? '—'}</span></div><div>{r.comment ?? '—'}</div>
 			<div class="request-actions">
 				<form method="POST" action="?/acceptRequest" use:enhance><input type="hidden" name="id" value={r.id} /><button class="link-btn" type="submit">review &amp; accept</button></form>
 				<form method="POST" action="?/deleteRequest" use:enhance><input type="hidden" name="id" value={r.id} /><button class="link-btn muted-text" type="submit">delete</button></form>
@@ -225,7 +225,7 @@
 	.mono { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; color: var(--ink-60); }
 	.altcheck { grid-template-columns: 70px 100px 100px 80px 120px 110px 110px; max-height: 320px; overflow: auto; }
 	.problems { grid-template-columns: 170px 70px 110px 60px 1fr; }
-	.requests { grid-template-columns: 170px 1fr 1fr 1fr 150px; }
+	.requests { grid-template-columns: 170px 0.7fr 1fr 1fr 1.5fr 150px; }
 	.request-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
 	.request-candidate { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1.5fr auto; gap: 24px; align-items: center; padding: 16px; border: 2px solid var(--ink); background: var(--ground-alt); }
 	.msg { color: var(--ink-60); }

@@ -81,6 +81,8 @@ function migrate(d: Database.Database) {
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		value TEXT NOT NULL,
 		email TEXT,
+		name TEXT,
+		comment TEXT,
 		created_at INTEGER NOT NULL
 	);
 	CREATE TABLE IF NOT EXISTS runs (
@@ -103,6 +105,8 @@ function migrate(d: Database.Database) {
 	const fcols = (d.prepare(`PRAGMA table_info(flights)`).all() as { name: string }[]).map((c) => c.name);
 	if (!fcols.includes('airframe')) d.exec(`ALTER TABLE flights ADD COLUMN airframe TEXT;`);
 	if (!rcols.includes('code')) d.exec(`ALTER TABLE requests ADD COLUMN code TEXT; ALTER TABLE requests ADD COLUMN assessment TEXT;`);
+	if (!rcols.includes('name')) d.exec(`ALTER TABLE requests ADD COLUMN name TEXT;`);
+	if (!rcols.includes('comment')) d.exec(`ALTER TABLE requests ADD COLUMN comment TEXT;`);
 }
 
 /* ---------- writes (all upserts → idempotent) ---------- */
@@ -171,8 +175,12 @@ export function recordRunEnd(id: number, ok: boolean, message: string) {
 	db().prepare(`UPDATE runs SET finished_at = ?, ok = ?, message = ? WHERE id = ?`).run(Date.now(), ok ? 1 : 0, message, id);
 }
 
-export function insertRequest(value: string, email: string | null, code: string | null = null, assessment: string | null = null) {
-	db().prepare(`INSERT INTO requests (value, email, code, assessment, created_at) VALUES (?, ?, ?, ?, ?)`).run(value, email, code, assessment, Date.now());
+export function insertRequest(value: string, email: string | null, code: string | null = null, assessment: string | null = null, name: string | null = null, comment: string | null = null) {
+	db().prepare(`INSERT INTO requests (value, email, code, assessment, name, comment, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`).run(value, email, code, assessment, name, comment, Date.now());
+}
+
+export function requestExists(code: string): boolean {
+	return !!db().prepare(`SELECT 1 FROM requests WHERE code = ? COLLATE NOCASE OR value = ? COLLATE NOCASE LIMIT 1`).get(code.trim(), code.trim());
 }
 
 /* ---------- reads ---------- */
@@ -307,7 +315,7 @@ export function recentProblems(sinceMs: number): { airport: string; night: strin
 }
 
 export interface RequestRow {
-	id: number; value: string; email: string | null; code: string | null; assessment: string | null; created_at: number;
+	id: number; value: string; email: string | null; name: string | null; comment: string | null; code: string | null; assessment: string | null; created_at: number;
 }
 export function listRequests(limit = 200): RequestRow[] {
 	return db().prepare(`SELECT * FROM requests ORDER BY id DESC LIMIT ?`).all(limit) as RequestRow[];
