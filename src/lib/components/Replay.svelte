@@ -43,10 +43,10 @@
 		height?: number;
 		/** Altimeter readings for the night; with field elevation they turn reported altitudes into height above the field. */
 		alt?: AltContext;
-		/** Begin playback as soon as the map is ready (default true). */
+		/** Begin playback as soon as the map is ready (default false). */
 		autoplay?: boolean;
 	}
-	let { airport, a, b, incident, others = [], tiles = 'carto', height = 520, alt = { ...NO_CORRECTION, elevationFt: airport.elevationFt }, autoplay = true }: Props = $props();
+	let { airport, a, b, incident, others = [], tiles = 'carto', height = 520, alt = { ...NO_CORRECTION, elevationFt: airport.elevationFt }, autoplay = false }: Props = $props();
 
 	const STEPS = 300;
 	const SPEEDS = [8, 16, 32];
@@ -198,6 +198,8 @@
 	let L: typeof Leaflet | null = null;
 	let glyph = 36;
 	let ready = $state(false);
+	let mapZooming = false;
+	let drawDeferred = false;
 	let layers: {
 		trailA: Leaflet.Polyline;
 		trailB: Leaflet.Polyline;
@@ -226,8 +228,18 @@
 			const mod = await import('$lib/leaflet');
 			if (cancelled || !replay) return;
 			L = mod.L;
-			base = mod.createBaseMap(mapEl, airport.pos, { tiles, interactive: false, runways: airport.runways });
+			base = mod.createBaseMap(mapEl, airport.pos, { tiles, runways: airport.runways });
 			const map = base.map;
+			map.on('zoomstart', () => {
+				mapZooming = true;
+			});
+			map.on('zoomend', () => {
+				mapZooming = false;
+				if (drawDeferred) {
+					drawDeferred = false;
+					draw();
+				}
+			});
 
 			// Each aircraft's full path, dashed.
 			for (const [f, color] of [
@@ -391,6 +403,12 @@
 
 	function draw() {
 		if (!layers || !sample || !base) return;
+		// Leaflet transforms marker and SVG panes during pinch zoom. Defer replay
+		// geometry updates until both panes share the new pixel origin.
+		if (mapZooming) {
+			drawDeferred = true;
+			return;
+		}
 		const labels: LabelDraw[] = [];
 		drawOthers(labels);
 		layers.trailA.setLatLngs(trail('a', t));

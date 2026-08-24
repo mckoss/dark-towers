@@ -336,7 +336,7 @@ test.describe('airport detail', () => {
 });
 
 test.describe('close approach', () => {
-	test('opens from a card, shows the figures and plays the replay', async ({ page }) => {
+	test('opens from a card with an interactive, paused replay', async ({ page }) => {
 		await page.goto(`/airport/PAE?night=${NIGHT_WITH_INCIDENTS}`);
 		await page.getByRole('link', { name: /Replay this close approach/ }).first().click();
 		await expect(page).toHaveURL(/\/close-approach\/PAE-/);
@@ -356,7 +356,21 @@ test.describe('close approach', () => {
 
 		const play = page.getByTestId('replay-play');
 		await expect(play).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Zoom in' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Zoom out' })).toBeVisible();
 		await expect(page.getByTestId('replay-pip')).toBeAttached();
+		// The map is fully interactive, but playback waits for the reader.
+		await expect(play).toHaveAttribute('aria-label', 'Play');
+		const clock = page.getByTestId('replay-time');
+		const before = await clock.getAttribute('data-t');
+		expect(before).not.toBeNull();
+		await page.getByRole('button', { name: 'Zoom in' }).click();
+		await expect(page.locator('.leaflet-container')).toHaveAttribute('class', /leaflet-touch-drag/);
+		await play.click();
+		await expect(play).toHaveAttribute('aria-label', 'Pause');
+		// The replay intentionally holds for 2.5 s at the closest moment, so
+		// retry until playback resumes instead of assuming one second is enough.
+		await expect(clock).not.toHaveAttribute('data-t', before!);
 		const replayLabels = page.locator('.replay-label .db-id');
 		await expect(replayLabels.nth(0)).toContainText(' · ');
 		await expect(replayLabels.nth(1)).toContainText(' · ');
@@ -366,14 +380,6 @@ test.describe('close approach', () => {
 		await expect(atcLine).toHaveText(/^\d{3}[↑↓]?\s+\d{1,3}$/);
 		await expect(page.locator('.replay-label-leader')).toHaveCount(await page.locator('.replay-label-offset').count());
 		await expectNoOverlaps(page.locator('.replay-label-offset .datablock'));
-		// Playback starts on its own once the map is up.
-		await expect(play).toHaveAttribute('aria-label', 'Pause');
-		const clock = page.getByTestId('replay-time');
-		const before = await clock.getAttribute('data-t');
-		expect(before).not.toBeNull();
-		// The replay intentionally holds for 2.5 s at the closest moment, so
-		// retry until playback resumes instead of assuming one second is enough.
-		await expect(clock).not.toHaveAttribute('data-t', before!);
 		await expect(page.getByTestId('replay-lateral')).toContainText('NM');
 		// Stepping pauses playback and moves the clock by 15 s.
 		await page.getByTestId('replay-forward').click();
