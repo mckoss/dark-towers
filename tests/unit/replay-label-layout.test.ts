@@ -29,6 +29,17 @@ describe('layoutReplayLabels', () => {
 		expect(placement.slot).toBe('nw');
 	});
 
+	it('returns an edge-displaced datablock to the nearest slot as its aircraft enters the map', () => {
+		const target = { id: 'a', x: -100, y: 150, width: 100, height: 48, radius: 18 };
+		const [offscreen] = layoutReplayLabels([target], { width: 400, height: 300 });
+		expect(offscreen.slot).toBe('e2');
+
+		const previous = new Map<string, LabelSlot>([['a', offscreen.slot]]);
+		const [onscreen] = layoutReplayLabels([{ ...target, x: 30 }], { width: 400, height: 300 }, previous);
+		expect(onscreen.slot).toBe('e');
+		expect(onscreen.x - 30).toBeLessThan(offscreen.x - target.x);
+	});
+
 	it('points the leader to the nearest edge of the datablock', () => {
 		expect(replayLeaderEnd({ x: 130, y: 80, width: 100, height: 50 }, { x: 100, y: 100 })).toEqual({ x: 30, y: 0 });
 		expect(replayLeaderEnd({ x: 20, y: 140, width: 100, height: 50 }, { x: 100, y: 100 })).toEqual({ x: 0, y: 40 });
