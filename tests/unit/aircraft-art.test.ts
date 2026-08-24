@@ -29,6 +29,8 @@ describe('aircraft artwork', () => {
 
 	it('uses registry descriptions and leaves unknown aircraft without a misleading image', () => {
 		expect(aircraftArtworkFor(null, 'CESSNA 172S SKYHAWK')).toMatchObject({ slug: 'cessna-high-wing' });
+		expect(aircraftArtworkFor(null, 'CESSNA U206G')).toMatchObject({ slug: 'cessna-high-wing' });
+		expect(aircraftArtworkFor('T206')).toMatchObject({ slug: 'cessna-high-wing' });
 		expect(aircraftArtworkFor('ZZZZ', 'EXPERIMENTAL HOMEBUILT')).toBeNull();
 	});
 

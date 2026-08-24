@@ -32,6 +32,7 @@ const artwork = {
 const byType: Record<string, keyof typeof artwork> = {
 	E170: 'e175', E75L: 'e175', E175: 'e175',
 	C150: 'cessna-high-wing', C152: 'cessna-high-wing', C172: 'cessna-high-wing', C182: 'cessna-high-wing',
+	C205: 'cessna-high-wing', C206: 'cessna-high-wing', C207: 'cessna-high-wing', C210: 'cessna-high-wing', T206: 'cessna-high-wing', U206: 'cessna-high-wing',
 	B737: 'boeing-737', B738: 'boeing-737', B739: 'boeing-737', B37M: 'boeing-737', B38M: 'boeing-737', B39M: 'boeing-737',
 	AS50: 'airbus-h125', AS55: 'airbus-h125', H125: 'airbus-h125',
 	P28A: 'piper-cherokee', PA28: 'piper-cherokee',
@@ -52,7 +53,7 @@ export function aircraftArtworkFor(...descriptions: Array<string | null | undefi
 		const direct = byType[normalized.replace(/\s+/g, '')];
 		if (direct) return artwork[direct];
 		if (/EMBRAER.*E-?17[05]/.test(normalized)) return artwork.e175;
-		if (/CESSNA.*\b(150|152|172|182)[A-Z]?\b/.test(normalized)) return artwork['cessna-high-wing'];
+		if (/CESSNA.*\b(150|152|172|182|205|206|207|210|T206|U206)[A-Z]?\b/.test(normalized)) return artwork['cessna-high-wing'];
 		if (/BOEING.*737/.test(normalized)) return artwork['boeing-737'];
 		if (/(AIRBUS|EUROCOPTER|AEROSPATIALE).*(H125|AS ?350)/.test(normalized)) return artwork['airbus-h125'];
 		if (/PIPER.*(CHEROKEE|PA-?28)/.test(normalized)) return artwork['piper-cherokee'];
@@ -85,7 +86,7 @@ export function aircraftArtworkForDetails(details: AircraftArtworkDetails): Airc
 	if (/\b(C25[BC]|C5(?:25|50|60|6X)|C68A|C7(?:00|50)|CL3[05]|CL60|E55P|F2TH|FA20|G150|GALX|GLF[456T]?|H25B|LJ[346][05]?|PC24|SF50)\b/.test(description)) return artwork['learjet-45'];
 	if (/\b(C208|DHC-?2|P46T|PC12|TBM)\b|CARAVAN|BEAVER/.test(description)) return artwork['cessna-caravan'];
 	if (/\b(BE20|BE9L|PA31)\b/.test(description)) return artwork.metroliner;
-	if (/\b(C120|C140|C162|C170|C177|C185|T206|C77R|C82[RS])\b|KITFOX|RANGER R7/.test(description)) return artwork['cessna-high-wing'];
+	if (/\b(C120|C140|C162|C170|C177|C185|C20[567]|C210|T206|U206|C77R|C82[RS])\b|KITFOX|RANGER R7/.test(description)) return artwork['cessna-high-wing'];
 	if (/LUSCOMBE|\bBL(8|17)\b/.test(description)) return artwork['luscombe-8'];
 	if (/\b(DA4[02]|DA62|S22T|SR2[02])\b|SLING|VL-?3|SUPER PETREL/.test(description)) return artwork['cirrus-sr22'];
 
