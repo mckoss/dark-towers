@@ -37,6 +37,11 @@ test.describe('home', () => {
 		const sw = await request.get('/service-worker.js');
 		expect(sw.ok()).toBeTruthy();
 	});
+
+	test('shows the application version in the header', async ({ page }) => {
+		await page.goto('/');
+		await expect(page.locator('.brand-version')).toHaveText('v0.2.0');
+	});
 });
 
 test.describe('navigation', () => {
