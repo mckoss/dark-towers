@@ -2,17 +2,27 @@
 	import { flightKind, flightLabel, flightSubLabel } from '$lib/flights';
 	/* Flight log table (README §3). Row hover reports the flight id via onfocus
 	   so the map can highlight the matching track. */
-	import type { Flight } from '$lib/types';
+	import type { Flight, Incident } from '$lib/types';
 	import { localTime } from '$lib/time';
 
 	interface Props {
 		flights: Flight[];
 		tz: string;
 		night: string;
+		incidents?: Incident[];
 		focus?: string | null;
 		onfocus?: (id: string | null) => void;
 	}
-	let { flights, tz, night, focus = null, onfocus }: Props = $props();
+	let { flights, tz, night, incidents = [], focus = null, onfocus }: Props = $props();
+	const closeApproachFlights = $derived.by(() => {
+		const ids = new Set<string>();
+		for (const incident of incidents) {
+			if (incident.kind === 'wake-turbulence') continue;
+			ids.add(incident.flightA);
+			ids.add(incident.flightB);
+		}
+		return ids;
+	});
 
 	const kind = (f: Flight) => flightKind(f);
 	const other = (f: Flight) => (f.otherCode ? `${f.otherName ?? f.otherCode} (${f.otherCode})` : 'Unknown');
@@ -31,6 +41,8 @@
 		<a
 			class="row"
 			class:focused={f.id === focus}
+			class:close-approach={closeApproachFlights.has(f.id)}
+			data-testid="flight-log-row"
 			href={`?night=${encodeURIComponent(night)}&t=${f.eventTime}#night-replay`}
 			onmouseenter={() => onfocus?.(f.id)}
 			onmouseleave={() => onfocus?.(null)}
@@ -40,7 +52,7 @@
 			<div class="time tabular">{localTime(tz, f.eventTime)}</div>
 			<div class="kind" class:airline={f.category === 'airline'}><span class="swatch" class:airline={f.category === 'airline'}></span>{kind(f)}</div>
 			<div class="dim">{f.direction === 'arrival' ? 'Arriving' : 'Leaving'}</div>
-			<div class="ident">{flightLabel(f)}{#if flightSubLabel(f)}<span class="tail">{flightSubLabel(f)}</span>{/if}</div>
+			<div class="ident">{flightLabel(f)}{#if flightSubLabel(f)}<span class="tail">{flightSubLabel(f)}</span>{/if}{#if closeApproachFlights.has(f.id)}<span class="sr-only"> — close approach participant</span>{/if}</div>
 			<div class="dim">{f.type ?? '—'}</div>
 			<div class="dim">{other(f)}</div>
 		</a>
@@ -67,6 +79,14 @@
 	.row:not(.head):focus-visible,
 	.row.focused {
 		background: var(--ground-alt);
+	}
+	.row.close-approach {
+		background: var(--accent-tint);
+	}
+	.row.close-approach:hover,
+	.row.close-approach:focus-visible,
+	.row.close-approach.focused {
+		background: #ffe0d9;
 	}
 	.row:not(.head):focus-visible {
 		outline: 2px solid var(--accent);

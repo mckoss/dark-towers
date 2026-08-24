@@ -252,6 +252,16 @@ test.describe('airport detail', () => {
 		await expect(page.getByTestId('night-time')).toHaveAttribute('data-t', requested!);
 	});
 
+	test('flight log highlights aircraft involved in close approaches', async ({ page }) => {
+		await page.goto(`/airport/PAE?night=${NIGHT_WITH_INCIDENTS}`);
+		const rows = page.getByTestId('flight-log-row');
+		const highlighted = rows.filter({ has: page.locator('.sr-only', { hasText: 'close approach participant' }) });
+		expect(await highlighted.count()).toBeGreaterThan(0);
+		expect(await highlighted.count()).toBeLessThan(await rows.count());
+		await expect(highlighted.first()).toHaveCSS('background-color', 'rgb(255, 242, 239)');
+		await expect(highlighted.first()).toContainText('close approach participant');
+	});
+
 	test('close-approach statistics preserve airport and night filters', async ({ page }) => {
 		await page.goto(`/airport/PAE?night=${NIGHT_WITH_INCIDENTS}`);
 		await expect(page.locator('a.stat-link[href="/close-approaches?airport=PAE"]')).toBeVisible();
