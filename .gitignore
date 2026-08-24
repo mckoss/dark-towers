@@ -6,8 +6,9 @@ Thumbs.db
 /.svelte-kit
 /build
 
-# Secrets & local config
-config.json
+# Secrets & local config (any variant: config.prod.json, config.staging.json, ...)
+config*.json
+!config.example.json
 .env
 .env.*
 !.env.example
