@@ -117,8 +117,8 @@
 		<div class="fact">
 			<div class="table-header">What a controller requires</div>
 			<div class="fact-row">
-				<div class="figure tabular small">{incident.kind === 'wake-turbulence' ? `${incident.requiredNm} NM` : '3 NM or 1,000\''}</div>
-				<div class="caption">{incident.kind === 'wake-turbulence' ? `FAA CWT on-approach minimum for Category ${incident.followerCategory} behind Category ${incident.leaderCategory}; flight A is the leader` : "at least 3 NM apart side to side, or at least 1,000' apart vertically — one is enough"}</div>
+				<div class="figure tabular small">{incident.kind === 'wake-turbulence' ? `${incident.requiredNm} NM` : 'At least 1,000\''}</div>
+				<div class="caption">{incident.kind === 'wake-turbulence' ? `FAA CWT on-approach minimum for Category ${incident.followerCategory} behind Category ${incident.leaderCategory}; flight A is the leader` : "vertical separation when aircraft are within 3 NM"}</div>
 			</div>
 		</div>
 	</div>

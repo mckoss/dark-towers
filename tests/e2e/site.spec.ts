@@ -308,7 +308,8 @@ test.describe('close approach', () => {
 		await expect(page.getByRole('heading', { level: 1 })).toContainText(/ and /);
 		await expect(page.locator('.runway-surface')).toHaveCount(2);
 		await expect(page.getByText(/\d+' at \d+\.\d\d NM/)).toBeVisible();
-		await expect(page.getByText(/one is enough/)).toBeVisible();
+		await expect(page.getByText("At least 1,000'")).toBeVisible();
+		await expect(page.getByText(/vertical separation when aircraft are within 3 NM/)).toBeVisible();
 		await expect(page.getByText(/Nearest approach · \d+:\d\d:\d\d [ap]m/)).toBeVisible();
 		await expect(page.getByTestId('nearest-moment')).toContainText('kt');
 		// The explanatory figures and the lower datablock line consistently show AGL;
@@ -366,7 +367,7 @@ test.describe('method', () => {
 	test('states sources, the rule, limitations and contacts in plain language', async ({ page }) => {
 		await page.goto('/method');
 		await expect(page.getByText('FlightAware')).toBeVisible();
-		await expect(page.getByText(/at least 3 nautical miles apart/)).toBeVisible();
+		await expect(page.getByText(/within 3 nautical miles .* at least 1,000 feet apart vertically/)).toBeVisible();
 		await expect(page.getByText('Known limitations')).toBeVisible();
 		// The exact test is spelled out, condition by condition.
 		await expect(page.getByRole('heading', { name: 'What counts as a close approach' })).toBeVisible();

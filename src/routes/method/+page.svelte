@@ -99,7 +99,7 @@
 <section class="section field cell-lg">
 	<div class="kicker standard-kicker">The standard</div>
 	<p class="poster standard">
-		With a controller on duty, aircraft are kept at least 3 nautical miles apart, or 1,000 feet apart vertically.
+		With a controller on duty, aircraft within 3 nautical miles of each other are kept at least 1,000 feet apart vertically.
 		When the tower is closed, nothing enforces this safety margin.
 	</p>
 </section>
