@@ -44,6 +44,7 @@
 	const INK = '#201e1d';
 	const GREY = '#8a8785';
 	const TRAIL_MS = 180_000;
+	const dataLabel = (f: Flight) => `${flightLabel(f)}${f.type ? ` · ${f.type}` : ''}`;
 
 	// The model and map are built once per mount from the initial props; the
 	// page keys this component on the incident id so a new incident remounts it.
@@ -229,7 +230,7 @@
 				L!.marker([c.a.lat, c.a.lon], {
 					interactive: false,
 					zIndexOffset: -500,
-					icon: L!.divIcon({ className: 'replay-label', iconSize: [0, 0], iconAnchor: [0, 0], html: labelHtml(color, flightLabel(f)) })
+					icon: L!.divIcon({ className: 'replay-label', iconSize: [0, 0], iconAnchor: [0, 0], html: labelHtml(color, dataLabel(f)) })
 				}).addTo(map);
 			layers = { trailA, trailB, markA: mk(colorA, a), markB: mk(colorB, b), labelA: lb(colorA, a), labelB: lb(colorB, b) };
 
@@ -345,7 +346,7 @@
 			g.label.setLatLng([lat, lon]);
 			const host = g.label.getElement();
 			if (host) {
-				host.innerHTML = labelHtml(GREY, flightLabel(f), { alt: v[2], gs: v[3] ?? 0, vs: vel ? vel[2] * 1000 : 0, active: true, phase: 'active' });
+				host.innerHTML = labelHtml(GREY, dataLabel(f), { alt: v[2], gs: v[3] ?? 0, vs: vel ? vel[2] * 1000 : 0, active: true, phase: 'active' });
 				const inner = host.firstElementChild as HTMLElement | null;
 				if (inner) inner.style.transform = `translate(${Math.round(glyph * 0.7)}px, -50%)`;
 			}
@@ -359,8 +360,8 @@
 		layers.trailB.setLatLngs(trail('b', t));
 		placeGlyph(layers.markA, sample.a, sample.inside);
 		placeGlyph(layers.markB, sample.b, sample.inside);
-		placeLabel(layers.labelA, sample.a, sample.b, colorA, flightLabel(a));
-		placeLabel(layers.labelB, sample.b, sample.a, colorB, flightLabel(b));
+		placeLabel(layers.labelA, sample.a, sample.b, colorA, dataLabel(a));
+		placeLabel(layers.labelB, sample.b, sample.a, colorB, dataLabel(b));
 	}
 
 	$effect(() => {

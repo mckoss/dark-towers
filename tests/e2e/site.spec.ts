@@ -208,6 +208,9 @@ test.describe('close approach', () => {
 		const play = page.getByTestId('replay-play');
 		await expect(play).toBeVisible();
 		await expect(page.getByTestId('replay-pip')).toBeAttached();
+		const replayLabels = page.locator('.replay-label .db-id');
+		await expect(replayLabels.nth(0)).toContainText(' · ');
+		await expect(replayLabels.nth(1)).toContainText(' · ');
 		// Playback starts on its own once the map is up.
 		await expect(play).toHaveAttribute('aria-label', 'Pause');
 		const clock = page.getByTestId('replay-time');
