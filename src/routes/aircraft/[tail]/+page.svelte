@@ -1,10 +1,14 @@
 <script lang="ts">
 	import { flightKind, flightLabel } from '$lib/flights';
 	import { localTime } from '$lib/time';
+	import AircraftHero from '$lib/components/AircraftHero.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 	const r = $derived(data.registry);
+	const aircraftType = $derived(data.sightings.find((sighting) => sighting.flight.type)?.flight.type ?? null);
+	const observedAirframe = $derived(data.sightings.find((sighting) => sighting.flight.airframe)?.flight.airframe ?? null);
+	const observedCategory = $derived(data.sightings[0]?.flight.category ?? null);
 	const ownerLocation = $derived(r ? [r.ownerCity, r.ownerState || r.ownerCountry].filter(Boolean).join(', ') : '');
 	const flightAware = $derived(`https://www.flightaware.com/resources/registration/${encodeURIComponent(data.registration)}`);
 	const faa = $derived(`https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${encodeURIComponent(data.registration.slice(1))}`);
@@ -23,6 +27,7 @@
 		<div class="kicker">Aircraft registration</div>
 		<h1 class="page-headline">{data.registration}</h1>
 		<p class="body">{r?.label ?? data.sightings[0]?.flight.type ?? 'Aircraft observed by Dark Towers'}</p>
+		<AircraftHero type={aircraftType} registryLabel={r?.label} model={r?.model} airframe={r?.airframe ?? observedAirframe} category={observedCategory} />
 	</div>
 	<div class="cell-lg facts">
 		{#if r}
