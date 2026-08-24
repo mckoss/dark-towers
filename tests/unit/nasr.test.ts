@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { assessRequest, buildNasr, findByCity, findByCode, towerKindOf, type NasrData } from '../../src/lib/nasr';
+import { assessRequest, buildNasr, findByCity, findByCode, findQualifyingAirports, towerKindOf, type NasrData } from '../../src/lib/nasr';
 import { listZip, parseCsv, readZipEntry } from '../../src/lib/zip';
 
 const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, '../fixtures/nasr.json'), 'utf8')) as NasrData;
@@ -73,6 +73,23 @@ describe('lookups', () => {
 		expect(findByCity(fixture, 'Santa Rosa, CA').map((a) => a.id)).toEqual(['STS']);
 		expect(findByCity(fixture, 'Santa Rosa').map((a) => a.id)).toEqual(['STS']);
 		expect(findByCity(fixture, 'Atlantis')).toEqual([]);
+	});
+
+	it('lists qualifying airports by city, state code, or state name', () => {
+		const california = ['ACV', 'LGB', 'MMH', 'MRY', 'SBA', 'SNA', 'STS'];
+		expect(findQualifyingAirports(fixture, 'CA').map((a) => a.id).sort()).toEqual(california);
+		expect(findQualifyingAirports(fixture, 'California').map((a) => a.id).sort()).toEqual(california);
+		expect(findQualifyingAirports(fixture, 'Santa Rosa').map((a) => a.id)).toEqual(['STS']);
+		expect(findQualifyingAirports(fixture, 'Seattle')).toEqual([]);
+		const oklahoma: NasrData = {
+			...fixture,
+			airports: {
+				...fixture.airports,
+				LAW: { ...fixture.airports.STS, id: 'LAW', icao: 'KLAW', name: 'LAWTON-FORT SILL REGIONAL', city: 'LAWTON', state: 'OK' }
+			}
+		};
+		expect(findQualifyingAirports(oklahoma, 'OK').map((a) => a.id)).toEqual(['LAW']);
+		expect(findQualifyingAirports(oklahoma, 'Oklahoma').map((a) => a.id)).toEqual(['LAW']);
 	});
 });
 

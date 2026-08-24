@@ -137,6 +137,35 @@ export function findByCity(data: NasrData, text: string): NasrAirport[] {
 	return Object.values(data.airports).filter((a) => a.part139 && a.city.toUpperCase() === city && (!state || a.state === state));
 }
 
+const STATE_CODES = new Map(
+	[
+		['AL', 'Alabama'], ['AK', 'Alaska'], ['AZ', 'Arizona'], ['AR', 'Arkansas'], ['CA', 'California'],
+		['CO', 'Colorado'], ['CT', 'Connecticut'], ['DE', 'Delaware'], ['FL', 'Florida'], ['GA', 'Georgia'],
+		['HI', 'Hawaii'], ['ID', 'Idaho'], ['IL', 'Illinois'], ['IN', 'Indiana'], ['IA', 'Iowa'],
+		['KS', 'Kansas'], ['KY', 'Kentucky'], ['LA', 'Louisiana'], ['ME', 'Maine'], ['MD', 'Maryland'],
+		['MA', 'Massachusetts'], ['MI', 'Michigan'], ['MN', 'Minnesota'], ['MS', 'Mississippi'], ['MO', 'Missouri'],
+		['MT', 'Montana'], ['NE', 'Nebraska'], ['NV', 'Nevada'], ['NH', 'New Hampshire'], ['NJ', 'New Jersey'],
+		['NM', 'New Mexico'], ['NY', 'New York'], ['NC', 'North Carolina'], ['ND', 'North Dakota'], ['OH', 'Ohio'],
+		['OK', 'Oklahoma'], ['OR', 'Oregon'], ['PA', 'Pennsylvania'], ['RI', 'Rhode Island'], ['SC', 'South Carolina'],
+		['SD', 'South Dakota'], ['TN', 'Tennessee'], ['TX', 'Texas'], ['UT', 'Utah'], ['VT', 'Vermont'],
+		['VA', 'Virginia'], ['WA', 'Washington'], ['WV', 'West Virginia'], ['WI', 'Wisconsin'], ['WY', 'Wyoming'],
+		['DC', 'District of Columbia'], ['AS', 'American Samoa'], ['GU', 'Guam'], ['MP', 'Northern Mariana Islands'],
+		['PR', 'Puerto Rico'], ['VI', 'U.S. Virgin Islands']
+	].flatMap(([code, name]) => [[code, code], [name.toUpperCase(), code]])
+);
+
+/** Qualifying Part 139 airports matching an exact city, state code, or state name. */
+export function findQualifyingAirports(data: NasrData, text: string): NasrAirport[] {
+	const value = text.trim().toUpperCase().replace(/\./g, '').replace(/\s+/g, ' ');
+	const state = STATE_CODES.get(value);
+	const matches = state
+		? Object.values(data.airports).filter((airport) => airport.state === state)
+		: findByCity(data, text);
+	return matches
+		.filter((airport) => airport.part139 && airport.tower !== 'full-time')
+		.sort((a, b) => a.state.localeCompare(b.state) || a.city.localeCompare(b.city) || a.id.localeCompare(b.id));
+}
+
 export interface Assessment {
 	/** Whether the request qualifies (part-time or no tower). */
 	ok: boolean;
