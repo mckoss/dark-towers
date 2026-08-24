@@ -22,7 +22,7 @@ jobs:
       - run: npm test
       # Seed the raw cache from the test fixture and build the SQLite database (no API calls).
       - run: npm run db:seed
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps --no-shell chromium
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v7
         if: failure()

@@ -13,6 +13,9 @@ export default defineConfig({
 	reporter: process.env.CI ? 'github' : 'list',
 	use: {
 		baseURL: 'http://localhost:4173',
+		// Full Chromium's modern headless mode is more reliable than the separate
+		// chrome-headless-shell binary, which intermittently segfaults on CI runners.
+		channel: 'chromium',
 		trace: 'retain-on-failure'
 	},
 	webServer: {
