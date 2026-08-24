@@ -10,6 +10,8 @@ import { addDays, todayKey } from '$lib/time';
 import type { AirportConfig, Flight, Incident, NightSummary } from '$lib/types';
 import * as db from './db';
 import { nasrData } from './nasr';
+import { qualifyingAirports, towerHoursText } from '$lib/nasr';
+import { towerHoursLabel } from '$lib/airports';
 import { sortCloseApproaches, type CloseApproachSort } from '$lib/close-approach-sort';
 
 export const PERIOD_NIGHTS = 30;
@@ -65,6 +67,22 @@ export interface AirportWithStats extends AirportConfig {
 	stats: db.Totals | null;
 }
 
+export interface AirportListRow extends AirportWithStats {
+	towerLabel: string;
+}
+
+export type CoverageStatus = 'tracking' | 'requested' | 'available';
+export interface CoverageAirport {
+	code: string;
+	name: string;
+	city: string;
+	state: string;
+	pos: [number, number];
+	towerLabel: string;
+	status: CoverageStatus;
+	incidents: number;
+}
+
 export function airportsWithStats(period = currentPeriod()): AirportWithStats[] {
 	const by = db.totalsByAirport(period.from, period.to);
 	return listAirports().map((a) => ({ ...a, stats: by[a.icao] ?? null }));
@@ -73,12 +91,56 @@ export function airportsWithStats(period = currentPeriod()): AirportWithStats[] 
 export function homeData() {
 	const period = currentPeriod();
 	const totals = db.totalsAll(period.from, period.to);
-	return { period, totals, airports: airportsWithStats(period) };
+	return { period, totals, airports: airportCoverage(period) };
+}
+
+/** All FAA-qualifying fields, overlaid with provisional requests and tracked application rows. */
+export function airportCoverage(period = currentPeriod()): CoverageAirport[] {
+	const configured = airportsWithStats(period);
+	const configuredByCode = new Map(configured.map((airport) => [airport.code, airport]));
+	const requested = new Set(db.requestedAirportCodes());
+	const data = nasrData();
+	const coverage = new Map<string, CoverageAirport>();
+	if (data) {
+		for (const airport of qualifyingAirports(data)) {
+			const stored = configuredByCode.get(airport.id);
+			const status: CoverageStatus = stored?.tracked ? 'tracking' : stored || requested.has(airport.id) ? 'requested' : 'available';
+			coverage.set(airport.id, {
+				code: airport.id, name: airport.name, city: airport.city, state: airport.state,
+				pos: [airport.lat, airport.lon], towerLabel: towerHoursText(airport), status,
+				incidents: stored?.stats?.incidents ?? 0
+			});
+		}
+	}
+	// Preserve configured airports even if a later FAA cycle no longer classifies them as qualifying.
+	for (const airport of configured) {
+		coverage.set(airport.code, {
+			code: airport.code, name: airport.name, city: airport.city, state: airport.state, pos: airport.pos,
+			towerLabel: towerHoursLabel(airport), status: airport.tracked ? 'tracking' : 'requested',
+			incidents: airport.stats?.incidents ?? 0
+		});
+	}
+	return [...coverage.values()].sort((a, b) => a.state.localeCompare(b.state) || a.city.localeCompare(b.city) || a.code.localeCompare(b.code));
 }
 
 export function airportsPageData() {
 	const period = currentPeriod();
-	const airports = airportsWithStats(period);
+	const configured = airportsWithStats(period);
+	const airportsByCode = new Map<string, AirportListRow>(configured.map((airport) => [airport.code, { ...airport, towerLabel: towerHoursLabel(airport) }]));
+	const data = nasrData();
+	if (data) {
+		for (const code of db.requestedAirportCodes()) {
+			if (airportsByCode.has(code)) continue;
+			const airport = data.airports[code];
+			if (!airport) continue;
+			airportsByCode.set(code, {
+				code: airport.id, icao: airport.icao ?? airport.id, name: airport.name, city: airport.city, state: airport.state,
+				tz: '', pos: [airport.lat, airport.lon], elevationFt: airport.elevFt, towerHours: null, schedules: [], carriers: [],
+				status: 'requested', tracked: false, stats: null, towerLabel: towerHoursText(airport)
+			});
+		}
+	}
+	const airports = [...airportsByCode.values()].sort((a, b) => a.code.localeCompare(b.code));
 	const tracked = airports.filter((a) => a.tracked);
 	return {
 		period,

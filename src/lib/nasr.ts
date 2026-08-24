@@ -162,7 +162,19 @@ export function findQualifyingAirports(data: NasrData, text: string): NasrAirpor
 		? Object.values(data.airports).filter((airport) => airport.state === state)
 		: findByCity(data, text);
 	return matches
-		.filter((airport) => airport.part139 && airport.tower !== 'full-time')
+		.filter(qualifiesForTracking)
+		.sort((a, b) => a.state.localeCompare(b.state) || a.city.localeCompare(b.city) || a.id.localeCompare(b.id));
+}
+
+/** The public coverage rule: passenger-service certification and no 24-hour tower. */
+export function qualifiesForTracking(airport: NasrAirport): boolean {
+	return airport.part139 && airport.tower !== 'full-time';
+}
+
+/** Every airport in the current FAA cycle that meets the public coverage rule. */
+export function qualifyingAirports(data: NasrData): NasrAirport[] {
+	return Object.values(data.airports)
+		.filter(qualifiesForTracking)
 		.sort((a, b) => a.state.localeCompare(b.state) || a.city.localeCompare(b.city) || a.id.localeCompare(b.id));
 }
 

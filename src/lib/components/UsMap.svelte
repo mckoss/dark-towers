@@ -1,205 +1,152 @@
 <script lang="ts">
-	/*
-	 * US map with tracked-airport markers (see README "Maps → US map").
-	 * d3-geo geoAlbersUsa fitted to a 960×560 viewBox over the vendored us-atlas
-	 * states topology. Only tracked airports are drawn; circles sit on their true
-	 * projected position and may overlap (no de-clustering by design).
-	 * Renders fine on the server — no window access.
-	 */
-	import { geoAlbersUsa, geoPath } from 'd3-geo';
-	import { feature, mesh } from 'topojson-client';
+	/* Interactive national coverage map. Leaflet supplies pan, wheel/pinch/keyboard zoom and accessible controls. */
+	import 'leaflet/dist/leaflet.css';
+	import { onMount } from 'svelte';
+	import { geoAlbersUsa } from 'd3-geo';
+	import { feature } from 'topojson-client';
 	import type { Topology, GeometryCollection } from 'topojson-specification';
 	import type { FeatureCollection, Geometry } from 'geojson';
+	import type { CoverageAirport } from '$lib/server/queries';
 	import atlas from '$lib/data/us-atlas.json';
 
-	export interface MapAirport {
-		code: string;
-		name: string;
-		/** [lat, lon] */
-		pos: [number, number];
-		tracked: boolean;
-		incidents: number;
-	}
-
-	interface Props {
-		airports: MapAirport[];
-		selected?: string;
-		onselect?: (code: string) => void;
-	}
-
-	let { airports, selected, onselect }: Props = $props();
+	interface Props { airports: CoverageAirport[]; }
+	let { airports }: Props = $props();
+	let mapEl: HTMLDivElement;
+	let zoom = $state(0);
 
 	const W = 960;
 	const H = 560;
-
 	const topo = atlas as unknown as Topology<{ states: GeometryCollection; nation: GeometryCollection }>;
 	const states = feature(topo, topo.objects.states) as FeatureCollection<Geometry>;
-	const borders = mesh(topo, topo.objects.states, (a, b) => a !== b);
 	const projection = geoAlbersUsa().fitSize([W, H], states);
-	const path = geoPath(projection);
-	const statePaths = states.features.map((f) => path(f) ?? '');
-	const borderPath = path(borders) ?? '';
+	const rank = { available: 0, requested: 1, tracking: 2 } as const;
 
-	interface Node {
-		code: string;
-		name: string;
-		incidents: number;
-		x: number;
-		y: number;
-		r: number;
-		label: string;
-		labelX: number;
-		labelY: number;
-		anchor: 'start' | 'end';
+	function details(airport: CoverageAirport): HTMLDivElement {
+		const card = document.createElement('div');
+		card.className = 'coverage-details';
+		const title = document.createElement('strong');
+		title.textContent = `${airport.code} · ${airport.name}`;
+		const location = document.createElement('span');
+		location.textContent = `${airport.city}, ${airport.state}`;
+		const tower = document.createElement('span');
+		tower.textContent = airport.towerLabel;
+		const status = document.createElement('span');
+		status.className = `coverage-status ${airport.status}`;
+		status.textContent = airport.status === 'tracking' ? 'Tracking' : airport.status === 'requested' ? 'Requested — awaiting review' : 'Qualifies for tracking';
+		card.append(title, location, tower, status);
+		return card;
 	}
 
-	const LABEL_SIZE = 12;
-	const GAP = 6;
+	function popup(airport: CoverageAirport): HTMLDivElement {
+		const card = details(airport);
+		if (airport.status === 'requested') return card;
+		const link = document.createElement('a');
+		link.className = 'coverage-action';
+		link.href = airport.status === 'tracking' ? `/airport/${airport.code}` : `/airports?request=${airport.code}#request-airport`;
+		link.textContent = airport.status === 'tracking' ? 'View airport' : 'Request to add';
+		card.append(link);
+		return card;
+	}
 
-	let nodes = $derived.by<Node[]>(() => {
-		const out: Node[] = [];
-		for (const a of airports) {
-			if (!a.tracked) continue;
-			const p = projection([a.pos[1], a.pos[0]]);
-			if (!p) continue;
-			const incidents = Math.max(0, a.incidents ?? 0);
-			const r = 9 + Math.sqrt(incidents) * 7;
-			const label = incidents > 0 ? `${a.code} · ${incidents}` : a.code;
-			const estWidth = label.length * LABEL_SIZE * 0.62;
-			const flip = p[0] + r + GAP + estWidth > W - 10;
-			out.push({
-				code: a.code,
-				name: a.name,
-				incidents,
-				x: p[0],
-				y: p[1],
-				r,
-				label,
-				labelX: flip ? p[0] - r - GAP : p[0] + r + GAP,
-				labelY: p[1] + LABEL_SIZE * 0.36,
-				anchor: flip ? 'end' : 'start'
+	onMount(() => {
+		let disposed = false;
+		let destroy: (() => void) | undefined;
+		void import('leaflet').then(({ default: L }) => {
+			if (disposed) return;
+			const map = L.map(mapEl, {
+				crs: L.CRS.Simple,
+				minZoom: -2,
+				attributionControl: false,
+				zoomControl: true,
+				doubleClickZoom: true,
+				scrollWheelZoom: true,
+				keyboard: true
 			});
-		}
-		// Biggest first so small circles stay legible on top.
-		return out.sort((m, n) => n.r - m.r);
+			const renderer = L.svg({ padding: 0.5 }).addTo(map);
+			const coordsToLatLng = (coords: number[]) => {
+				const point = projection([coords[0], coords[1]]) ?? [0, 0];
+				return L.latLng(H - point[1], point[0]);
+			};
+			L.geoJSON(states, {
+				coordsToLatLng,
+				interactive: false,
+				style: { renderer, color: '#201e1d', weight: 0.7, opacity: 0.34, fillColor: '#e7e5e4', fillOpacity: 1 }
+			}).addTo(map);
+
+			const colors = { tracking: '#dc3e27', requested: '#477ea8', available: '#737675' } as const;
+			for (const airport of [...airports].sort((a, b) => rank[a.status] - rank[b.status])) {
+				const point = projection([airport.pos[1], airport.pos[0]]);
+				if (!point) continue;
+				const radius = airport.status === 'tracking' ? 7 + Math.sqrt(Math.max(0, airport.incidents)) * 3 : airport.status === 'requested' ? 6 : 3.5;
+				const color = colors[airport.status];
+				const marker = L.circleMarker([H - point[1], point[0]], {
+					renderer,
+					radius,
+					color,
+					weight: airport.status === 'available' ? 1 : 2,
+					opacity: airport.status === 'available' ? 0.72 : 1,
+					fillColor: color,
+					fillOpacity: airport.status === 'available' ? 0.28 : 0.48,
+					className: `coverage-marker ${airport.status}`
+				});
+				marker.bindTooltip(details(airport), { direction: 'top', offset: [0, -radius], className: 'coverage-tooltip' });
+				marker.bindPopup(popup(airport), { closeButton: true, className: 'coverage-popup', offset: [0, -radius] });
+				marker.on('add', () => {
+					const path = (marker as unknown as { _path?: SVGPathElement })._path;
+					if (!path) return;
+					path.dataset.code = airport.code;
+					path.dataset.status = airport.status;
+					path.setAttribute('tabindex', '0');
+					path.setAttribute('role', 'button');
+					path.setAttribute('aria-label', `${airport.code}, ${airport.name}, ${airport.status}`);
+					path.addEventListener('keydown', (event) => {
+						if (event.key !== 'Enter' && event.key !== ' ') return;
+						event.preventDefault();
+						marker.openPopup();
+					});
+				});
+				marker.addTo(map);
+			}
+
+			const bounds = L.latLngBounds([0, 0], [H, W]);
+			map.fitBounds(bounds, { padding: [12, 12] });
+			map.setMinZoom(map.getZoom());
+			map.setMaxZoom(map.getZoom() + 6);
+			zoom = map.getZoom();
+			map.on('zoomend', () => { zoom = map.getZoom(); });
+			destroy = () => map.remove();
+		});
+		return () => {
+			disposed = true;
+			destroy?.();
+		};
 	});
 </script>
 
-<svg
-	class="us-map"
-	viewBox="0 0 {W} {H}"
-	preserveAspectRatio="xMidYMid meet"
-	role="img"
-	aria-label="Map of the United States showing tracked airports"
->
-	<g class="states">
-		{#each statePaths as d, i (i)}
-			<path {d} />
-		{/each}
-	</g>
-	<path class="borders" d={borderPath} />
-
-	<g class="markers">
-		{#each nodes as n (n.code)}
-			<a
-				href="/airport/{n.code}"
-				class="marker"
-				class:hot={n.incidents > 0}
-				class:selected={selected === n.code}
-				aria-label="Open the {n.code} record"
-				onclick={(e) => {
-					if (onselect) {
-						e.preventDefault();
-						onselect(n.code);
-					}
-				}}
-			>
-				<title>Open the {n.code} record</title>
-				<circle class="fill" cx={n.x} cy={n.y} r={n.r} />
-				<circle class="ring" cx={n.x} cy={n.y} r={n.r} />
-				<circle class="dot" cx={n.x} cy={n.y} r={n.incidents > 0 ? 2.6 : 2.2} />
-			</a>
-		{/each}
-	</g>
-
-	<g class="labels" aria-hidden="true">
-		{#each nodes as n (n.code)}
-			<text class:hot={n.incidents > 0} x={n.labelX} y={n.labelY} text-anchor={n.anchor}>{n.label}</text>
-		{/each}
-	</g>
-</svg>
+<div class="us-map" bind:this={mapEl} data-testid="us-map" data-zoom={zoom} aria-label="Interactive map of qualifying United States airports"></div>
 
 <style>
-	.us-map {
-		display: block;
-		width: 100%;
-		height: auto;
-		overflow: visible;
-		font-family: var(--font);
+	.us-map { width: 100%; height: 100%; min-height: 480px; border: 0; background: var(--ground) !important; }
+	:global(.coverage-marker) { cursor: pointer; outline: none; }
+	:global(.coverage-marker:focus) { stroke-width: 4; }
+	:global(.leaflet-tooltip.coverage-tooltip),
+	:global(.leaflet-popup.coverage-popup .leaflet-popup-content-wrapper) {
+		border: 1.5px solid var(--ink);
+		border-radius: 0;
+		background: var(--ground);
+		box-shadow: 3px 3px 0 rgba(32, 30, 29, 0.22);
+		color: var(--ink);
 	}
-	.states path {
-		fill: var(--ground-alt);
-		stroke: none;
-	}
-	.borders {
-		fill: none;
-		stroke: var(--ink);
-		stroke-width: 0.6;
-		opacity: 0.35;
-	}
-	.marker {
-		cursor: pointer;
-		outline: none;
-		border: none;
-	}
-	.marker .fill {
-		fill: var(--ink);
-		opacity: 0.12;
-	}
-	.marker .ring {
-		fill: none;
-		stroke: var(--ink);
-		stroke-width: 1.5;
-		opacity: 0.6;
-	}
-	.marker .dot {
-		fill: var(--ink);
-	}
-	.marker.hot .fill {
-		fill: var(--accent);
-		opacity: 0.22;
-	}
-	.marker.hot .ring {
-		stroke: var(--accent);
-		opacity: 0.85;
-	}
-	.marker.hot .dot {
-		fill: var(--accent);
-	}
-	.marker:hover .fill,
-	.marker:focus-visible .fill {
-		opacity: 0.35;
-	}
-	.marker.selected .ring {
-		stroke-width: 2.5;
-		opacity: 1;
-	}
-	.marker:focus-visible .ring {
-		stroke: var(--accent);
-		stroke-width: 2.5;
-		opacity: 1;
-	}
-	.labels text {
-		font-size: 12px;
-		font-weight: 700;
-		fill: var(--ink);
-		paint-order: stroke;
-		stroke: var(--ground);
-		stroke-width: 3.5px;
-		stroke-linejoin: round;
-		pointer-events: none;
-	}
-	.labels text.hot {
-		fill: var(--accent-text);
+	:global(.leaflet-tooltip.coverage-tooltip::before) { border-top-color: var(--ink); }
+	:global(.leaflet-popup.coverage-popup .leaflet-popup-tip) { background: var(--ground); }
+	:global(.coverage-details) { display: flex; min-width: 190px; flex-direction: column; gap: 4px; font: 12px/1.35 var(--font); }
+	:global(.coverage-details strong) { font-size: 13px; }
+	:global(.coverage-status) { margin-top: 3px; font-weight: 750; text-transform: uppercase; letter-spacing: 0.06em; }
+	:global(.coverage-status.tracking) { color: #a82d1d; }
+	:global(.coverage-status.requested) { color: #315f82; }
+	:global(.coverage-status.available) { color: var(--ink-60); }
+	:global(.coverage-action) { display: inline-block; align-self: flex-start; margin-top: 7px; padding: 7px 9px; border: 0; background: var(--ink); color: var(--ground) !important; font-weight: 750; }
+	@media (max-width: 760px) {
+		.us-map { min-height: 430px; }
 	}
 </style>

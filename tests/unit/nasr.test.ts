@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { assessRequest, buildNasr, findByCity, findByCode, findQualifyingAirports, towerKindOf, type NasrData } from '../../src/lib/nasr';
+import { assessRequest, buildNasr, findByCity, findByCode, findQualifyingAirports, qualifyingAirports, towerKindOf, type NasrData } from '../../src/lib/nasr';
 import { listZip, parseCsv, readZipEntry } from '../../src/lib/zip';
 
 const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, '../fixtures/nasr.json'), 'utf8')) as NasrData;
@@ -81,6 +81,8 @@ describe('lookups', () => {
 		expect(findQualifyingAirports(fixture, 'California').map((a) => a.id).sort()).toEqual(california);
 		expect(findQualifyingAirports(fixture, 'Santa Rosa').map((a) => a.id)).toEqual(['STS']);
 		expect(findQualifyingAirports(fixture, 'Seattle')).toEqual([]);
+		expect(qualifyingAirports(fixture).some((airport) => airport.id === 'SEA')).toBe(false);
+		expect(qualifyingAirports(fixture).some((airport) => airport.id === 'STS')).toBe(true);
 		const oklahoma: NasrData = {
 			...fixture,
 			airports: {

@@ -30,13 +30,30 @@ test.describe('home', () => {
 		await page.goto('/');
 		await expect(page.getByRole('heading', { level: 1 })).toContainText('Airliners are landing at airports');
 		await expect(page.getByText('Data from last 30 days')).toBeVisible();
-		// Tracked airport marker on the map links to its record.
-		const marker = page.locator('a[href="/airport/PAE"]').first();
-		await expect(marker).toHaveAttribute('aria-label', /Open the PAE record/);
+		// Tracked airport marker opens details and links to its record.
+		const marker = page.locator('.coverage-marker[data-code="PAE"]');
+		await expect(marker).toHaveAttribute('data-status', 'tracking');
+		await marker.focus();
+		await marker.press('Enter');
+		await expect(page.getByRole('link', { name: 'View airport' })).toHaveAttribute('href', '/airport/PAE');
 		// Copy (not the map labels) never names an airport.
 		const copy = await page.locator('main h1, main p').allTextContents();
 		expect(copy.join(' ')).not.toMatch(/Paine|Everett|PAE\b/);
 		await expect(page.getByRole('link', { name: /Airport list and submissions/ })).toHaveAttribute('href', '/airports');
+	});
+
+	test('shows all qualifying airports and supports zooming and map requests', async ({ page }) => {
+		await page.goto('/');
+		const map = page.getByTestId('us-map');
+		await expect(page.locator('.coverage-marker.available').first()).toBeVisible();
+		expect(await page.locator('.coverage-marker').count()).toBeGreaterThan(7);
+		await expect(page.getByText('Requested — awaiting review', { exact: true })).toBeVisible();
+		const available = page.locator('.coverage-marker[data-code="STS"]');
+		await available.click();
+		await expect(page.getByRole('link', { name: 'Request to add' })).toHaveAttribute('href', '/airports?request=STS#request-airport');
+		const before = Number(await map.getAttribute('data-zoom'));
+		await page.getByRole('button', { name: 'Zoom in' }).click();
+		await expect.poll(async () => Number(await map.getAttribute('data-zoom'))).toBeGreaterThan(before);
 	});
 
 	test('health endpoint reports the sample nights', async ({ request }) => {
@@ -175,6 +192,11 @@ test.describe('airports', () => {
 		await candidate.getByLabel('Comment (optional)').fill(comment);
 		await candidate.getByRole('button', { name: 'Submit airport request' }).click();
 		await expect(page.getByTestId('request-ok')).toContainText(`request for ${code}`);
+		await page.goto('/airports');
+		const requestedRow = page.locator('.row.inert').filter({ hasText: code });
+		await expect(requestedRow).toContainText('Requested');
+		await page.goto('/');
+		await expect(page.locator(`.coverage-marker[data-code="${code}"]`)).toHaveAttribute('data-status', 'requested');
 		await page.goto('/admin');
 		await expect(page.getByText(comment)).toBeVisible();
 		const text = await page.locator('main').textContent();

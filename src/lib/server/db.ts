@@ -192,6 +192,13 @@ export function requestExists(code: string): boolean {
 	return !!db().prepare(`SELECT 1 FROM requests WHERE code = ? COLLATE NOCASE OR value = ? COLLATE NOCASE LIMIT 1`).get(code.trim(), code.trim());
 }
 
+/** Airport codes with a public request awaiting review; no requester details leave this module. */
+export function requestedAirportCodes(): string[] {
+	return (db()
+		.prepare(`SELECT DISTINCT UPPER(COALESCE(code, value)) code FROM requests WHERE COALESCE(code, value) <> '' ORDER BY code`)
+		.all() as { code: string }[]).map((row) => row.code);
+}
+
 /* ---------- reads ---------- */
 
 interface FlightRow {

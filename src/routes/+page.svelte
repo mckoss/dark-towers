@@ -7,15 +7,6 @@
 	const fmt = (n: number) => n.toLocaleString('en-US');
 	let empty = $derived(data.totals.flights === 0);
 
-	let mapAirports = $derived(
-		data.airports.map((a) => ({
-			code: a.code,
-			name: a.name,
-			pos: a.pos,
-			tracked: a.tracked,
-			incidents: a.stats?.incidents ?? 0
-		}))
-	);
 </script>
 
 <svelte:head>
@@ -65,12 +56,14 @@
 
 <section class="section map-row">
 	<div class="map-plate">
-		<UsMap airports={mapAirports} />
+		<UsMap airports={data.airports} />
 	</div>
 	<div class="legend">
-		<div class="legend-title">Close approaches, last 30 days</div>
-		<div class="legend-row"><span class="swatch swatch-accent"></span> Tracked airport — circle grows with the count</div>
-		<div class="legend-row"><span class="swatch swatch-ink"></span> Tracked airport — none found</div>
+		<div class="legend-title">Airport coverage</div>
+		<div class="legend-row"><span class="swatch swatch-tracking"></span> Tracking — grows with close approaches</div>
+		<div class="legend-row"><span class="swatch swatch-requested"></span> Requested — awaiting review</div>
+		<div class="legend-row"><span class="swatch swatch-available"></span> Qualifies — available to request</div>
+		<div class="legend-help">Drag to pan · scroll, pinch, or use ± to zoom</div>
 	</div>
 </section>
 
@@ -123,14 +116,7 @@
 		position: relative;
 	}
 	.map-plate {
-		display: flex;
-		align-items: center;
-		justify-content: center;
 		height: 640px;
-		padding: 24px;
-	}
-	.map-plate :global(svg) {
-		max-height: 100%;
 	}
 	.legend {
 		position: absolute;
@@ -162,18 +148,20 @@
 		flex-shrink: 0;
 		border-radius: 50% !important; /* the one deliberate circle: it depicts the map marker */
 	}
-	.swatch-accent {
-		width: 20px;
-		height: 20px;
-		border: 1.5px solid var(--accent);
-		background: rgba(236, 48, 19, 0.22);
+	.swatch-tracking {
+		width: 18px;
+		height: 18px;
+		border: 2px solid #dc3e27;
+		background: rgba(220, 62, 39, 0.48);
 	}
-	.swatch-ink {
+	.swatch-requested {
 		width: 14px;
 		height: 14px;
-		border: 1.5px solid var(--ink);
-		background: rgba(32, 30, 29, 0.12);
+		border: 2px solid #477ea8;
+		background: rgba(71, 126, 168, 0.48);
 	}
+	.swatch-available { width: 9px; height: 9px; border: 1px solid #737675; background: rgba(115, 118, 117, 0.28); }
+	.legend-help { margin-top: 3px; font-size: 11px; color: var(--ink-60); }
 
 	.cta {
 		display: flex;
@@ -201,8 +189,7 @@
 			padding-bottom: 16px;
 		}
 		.map-plate {
-			height: auto;
-			padding: 16px var(--gutter);
+			height: 480px;
 		}
 		.legend {
 			position: static;
