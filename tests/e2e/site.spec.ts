@@ -156,6 +156,49 @@ test.describe('airport detail', () => {
 		expect(await page.getByTestId('night-time').getAttribute('data-t')).toBe(paused);
 	});
 
+	test('keeps aircraft trails attached while a mobile pinch zoom is in progress', async ({ page }, testInfo) => {
+		test.skip(testInfo.project.name !== 'mobile', 'Pinch zoom is a mobile-only interaction');
+		await page.goto(`/airport/PAE?night=${NIGHT_WITH_INCIDENTS}`);
+		const scrubber = page.getByTestId('night-scrubber');
+		await scrubber.evaluate((input: HTMLInputElement) => {
+			input.value = '500';
+			input.dispatchEvent(new Event('input', { bubbles: true }));
+		});
+		const trail = page.locator('.leaflet-overlay-pane path[stroke-opacity="0.95"]').first();
+		const marker = page.locator('.replay-marker').first();
+		// Leaflet's icon host intentionally has a 0 × 0 box; its child SVG is visible.
+		await expect(marker.locator('svg')).toBeAttached();
+		await expect(trail).toBeAttached();
+		await page.getByTestId('night-play').click();
+		const before = await marker.getAttribute('style');
+		await expect.poll(() => marker.getAttribute('style')).not.toBe(before);
+
+		const box = await page.locator('.flight-map').boundingBox();
+		expect(box).not.toBeNull();
+		const x = box!.x + box!.width / 2;
+		const y = box!.y + box!.height / 2;
+		const cdp = await page.context().newCDPSession(page);
+		await cdp.send('Input.dispatchTouchEvent', {
+			type: 'touchStart',
+			touchPoints: [
+				{ x: x - 30, y, id: 1 },
+				{ x: x + 30, y, id: 2 }
+			]
+		});
+		await cdp.send('Input.dispatchTouchEvent', {
+			type: 'touchMove',
+			touchPoints: [
+				{ x: x - 70, y, id: 1 },
+				{ x: x + 70, y, id: 2 }
+			]
+		});
+		const duringPinch = await marker.getAttribute('style');
+		await page.waitForTimeout(300);
+		expect(await marker.getAttribute('style')).toBe(duringPinch);
+		await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+		await expect.poll(() => marker.getAttribute('style')).not.toBe(duringPinch);
+	});
+
 	test('a night without close approaches shows the honest empty state', async ({ page }) => {
 		await page.goto('/airport/PAE?night=2026-08-16');
 		await expect(page.getByText(/No separation or wake-turbulence events were detected/)).toBeVisible();

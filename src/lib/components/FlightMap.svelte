@@ -193,6 +193,12 @@
 	}
 	const glyphs = new Map<string, { mark: LeafletNS.Marker; label: LeafletNS.Marker; trail: LeafletNS.Polyline }>();
 	let sepLines: LeafletNS.Polyline[] = [];
+	// Leaflet animates a pinch by transforming the existing marker and SVG
+	// panes. Mutating their geometry mid-gesture makes the two renderers use
+	// different pixel origins, briefly detaching a trail from its aircraft.
+	// Keep one coherent frame during the gesture and catch up once it ends.
+	let mapZooming = false;
+	let replayDrawDeferred = false;
 	/** Pairs inside the minima at t (from the recorded incidents, ±90 s, checked live). */
 	function alertPairs(at: number): [Flight, Flight][] {
 		const out: [Flight, Flight][] = [];
@@ -214,6 +220,10 @@
 	}
 	function drawReplay() {
 		if (!base || !L) return;
+		if (mapZooming) {
+			replayDrawDeferred = true;
+			return;
+		}
 		const map = base.map;
 		if (!started) {
 			for (const g of glyphs.values()) {
@@ -422,6 +432,16 @@
 			if (cancelled) return;
 			L = mod.L;
 			base = mod.createBaseMap(el, center, { tiles, radiusNm: 10 });
+			base.map.on('zoomstart', () => {
+				mapZooming = true;
+			});
+			base.map.on('zoomend', () => {
+				mapZooming = false;
+				if (replayDrawDeferred) {
+					replayDrawDeferred = false;
+					drawReplay();
+				}
+			});
 		})();
 		return () => {
 			cancelled = true;
