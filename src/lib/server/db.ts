@@ -240,6 +240,12 @@ export function incidentsForNight(airport: string, night: string): Incident[] {
 export function incidentsForAirport(airport: string, fromNight: string): Incident[] {
 	return (db().prepare(`SELECT * FROM incidents WHERE airport = ? AND night >= ? ORDER BY night DESC, t`).all(airport, fromNight) as IncidentRow[]).map(rowToIncident);
 }
+export function separationIncidents(fromNight: string, toNight: string, airport?: string): Incident[] {
+	const rows = airport
+		? db().prepare(`SELECT * FROM incidents WHERE airport = ? AND night >= ? AND night <= ? AND (kind IS NULL OR kind = 'separation') ORDER BY night DESC, t DESC`).all(airport, fromNight, toNight)
+		: db().prepare(`SELECT * FROM incidents WHERE night >= ? AND night <= ? AND (kind IS NULL OR kind = 'separation') ORDER BY night DESC, t DESC`).all(fromNight, toNight);
+	return (rows as IncidentRow[]).map(rowToIncident);
+}
 export function incidentById(id: string): Incident | null {
 	const r = db().prepare(`SELECT * FROM incidents WHERE id = ?`).get(id) as IncidentRow | undefined;
 	return r ? rowToIncident(r) : null;

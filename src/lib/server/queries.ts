@@ -212,3 +212,33 @@ export function identsFor(incidents: Incident[]): Record<string, string> {
 	}
 	return out;
 }
+
+export interface ListedCloseApproach extends Incident {
+	airportCode: string;
+	airportName: string;
+	tz: string;
+	identA: string;
+	identB: string;
+}
+
+/** Public close-approach listing, optionally narrowed to an airport and/or night. */
+export function closeApproachesData(airportCode?: string | null, night?: string | null, month?: string | null) {
+	const airport = airportCode ? getAirport(airportCode) : null;
+	if (airportCode && !airport) return null;
+	const validNight = night && /^\d{4}-\d{2}-\d{2}$/.test(night) ? night : null;
+	const period = validNight
+		? { from: validNight, to: validNight, label: `Night of ${validNight}`, month: null }
+		: month && /^\d{4}-\d{2}$/.test(month)
+			? monthPeriod(month)
+			: currentPeriod();
+	const incidents = db.separationIncidents(period.from, period.to, airport?.icao);
+	const idents = identsFor(incidents);
+	const airports = new Map(listAirports().map((a) => [a.icao, a]));
+	const rows: ListedCloseApproach[] = incidents.flatMap((incident) => {
+		const found = airports.get(incident.airport);
+		return found
+			? [{ ...incident, airportCode: found.code, airportName: found.name, tz: found.tz, identA: idents[incident.flightA] ?? '?', identB: idents[incident.flightB] ?? '?' }]
+			: [];
+	});
+	return { airport, period, night: validNight, rows };
+}

@@ -49,12 +49,12 @@
 			<div class="big-stat" class:muted={empty}>{empty ? '—' : fmt(data.totals.airline)}</div>
 			<div class="stat-label">Flown by passenger airlines</div>
 		</div>
-		<div class="stat">
+		<a class="stat stat-link" href="/close-approaches">
 			<div class="big-stat" class:accent={!empty} class:muted={empty}>
 				{empty ? '—' : fmt(data.totals.incidents)}
 			</div>
 			<div class="stat-label">Close approaches below the separation standard</div>
-		</div>
+		</a>
 		<div class="stat">
 			<div class="big-stat" class:accent={!empty} class:muted={empty}>{empty ? '—' : fmt(data.totals.wakeIncidents)}</div>
 			<div class="stat-label">Wake-turbulence events below FAA in-trail spacing</div>
@@ -99,8 +99,14 @@
 		gap: 16px;
 		padding: 24px var(--gutter);
 		border-bottom: var(--row-rule);
+		color: inherit;
 	}
-	.stat:nth-of-type(4) {
+	.stat-link:hover,
+	.stat-link:focus-visible {
+		background: var(--ground-alt);
+		color: inherit;
+	}
+	.stat:nth-child(4) {
 		border-bottom: none;
 	}
 	.stat .big-stat {

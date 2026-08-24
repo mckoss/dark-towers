@@ -46,6 +46,13 @@
 		return month ? `?month=${month}` : '?';
 	}
 
+	function approachesHref(night?: string): string {
+		const q = new URLSearchParams({ airport: airport.code });
+		if (night) q.set('night', night);
+		else if (data.period.month) q.set('month', data.period.month);
+		return `/close-approaches?${q}`;
+	}
+
 	const fmt = (n: number) => n.toLocaleString('en-US');
 </script>
 
@@ -89,7 +96,7 @@
 	<div class="stat"><div class="stat-n">{fmt(data.totals.flights)}</div><div class="stat-label">Flights in and out</div></div>
 	<div class="stat"><div class="stat-n">{fmt(data.totals.airline)}</div><div class="stat-label">Passenger airline</div></div>
 	<div class="stat"><div class="stat-n">{fmt(data.totals.private)}</div><div class="stat-label">Private and training aircraft</div></div>
-	<div class="stat"><div class="stat-n accent">{fmt(data.totals.incidents)}</div><div class="stat-label">Close approaches</div></div>
+	<a class="stat stat-link" href={approachesHref()}><div class="stat-n accent">{fmt(data.totals.incidents)}</div><div class="stat-label">Close approaches</div></a>
 	<div class="stat"><div class="stat-n accent">{fmt(data.totals.wakeIncidents)}</div><div class="stat-label">Wake turbulence</div></div>
 </section>
 
@@ -122,14 +129,14 @@
 
 	{#if data.selectedNight}
 		<section class="section split night">
-			<div class="night-left">
+			<div class="night-left" id="night-replay">
 				<div class="night-head">
 					<div class="table-header">Flight paths within {AIRSPACE_RADIUS_NM} nautical miles, tower closed</div>
 					<h2 class="night-title">Night of {nightLabel(data.selectedNight)}</h2>
 					<div class="night-hours" data-testid="night-hours">{nightHours(data.selectedNight)}</div>
 				</div>
 				{#if hasTracks}
-					<FlightMap center={airport.pos} flights={data.flights} {focus} height={560} alt={altCtx} tz={airport.tz} incidents={data.incidents} runways={airport.runways} replay onfocus={(id) => (focus = id)} />
+					<FlightMap center={airport.pos} flights={data.flights} {focus} height={560} alt={altCtx} tz={airport.tz} incidents={data.incidents} runways={airport.runways} replay initialTime={data.replayTime} onfocus={(id) => (focus = id)} />
 				{:else}
 					<div class="no-tracks inset">Flight paths for this night are not available.</div>
 				{/if}
@@ -150,6 +157,7 @@
 						<div><div class="tot-n">{nightFlights}</div><div class="tot-label">Flights</div></div>
 						<div><div class="tot-n">{nightAirline}</div><div class="tot-label">Passenger airline</div></div>
 						<div><div class="tot-n">{nightPrivate}</div><div class="tot-label">Private and training</div></div>
+						<a class="total-link" href={approachesHref(data.selectedNight)}><div class="tot-n accent">{data.nightSummary?.incidents ?? 0}</div><div class="tot-label">Close approaches</div></a>
 					</div>
 				</div>
 			</div>
@@ -157,7 +165,7 @@
 
 		<section class="log">
 			<h2 class="log-title">Flight log — {nightLabel(data.selectedNight)}</h2>
-			<FlightLog flights={data.flights} tz={airport.tz} {focus} onfocus={(id) => (focus = id)} />
+			<FlightLog flights={data.flights} tz={airport.tz} night={data.selectedNight} {focus} onfocus={(id) => (focus = id)} />
 		</section>
 	{/if}
 {/if}
@@ -228,6 +236,12 @@
 	}
 	.stat {
 		padding: 12px 20px 16px;
+		color: inherit;
+	}
+	.stat-link:hover,
+	.stat-link:focus-visible {
+		background: var(--ground-alt);
+		color: inherit;
 	}
 	.stat + .stat {
 		border-left: var(--row-rule);
@@ -344,15 +358,23 @@
 	}
 	.totals-grid {
 		display: grid;
-		grid-template-columns: repeat(3, 1fr);
+		grid-template-columns: repeat(4, 1fr);
 		gap: 1px;
 		margin-top: 16px;
 		background: var(--hairline);
 		border: 1px solid var(--hairline);
 	}
-	.totals-grid > div {
+	.totals-grid > div,
+	.totals-grid > a {
 		background: var(--ground);
 		padding: 16px;
+	}
+	.total-link {
+		color: inherit;
+	}
+	.total-link:hover,
+	.total-link:focus-visible {
+		background: var(--ground-alt);
 	}
 	.tot-n {
 		font-size: 30px;

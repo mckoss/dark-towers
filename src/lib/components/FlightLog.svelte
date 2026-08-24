@@ -8,10 +8,11 @@
 	interface Props {
 		flights: Flight[];
 		tz: string;
+		night: string;
 		focus?: string | null;
 		onfocus?: (id: string | null) => void;
 	}
-	let { flights, tz, focus = null, onfocus }: Props = $props();
+	let { flights, tz, night, focus = null, onfocus }: Props = $props();
 
 	const kind = (f: Flight) => flightKind(f);
 	const other = (f: Flight) => (f.otherCode ? `${f.otherName ?? f.otherCode} (${f.otherCode})` : 'Unknown');
@@ -27,11 +28,10 @@
 		<div>Other airport</div>
 	</div>
 	{#each flights as f (f.id)}
-		<div
+		<a
 			class="row"
 			class:focused={f.id === focus}
-			role="row"
-			tabindex="0"
+			href={`?night=${encodeURIComponent(night)}&t=${f.eventTime}#night-replay`}
 			onmouseenter={() => onfocus?.(f.id)}
 			onmouseleave={() => onfocus?.(null)}
 			onfocus={() => onfocus?.(f.id)}
@@ -43,7 +43,7 @@
 			<div class="ident">{flightLabel(f)}{#if flightSubLabel(f)}<span class="tail">{flightSubLabel(f)}</span>{/if}</div>
 			<div class="dim">{f.type ?? '—'}</div>
 			<div class="dim">{other(f)}</div>
-		</div>
+		</a>
 	{/each}
 </div>
 
@@ -56,14 +56,21 @@
 		padding: 11px 0;
 		border-bottom: var(--row-rule);
 		font-size: 14px;
+		color: inherit;
+		text-decoration: none;
 	}
 	.row.head {
 		border-top: var(--rule);
 		padding: 10px 0;
 	}
 	.row:not(.head):hover,
+	.row:not(.head):focus-visible,
 	.row.focused {
 		background: var(--ground-alt);
+	}
+	.row:not(.head):focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: -2px;
 	}
 	.time {
 		font-weight: 600;

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { flightLabel } from '$lib/flights';
 	import { dataBlockHtml, trendOf } from '$lib/datablock';
-	import { altView, displayAlt, NO_CORRECTION, type AltContext } from '$lib/altview.svelte';
+	import { displayAlt, NO_CORRECTION, type AltContext } from '$lib/altview.svelte';
 	import { localTime, localTimeZoned } from '$lib/time';
 	import { PAUSE_ICON, PLAY_ICON, REPLAY_ICON } from './Replay.svelte';
 	import { aircraftKind, assignLanes, glyphHtml, MILITARY_BLUE, silhouetteFor } from '$lib/replay';
@@ -45,12 +45,14 @@
 		incidents?: Incident[];
 		/** Show the whole-night replay controls under the map. */
 		replay?: boolean;
+		/** Optional deep-linked replay time (Unix ms). The replay remains paused. */
+		initialTime?: number | null;
 		/** FAA runway geometry for the airport at the center of the map. */
 		runways?: Runway[];
 		onfocus?: (id: string | null) => void;
 	}
 
-	let { center, flights, focus = null, height = 520, tiles = 'carto', alt = NO_CORRECTION, tz = 'UTC', incidents = [], replay = false, runways = [], onfocus }: Props = $props();
+	let { center, flights, focus = null, height = 520, tiles = 'carto', alt = NO_CORRECTION, tz = 'UTC', incidents = [], replay = false, initialTime = null, runways = [], onfocus }: Props = $props();
 
 	const SAMPLE_MS = 2000;
 
@@ -323,7 +325,7 @@
 			g.label.setLatLng(at);
 			const host = g.label.getElement();
 			if (host) {
-				const shown = displayAlt(v[2], alt, altView.mode);
+				const shown = displayAlt(v[2], alt);
 				const elements = updateReplayLabel(
 					host,
 					dataBlockHtml({ label: dataLabel(f), altFt: v[2], plainAltFt: shown.ft, altUnit: shown.mode === 'agl' ? 'AGL' : 'ADS-B', gsKt: v[3], trend: trendOf(vel ? vel[2] * 1000 : null) }, color)
@@ -419,7 +421,7 @@
 		const v = entry.spline.at(t)!;
 		const vel = entry.spline.velocityAt(t);
 		const color = aircraftKind(f) === 'military' ? MILITARY_BLUE : f.category === 'airline' ? '#ec3013' : '#201e1d';
-		const shown = displayAlt(v[2], alt, altView.mode);
+		const shown = displayAlt(v[2], alt);
 		const html = dataBlockHtml({ label: dataLabel(f), altFt: v[2], plainAltFt: shown.ft, altUnit: shown.mode === 'agl' ? 'AGL' : 'ADS-B', gsKt: v[3], trend: trendOf(vel ? vel[2] * 1000 : null), time: localTimeZoned(tz, t, true) }, color);
 		const at: LeafletNS.LatLngExpression = [v[0], v[1]];
 		if (!hoverDot) hoverDot = L.circleMarker(at, { radius: 4, color, weight: 2, fillColor: '#f3f2f2', fillOpacity: 1, interactive: false }).addTo(base.map);
@@ -454,8 +456,11 @@
 		cancelAnimationFrame(raf);
 		clearHold();
 		visited.clear();
-		started = false;
-		t = span?.start ?? 0;
+		const requested = span && initialTime != null && Number.isFinite(initialTime)
+			? Math.min(span.end, Math.max(span.start, initialTime))
+			: null;
+		started = requested != null;
+		t = requested ?? span?.start ?? 0;
 		layer?.remove();
 		lines.clear();
 		splines.clear();
@@ -531,6 +536,7 @@
 	// Redraw whenever the map exists and the flight set changes.
 	$effect(() => {
 		void flights;
+		void initialTime;
 		if (base) draw();
 	});
 	// Restyle (cheap) when only focus changes.
@@ -538,11 +544,10 @@
 		void focus;
 		if (base) restyle();
 	});
-	// Advance the replay whenever the clock (or the altitude mode) changes.
+	// Advance the replay whenever the clock changes.
 	$effect(() => {
 		void t;
 		void started;
-		void altView.mode;
 		if (base) drawReplay();
 	});
 	onMount(() => () => {

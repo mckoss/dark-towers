@@ -8,7 +8,7 @@
 <script lang="ts">
 	import { flightLabel } from '$lib/flights';
 	import { dataBlockHtml, trendOf } from '$lib/datablock';
-	import { altView, displayAlt, NO_CORRECTION, type AltContext } from '$lib/altview.svelte';
+	import { displayAlt, NO_CORRECTION, type AltContext } from '$lib/altview.svelte';
 	/**
 	 * Animated replay of a close approach. Both aircraft are sampled from their
 	 * own timestamped tracks at one shared clock; the map is Leaflet (browser
@@ -215,7 +215,7 @@
 			const note = !s ? '' : s.phase === 'after' ? ' · track ended' : ' · not yet reporting';
 			return `<div class="replay-chip" style="color:${color};border-color:${color}">${text}${note}</div>`;
 		}
-		const shown = displayAlt(s.alt, alt, altView.mode);
+		const shown = displayAlt(s.alt, alt);
 		return dataBlockHtml({ label: text, altFt: s.alt, plainAltFt: shown.ft, altUnit: shown.mode === 'agl' ? 'AGL' : 'ADS-B', gsKt: s.gs, trend: trendOf(s.vs) }, color);
 	}
 
