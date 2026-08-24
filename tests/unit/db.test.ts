@@ -6,7 +6,7 @@ freshDataDir('db');
 const dbm = await import('$lib/server/db');
 const {
 	openMemoryDb, upsertFlight, replaceIncidents, upsertNight, totalsForAirport, latestNight, flightById, flightsForNight,
-	incidentsForNight, incidentById, incidentsForAirport, nightSummary, nightsForAirport, totalsAll, totalsByAirport,
+	incidentsForNight, incidentById, incidentsForAirport, separationIncidents, nightSummary, nightsForAirport, totalsAll, totalsByAirport,
 	recordRunStart, recordRunEnd, insertRequest, listRequests, requestExists
 } = dbm;
 
@@ -95,6 +95,14 @@ describe('replaceIncidents', () => {
 		const early = incident('early', 'a', 'c', { t: 100, severity: 'closer-than-allowed' });
 		replaceIncidents('KPAE', '2026-08-14', [late, early]);
 		expect(incidentsForNight('KPAE', '2026-08-14')).toEqual([early, late]);
+	});
+	it('lists only separation events inside the requested range', () => {
+		replaceIncidents('KPAE', '2026-08-14', [
+			incident('separation', 'a', 'b'),
+			incident('wake', 'a', 'c', { kind: 'wake-turbulence', requiredNm: 5 })
+		]);
+		expect(separationIncidents('2026-08-14', '2026-08-14').map((i) => i.id)).toEqual(['separation']);
+		expect(separationIncidents('2026-08-15', '2026-08-16')).toEqual([]);
 	});
 	it('is wrapped in a transaction: a failing insert rolls back the delete', () => {
 		replaceIncidents('KPAE', '2026-08-14', [incident('i1', 'a', 'b')]);

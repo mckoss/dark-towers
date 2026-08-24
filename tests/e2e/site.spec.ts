@@ -59,6 +59,15 @@ test.describe('home', () => {
 		await page.goto('/');
 		await expect(page.locator('.brand-version')).toHaveText(`v${version}`);
 	});
+
+	test('close-approach statistic opens the replayable event table', async ({ page }) => {
+		await page.goto('/');
+		await page.getByRole('link', { name: /Close approaches below the separation standard/ }).click();
+		await expect(page).toHaveURL(/\/close-approaches$/);
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Close approaches');
+		const replay = page.getByRole('link', { name: /Watch replay/ }).first();
+		await expect(replay).toHaveAttribute('href', /\/close-approach\/PAE-/);
+	});
 });
 
 test.describe('navigation', () => {
@@ -196,6 +205,27 @@ test.describe('airport detail', () => {
 		await expect(fading).toHaveCount(0, { timeout: 1200 });
 	});
 
+	test('flight log links seek a shareable whole-night replay and leave it paused', async ({ page }) => {
+		await page.goto(`/airport/PAE?night=${NIGHT_WITH_INCIDENTS}`);
+		const flight = page.locator('section.log a.row').first();
+		const href = await flight.getAttribute('href');
+		expect(href).toMatch(/^\?night=2026-08-17&t=\d+#night-replay$/);
+		const requested = new URL(href!, 'http://localhost').searchParams.get('t');
+		await flight.click();
+		await expect(page).toHaveURL(new RegExp(`night=${NIGHT_WITH_INCIDENTS}&t=${requested}#night-replay`));
+		await expect(page.getByTestId('night-play')).toHaveAttribute('aria-label', 'Play');
+		await expect(page.getByTestId('night-time')).toHaveAttribute('data-t', requested!);
+	});
+
+	test('close-approach statistics preserve airport and night filters', async ({ page }) => {
+		await page.goto(`/airport/PAE?night=${NIGHT_WITH_INCIDENTS}`);
+		await expect(page.locator('a.stat-link[href="/close-approaches?airport=PAE"]')).toBeVisible();
+		await page.locator('.total-link').click();
+		await expect(page).toHaveURL(new RegExp(`/close-approaches\\?airport=PAE&night=${NIGHT_WITH_INCIDENTS}`));
+		await expect(page.getByRole('heading', { level: 1 })).toContainText('Paine Field');
+		await expect(page.getByText(`Night of Monday, August 17`)).toBeVisible();
+	});
+
 	test('keeps aircraft trails attached while a mobile pinch zoom is in progress', async ({ page }, testInfo) => {
 		test.skip(testInfo.project.name !== 'mobile', 'Pinch zoom is a mobile-only interaction');
 		await page.goto(`/airport/PAE?night=${NIGHT_WITH_INCIDENTS}`);
@@ -281,11 +311,10 @@ test.describe('close approach', () => {
 		await expect(page.getByText(/one is enough/)).toBeVisible();
 		await expect(page.getByText(/Nearest approach · \d+:\d\d:\d\d [ap]m/)).toBeVisible();
 		await expect(page.getByTestId('nearest-moment')).toContainText('kt');
-		// Altitudes default to height above the field; the reader can switch to raw reported altitude.
+		// The explanatory figures and the lower datablock line consistently show AGL;
+		// the compact ATC line always retains raw pressure altitude.
 		await expect(page.getByTestId('alt-note')).toContainText(/Altitudes shown are AGL .*corrected [−+][\d,]+'/);
-		await page.getByRole('button', { name: 'Show ADS-B altitudes' }).click();
-		await expect(page.getByTestId('alt-note')).toContainText(/Altitudes shown are ADS-B/);
-		await page.getByRole('button', { name: 'Show heights AGL' }).click();
+		await expect(page.getByRole('button', { name: /altitudes/i })).toHaveCount(0);
 		// Editorial rule: never claim what is or is not in an FAA record.
 		expect(await page.locator('main').textContent()).not.toMatch(/reported to the FAA|FAA record/i);
 
@@ -295,6 +324,10 @@ test.describe('close approach', () => {
 		const replayLabels = page.locator('.replay-label .db-id');
 		await expect(replayLabels.nth(0)).toContainText(' · ');
 		await expect(replayLabels.nth(1)).toContainText(' · ');
+		await expect(page.locator('.replay-label .db-plain').first()).toContainText(/ft AGL/);
+		const atcLine = page.locator('.replay-label-offset.visible .db-atc').first();
+		await expect(atcLine).toBeVisible();
+		await expect(atcLine).toHaveText(/^\d{3}[↑↓]?\s+\d{1,3}$/);
 		await expect(page.locator('.replay-label-leader')).toHaveCount(await page.locator('.replay-label-offset').count());
 		await expectNoOverlaps(page.locator('.replay-label-offset .datablock'));
 		// Playback starts on its own once the map is up.

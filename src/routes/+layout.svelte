@@ -2,12 +2,9 @@
 	import '../app.css';
 	import { page } from '$app/state';
 	import favicon from '$lib/assets/favicon.svg';
-	import { onMount } from 'svelte';
-	import { initAltView } from '$lib/altview.svelte';
 	import pkg from '../../package.json';
 
 	let { children } = $props();
-	onMount(initAltView);
 	let menuOpen = $state(false);
 
 	const nav = [

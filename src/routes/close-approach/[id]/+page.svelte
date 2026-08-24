@@ -5,15 +5,15 @@
 	import { flightLabel, flightSubLabel } from '$lib/flights';
 	import { aircraftKind, pairColors, WINDOW_AFTER_MS, WINDOW_BEFORE_MS } from '$lib/replay';
 	import { localTime, localTimeZoned, nightLabel } from '$lib/time';
-	import { altContextFor, altView, displayAlt, setAltMode, type AltContext } from '$lib/altview.svelte';
+	import { altContextFor, displayAlt, type AltContext } from '$lib/altview.svelte';
 	import type { Flight } from '$lib/types';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 	const { incident, airport, a, b, others, related } = $derived(data);
 
-	// Altitudes: above the field by default (reported pressure altitude corrected
-	// by the hour's altimeter setting), or raw as reported if the reader asks.
+	// Page figures are corrected height above the field. Replay datablocks always
+	// retain raw pressure altitude in their compact ATC line and put AGL below.
 	// One correction for the whole page, fixed at the closest moment: the
 	// replay, the sidebar and the cards all use it, so both aircraft are
 	// always corrected by the same amount.
@@ -21,7 +21,7 @@
 	const altSource = $derived(altCtx.source);
 	const correction = $derived(altCtx.offsetFt);
 	const showAlt = (reported: number) => {
-		const d = displayAlt(reported, altCtx, altView.mode);
+		const d = displayAlt(reported, altCtx);
 		return `${d.ft.toLocaleString('en-US')} ft`;
 	};
 	const signed = (n: number) => `${n < 0 ? '−' : '+'}${Math.abs(n).toLocaleString('en-US')}'`;
@@ -103,7 +103,6 @@
 				{/each}
 			</div>
 			<div class="alt-note" data-testid="alt-note">
-				{#if altView.mode === 'agl'}
 					{#if altSource === 'on-field'}
 						Altitudes shown are AGL (height above the field): ADS-B altitude, corrected {signed(-correction)} — {altCtx.points === 1 ? 'an aircraft' : `${altCtx.points} reports from aircraft`} on the field within an hour of this moment read {signed(correction)} against the field elevation of {airport.elevationFt.toLocaleString('en-US')}'. Source altitudes come in 100' steps.
 					{:else if altSource === 'weather'}
@@ -113,11 +112,6 @@
 					{:else}
 						Altitudes shown are AGL (height above the field, {airport.elevationFt.toLocaleString('en-US')}'), uncorrected: no ground reference for this night.
 					{/if}
-					<button type="button" class="alt-switch" onclick={() => setAltMode('reported')}>Show ADS-B altitudes</button>
-				{:else}
-					Altitudes shown are ADS-B: the figure each aircraft broadcast, measured against a standard air pressure and not corrected for the day's weather or the field elevation.
-					<button type="button" class="alt-switch" onclick={() => setAltMode('agl')}>Show heights AGL</button>
-				{/if}
 			</div>
 		</div>
 		<div class="fact">
@@ -207,18 +201,6 @@
 		margin-top: 12px;
 		font-size: 12px;
 		color: var(--ink-45);
-	}
-	.alt-switch {
-		display: block;
-		margin-top: 6px;
-		padding: 0;
-		border: none;
-		background: none;
-		font: inherit;
-		font-weight: 700;
-		color: var(--ink);
-		text-decoration: underline;
-		cursor: pointer;
 	}
 	.moment-row {
 		display: grid;
