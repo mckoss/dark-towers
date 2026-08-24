@@ -5,6 +5,11 @@ export default defineConfig({
 	timeout: 30_000,
 	fullyParallel: true,
 	retries: process.env.CI ? 1 : 0,
+	// Keep the retry for traces, but never let a retry turn a real CI failure green.
+	failOnFlakyTests: !!process.env.CI,
+	// Multiple Chromium processes occasionally exhaust the hosted runner and crash
+	// before a test begins. Local runs can still use all available workers.
+	workers: process.env.CI ? 1 : undefined,
 	reporter: process.env.CI ? 'github' : 'list',
 	use: {
 		baseURL: 'http://localhost:4173',
