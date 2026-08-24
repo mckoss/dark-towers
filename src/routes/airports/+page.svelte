@@ -14,6 +14,7 @@
 	const flights = (a: AirportWithStats) => (a.stats ? String(a.stats.flights) : '—');
 	const hasIncidents = (a: AirportWithStats) => (a.stats?.incidents ?? 0) > 0;
 	const candidate = $derived(form?.candidate ?? data.candidate);
+	const matches = $derived(form?.matches ?? []);
 	const requestError = $derived(form?.error ?? data.requestError);
 	const signInHref = $derived(candidate ? `/auth/google?next=${encodeURIComponent(`/airports?request=${candidate.id}#request-airport`)}` : '');
 </script>
@@ -135,12 +136,30 @@
 			</div>
 		{:else}
 			<form method="POST" action="?/lookup" use:enhance>
-				<input type="text" name="value" placeholder="Airport code, or city and state" maxlength="120" required aria-label="Airport code, or city and state" />
+				<input type="text" name="value" placeholder="Airport code, city, or state" maxlength="120" required aria-label="Airport code, city, or state" />
 				<button type="submit" class="btn btn-ink">Look up airport</button>
 				{#if requestError}
 					<div class="confirm error" role="alert">{requestError}</div>
 				{/if}
 			</form>
+			{#if matches.length}
+				<div class="matches" data-testid="request-results">
+					<div class="kicker">Qualifying airports</div>
+					<p>These FAA Part 139 airports have a part-time tower or no tower.</p>
+					{#each matches as airport (airport.id)}
+						<div class="match" data-testid="request-result">
+							<div><strong>{airport.id} · {airport.name}</strong><span>{airport.city}, {airport.state} · {airport.towerLabel}</span></div>
+							{#if airport.status === 'available'}
+								<a class="btn btn-ink" href="/airports?request={airport.id}#request-airport">Review {airport.id}</a>
+							{:else if airport.status === 'listed'}
+								<span class="pill pill-ghost">Already on list</span>
+							{:else}
+								<span class="pill pill-ghost">Already requested</span>
+							{/if}
+						</div>
+					{/each}
+				</div>
+			{/if}
 		{/if}
 	</div>
 </section>
@@ -281,6 +300,15 @@
 		font-size: 15px;
 		line-height: 1.5;
 	}
+	.matches { margin-top: 24px; border-top: 2px solid #fff; }
+	.matches > .kicker { margin-top: 20px; }
+	.matches > p { margin: 8px 0 12px; font-size: 13px; line-height: 1.45; }
+	.match { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-top: 1px solid rgba(255, 255, 255, 0.55); }
+	.match strong, .match span { display: block; }
+	.match strong { font-size: 15px; }
+	.match div > span { margin-top: 3px; font-size: 12px; line-height: 1.35; }
+	.match .btn { flex: none; padding: 10px 12px; font-size: 11px; }
+	.match > .pill { flex: none; }
 
 	@media (max-width: 760px) {
 		.stat {
@@ -347,5 +375,6 @@
 			border-left: none;
 			border-top: 2px solid #fff;
 		}
+		.match { align-items: flex-start; flex-direction: column; }
 	}
 </style>

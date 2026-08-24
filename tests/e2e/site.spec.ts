@@ -136,6 +136,22 @@ test.describe('airports', () => {
 		await expect(page).toHaveURL(/\/airport\/PAE/);
 	});
 
+	test('finds qualifying airports by state code, state name, or city', async ({ page }) => {
+		await page.goto('/airports');
+		const search = page.getByLabel('Airport code, city, or state');
+		for (const query of ['OR', 'Oregon', 'Redmond']) {
+			await search.fill(query);
+			await Promise.all([
+				page.waitForResponse((response) => response.request().method() === 'POST' && response.url().includes('/airports')),
+				page.getByRole('button', { name: 'Look up airport' }).click()
+			]);
+			await expect(page.getByTestId('request-results')).toContainText('RDM');
+		}
+		await page.getByRole('link', { name: 'Review RDM' }).click();
+		await expect(page).toHaveURL(/request=RDM/);
+		await expect(page.getByTestId('request-candidate')).toContainText('RDM');
+	});
+
 	test('request lookup qualifies a new airport before collecting verified contact details', async ({ page, isMobile }) => {
 		await page.goto('/airports');
 		await page.getByPlaceholder(/Airport code/).fill('SEA');
