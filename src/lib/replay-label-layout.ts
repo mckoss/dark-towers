@@ -100,8 +100,12 @@ export function layoutReplayLabels(
 			const aircraftOverlap = aircraftRects.reduce((sum, other) => sum + overlapArea(rect, other, 3), 0);
 			const clipped = outsideArea(rect, viewport, 6);
 			const distance = Math.hypot(rect.x + rect.width / 2 - target.x, rect.y + rect.height / 2 - target.y);
-			const changed = prior && slot !== prior ? 250 : 0;
-			const score = clipped * 20_000 + labelOverlap * 10_000 + aircraftOverlap * 2_000 + changed + distance + rank;
+			// A small amount of hysteresis keeps equally good nearby directions
+			// stable. Far slots exist only to escape an edge or collision, however,
+			// and must give way as soon as a clear near slot becomes available.
+			const changed = prior && slot !== prior ? 40 : 0;
+			const far = slot.endsWith('2') ? 200 : 0;
+			const score = clipped * 20_000 + labelOverlap * 10_000 + aircraftOverlap * 2_000 + far + changed + distance + rank;
 			if (!best || score < best.score) best = { slot, rect, score };
 		}
 
