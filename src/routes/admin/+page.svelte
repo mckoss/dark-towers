@@ -77,9 +77,13 @@
 <section class="section split">
 	<div class="cell">
 		<h2 class="section-heading">Run the pipeline</h2>
+		<p class="hint activity">
+			{#if data.schedulerOn}Scheduler is on: this runs by itself hourly at :07.{:else}Scheduler is <strong>off</strong> — nights are only collected when started here.{/if}
+			Last 24 hours: {data.activity.runs === 0 ? 'no runs' : `${data.activity.runs} run${data.activity.runs === 1 ? '' : 's'}, ${data.activity.apiCalls} API call${data.activity.apiCalls === 1 ? '' : 's'}`}{data.activity.failed ? `, ${data.activity.failed} failed` : ''}{#if data.activity.lastAt}; last {when(data.activity.lastAt)} {data.activity.lastOk ? '✓' : '✗'}{/if}. Details under Recent runs below.
+		</p>
 		<form method="POST" action="?/catchup" use:enhance class="row">
 			<button class="btn" type="submit" disabled={running}>Catch up now</button>
-			<span class="hint">Ingests every tracked airport's recent nights that aren't complete (what the hourly scheduler does).</span>
+			<span class="hint">Runs the same catch-up immediately: every tracked airport's recent nights that aren't complete.</span>
 		</form>
 		<form method="POST" action="?/ingest" use:enhance class="row ingest">
 			<label>Airport

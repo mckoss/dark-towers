@@ -1,5 +1,5 @@
 import { listAirports } from '$lib/server/airports-store';
-import { altimeterCheck, deleteRequest, incompleteNights, listRequests, nightCounts, recentRuns } from '$lib/server/db';
+import { altimeterCheck, deleteRequest, incompleteNights, listRequests, nightCounts, recentRuns, runActivity } from '$lib/server/db';
 import { pressureOffsetFt } from '$lib/altimeter';
 import { cachedCapability, extendedHistoryAllowed, probeCapability } from '$lib/server/capability';
 import { currentJob, startBackfill, startCatchUp, startIngest } from '$lib/server/jobs';
@@ -88,6 +88,8 @@ export const load: PageServerLoad = ({ locals }) => {
 			];
 			return { rows, totalBytes: rows.reduce((n, r) => n + r.bytes, 0) };
 		})(),
+		schedulerOn: s.scheduler,
+		activity: runActivity(Date.now() - 24 * 3600_000),
 		runs: recentRuns(),
 		requests: listRequests(),
 		job: currentJob()

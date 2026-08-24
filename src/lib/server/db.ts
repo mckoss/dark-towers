@@ -284,6 +284,18 @@ export interface RunRow {
 export function recentRuns(limit = 40): RunRow[] {
 	return db().prepare(`SELECT * FROM runs ORDER BY id DESC LIMIT ?`).all(limit) as RunRow[];
 }
+/** Pipeline activity in a recent window: run count, summed API calls (parsed from run messages), and the newest run. */
+export function runActivity(sinceMs: number): { runs: number; apiCalls: number; failed: number; lastAt: number | null; lastOk: boolean | null } {
+	const rows = db().prepare(`SELECT started_at, ok, message FROM runs WHERE started_at >= ? ORDER BY started_at DESC`).all(sinceMs) as { started_at: number; ok: number | null; message: string | null }[];
+	let apiCalls = 0, failed = 0;
+	for (const r of rows) {
+		const m = r.message?.match(/(\d+) api calls/);
+		if (m) apiCalls += Number(m[1]);
+		if (r.ok === 0) failed++;
+	}
+	return { runs: rows.length, apiCalls, failed, lastAt: rows[0]?.started_at ?? null, lastOk: rows[0] ? !!rows[0].ok : null };
+}
+
 export interface RequestRow {
 	id: number; value: string; email: string | null; code: string | null; assessment: string | null; created_at: number;
 }
