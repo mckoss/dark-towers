@@ -1,7 +1,6 @@
 <script lang="ts">
 	import '../app.css';
 	import { page } from '$app/state';
-	import favicon from '$lib/assets/favicon.svg';
 	import pkg from '../../package.json';
 
 	let { children } = $props();
@@ -16,7 +15,10 @@
 </script>
 
 <svelte:head>
-	<link rel="icon" href={favicon} />
+	<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+	<link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
+	<link rel="icon" href="/favicon.ico" sizes="any" />
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 	<link rel="manifest" href="/manifest.webmanifest" />
 	<meta name="theme-color" content="#f3f2f2" />
 	<link rel="preconnect" href="https://fonts.googleapis.com" />

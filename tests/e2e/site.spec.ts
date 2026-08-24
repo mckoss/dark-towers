@@ -403,6 +403,10 @@ test.describe('aircraft', () => {
 
 	test('history is newest first and unknown registrations are 404', async ({ page }) => {
 		await page.goto('/aircraft/N11571');
+		const hero = page.getByTestId('aircraft-hero-image');
+		await expect(hero).toBeVisible();
+		await expect(hero).toHaveAttribute('src', '/images/aircraft/cessna-high-wing-640.webp');
+		await expect(hero.locator('xpath=..').locator('source')).toHaveAttribute('srcset', /cessna-high-wing-320\.webp 320w.*960\.webp 960w/);
 		const times = await page.getByTestId('aircraft-sighting').evaluateAll((rows) => rows.map((row) => Number(row.getAttribute('data-event-time'))));
 		expect(times.length).toBeGreaterThan(1);
 		expect(times).toEqual([...times].sort((a, b) => b - a));
