@@ -11,10 +11,10 @@
 			<source
 				type="image/webp"
 				srcset="/images/aircraft/{artwork.slug}-320.webp 320w, /images/aircraft/{artwork.slug}-640.webp 640w, /images/aircraft/{artwork.slug}-960.webp 960w"
-				sizes="(max-width: 760px) calc(100vw - 48px), 50vw"
+				sizes="(max-width: 760px) 260px, 300px"
 			/>
 			<img
-				src="/images/aircraft/{artwork.slug}-640.webp"
+				src="/images/aircraft/{artwork.slug}-320.webp"
 				alt={artwork.alt}
 				width="960"
 				height="640"
@@ -29,20 +29,20 @@
 
 <style>
 	.aircraft-hero {
-		margin: 26px 0 0;
-		background: #efe2c5;
-		border: var(--rule);
-		overflow: hidden;
+		width: min(100%, 300px);
+		margin: 22px 0 0;
 	}
 	picture { display: block; aspect-ratio: 3 / 2; }
 	img { display: block; width: 100%; height: 100%; object-fit: contain; }
 	figcaption {
-		padding: 8px 10px;
-		border-top: 1px solid color-mix(in srgb, var(--ink) 35%, transparent);
+		margin-top: 5px;
 		color: var(--ink-60);
-		font-size: 10px;
-		font-weight: 700;
-		letter-spacing: 0.1em;
+		font-size: 9px;
+		font-weight: 600;
+		letter-spacing: 0.07em;
 		text-transform: uppercase;
+	}
+	@media (max-width: 760px) {
+		.aircraft-hero { width: min(100%, 260px); }
 	}
 </style>
