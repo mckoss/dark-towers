@@ -53,7 +53,11 @@
 			<div class="big-stat" class:accent={!empty} class:muted={empty}>
 				{empty ? '—' : fmt(data.totals.incidents)}
 			</div>
-			<div class="stat-label">Aircraft that came closer than FAA control standards</div>
+			<div class="stat-label">Close approaches below the separation standard</div>
+		</div>
+		<div class="stat">
+			<div class="big-stat" class:accent={!empty} class:muted={empty}>{empty ? '—' : fmt(data.totals.wakeIncidents)}</div>
+			<div class="stat-label">Wake-turbulence events below FAA in-trail spacing</div>
 		</div>
 		<div class="footnote period">Data from last 30 days</div>
 	</div>
@@ -87,7 +91,7 @@
 
 	.stats {
 		display: grid;
-		grid-template-rows: 1fr 1fr 1fr auto;
+		grid-template-rows: 1fr 1fr 1fr 1fr auto;
 	}
 	.stat {
 		display: flex;
@@ -96,7 +100,7 @@
 		padding: 24px var(--gutter);
 		border-bottom: var(--row-rule);
 	}
-	.stat:nth-of-type(3) {
+	.stat:nth-of-type(4) {
 		border-bottom: none;
 	}
 	.stat .big-stat {

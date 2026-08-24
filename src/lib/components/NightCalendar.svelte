@@ -15,7 +15,7 @@
 	function describe(c: { night: string; summary: NightSummary | null }): string[] {
 		const s = c.summary;
 		if (!s) return ['No data yet'];
-		return [`${s.flights} flights`, `${s.airline} airline`, `${s.incidents} close ${s.incidents === 1 ? 'approach' : 'approaches'}`];
+		return [`${s.flights} flights`, `${s.airline} airline`, `${s.incidents} close ${s.incidents === 1 ? 'approach' : 'approaches'}`, `${s.wakeIncidents ?? 0} wake ${s.wakeIncidents === 1 ? 'event' : 'events'}`];
 	}
 	let tip = $state<{ lines: string[]; x: number; hot: boolean; align: 'center' | 'left' | 'right' } | null>(null);
 	let gridEl: HTMLDivElement;
@@ -27,7 +27,7 @@
 		const x = r.left - g.left + r.width / 2;
 		const TIP_HALF = 80;
 		const align = x < TIP_HALF ? 'left' : g.width - x < TIP_HALF ? 'right' : 'center';
-		tip = { lines: describe(c), x: align === 'left' ? r.left - g.left : align === 'right' ? r.right - g.left : x, hot: (c.summary?.incidents ?? 0) > 0, align };
+		tip = { lines: describe(c), x: align === 'left' ? r.left - g.left : align === 'right' ? r.right - g.left : x, hot: (c.summary?.incidents ?? 0) + (c.summary?.wakeIncidents ?? 0) > 0, align };
 	}
 
 
@@ -38,7 +38,7 @@
 		<span><i class="none"></i>No data</span>
 		<span><i class="quiet"></i>No airline flights</span>
 		<span><i class="airline"></i>Airline flights</span>
-		<span><i class="hot"></i>Close approach</span>
+		<span><i class="hot"></i>Flagged event</span>
 	</div>
 	<div class="grid" bind:this={gridEl}>
 		{#if tip}
@@ -50,9 +50,9 @@
 			{@const s = c.summary}
 			<button
 				class="night"
-				class:hot={(s?.incidents ?? 0) > 0}
-				class:airline={!!s && s.incidents === 0 && s.airline > 0}
-				class:quiet={!!s && s.incidents === 0 && s.airline === 0}
+				class:hot={(s?.incidents ?? 0) + (s?.wakeIncidents ?? 0) > 0}
+				class:airline={!!s && s.incidents === 0 && (s.wakeIncidents ?? 0) === 0 && s.airline > 0}
+				class:quiet={!!s && s.incidents === 0 && (s.wakeIncidents ?? 0) === 0 && s.airline === 0}
 				class:selected={c.night === selected}
 				class:empty={!s}
 				aria-disabled={!s}

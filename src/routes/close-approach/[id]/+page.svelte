@@ -64,7 +64,7 @@
 </script>
 
 <svelte:head>
-	<title>{flightLabel(a)} and {flightLabel(b)} · close approach · Dark Towers</title>
+	<title>{flightLabel(a)} and {flightLabel(b)} · {incident.kind === 'wake-turbulence' ? 'wake turbulence' : 'close approach'} · Dark Towers</title>
 </svelte:head>
 
 <section class="section head">
@@ -72,7 +72,7 @@
 		<a class="back" href="/airport/{airport.code}">← {airport.name}</a>
 		<span class="ref">{nightLabel(incident.night)}</span>
 	</div>
-	<h1 class="headline">{flightLabel(a)} and {flightLabel(b)} — <span class:accent-text={incident.severity === 'very-close'}>{incident.severity === 'very-close' ? 'very close approach' : 'close approach'} at {localTimeZoned(airport.tz, incident.t)}</span></h1>
+	<h1 class="headline">{flightLabel(a)} and {flightLabel(b)} — <span class:accent-text={incident.kind === 'wake-turbulence' || incident.severity === 'very-close'}>{incident.kind === 'wake-turbulence' ? 'wake-turbulence event' : incident.severity === 'very-close' ? 'very close approach' : 'close approach'} at {localTimeZoned(airport.tz, incident.t)}</span></h1>
 </section>
 
 <section class="section split">
@@ -84,9 +84,9 @@
 	</div>
 	<div class="facts">
 		<div class="fact">
-			<div class="table-header">Nearest approach · {localTime(airport.tz, incident.t, true)}</div>
+			<div class="table-header">{incident.kind === 'wake-turbulence' ? 'Closest in-trail spacing' : 'Nearest approach'} · {localTime(airport.tz, incident.t, true)}</div>
 			<div class="fact-row">
-				<div class="figure accent tabular">{ft(incident.verticalFt)} <span class="at">at</span> {nm(incident.lateralNm)}</div>
+				<div class="figure accent tabular">{incident.kind === 'wake-turbulence' ? `${nm(incident.lateralNm)} in trail` : `${ft(incident.verticalFt)} at ${nm(incident.lateralNm)}`}</div>
 			</div>
 			<div class="at-moment" data-testid="nearest-moment">
 				{#each [{ f: a, alt: incident.altA, gs: incident.gsA, swatch: colors[0] }, { f: b, alt: incident.altB, gs: incident.gsB, swatch: colors[1] }] as row (row.f.id)}
@@ -122,8 +122,8 @@
 		<div class="fact">
 			<div class="table-header">What a controller requires</div>
 			<div class="fact-row">
-				<div class="figure tabular small">3 NM <span class="at">or</span> 1,000'</div>
-				<div class="caption">at least 3 NM apart side to side, or at least 1,000' apart vertically — one is enough</div>
+				<div class="figure tabular small">{incident.kind === 'wake-turbulence' ? `${incident.requiredNm} NM` : '3 NM or 1,000\''}</div>
+				<div class="caption">{incident.kind === 'wake-turbulence' ? `FAA CWT on-approach minimum for Category ${incident.followerCategory} behind Category ${incident.leaderCategory}; flight A is the leader` : "at least 3 NM apart side to side, or at least 1,000' apart vertically — one is enough"}</div>
 			</div>
 		</div>
 	</div>
@@ -252,14 +252,6 @@
 	.who-desc {
 		font-size: 12px;
 		color: var(--ink-60);
-	}
-	.at {
-		font-size: 0.5em;
-		font-weight: 700;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--ink-60);
-		margin: 0 0.15em;
 	}
 	.figure.small {
 		font-size: 32px;

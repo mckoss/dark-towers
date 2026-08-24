@@ -9,7 +9,8 @@
 		tz: string;
 	}
 	let { incident, identA, identB, tz }: Props = $props();
-	const severity = $derived(incident.severity === 'very-close' ? 'Very close' : 'Close approach');
+	const wake = $derived(incident.kind === 'wake-turbulence');
+	const severity = $derived(wake ? 'Wake turbulence' : incident.severity === 'very-close' ? 'Very close' : 'Close approach');
 </script>
 
 <a class="card" href="/close-approach/{incident.id}">
@@ -19,6 +20,10 @@
 	</div>
 	<div class="pair">{identA} × {identB}</div>
 	<div class="figs">
+		{#if wake}
+		<div><div class="fig tabular">{incident.lateralNm} NM</div><div class="cap">In trail · required {incident.requiredNm} NM</div></div>
+		<div><div class="fig tabular">{incident.trailSeconds}s</div><div class="cap">Behind leader · CWT {incident.leaderCategory} → {incident.followerCategory}</div></div>
+		{:else}
 		<div>
 			<div class="fig tabular">{incident.lateralNm} NM</div>
 			<div class="cap">Less than 3 NM</div>
@@ -27,8 +32,9 @@
 			<div class="fig tabular">{incident.verticalFt.toLocaleString('en-US')}'</div>
 			<div class="cap">Less than 1,000'</div>
 		</div>
+		{/if}
 	</div>
-	<span class="btn more">Replay this close approach →</span>
+	<span class="btn more">Replay this {wake ? 'wake event' : 'close approach'} →</span>
 </a>
 
 <style>

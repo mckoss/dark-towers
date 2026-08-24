@@ -90,6 +90,7 @@
 	<div class="stat"><div class="stat-n">{fmt(data.totals.airline)}</div><div class="stat-label">Passenger airline</div></div>
 	<div class="stat"><div class="stat-n">{fmt(data.totals.private)}</div><div class="stat-label">Private and training aircraft</div></div>
 	<div class="stat"><div class="stat-n accent">{fmt(data.totals.incidents)}</div><div class="stat-label">Close approaches</div></div>
+	<div class="stat"><div class="stat-n accent">{fmt(data.totals.wakeIncidents)}</div><div class="stat-label">Wake turbulence</div></div>
 </section>
 
 {#if !hasDetail}
@@ -135,13 +136,13 @@
 				<MapLegend items={[{ kind: 'accent', label: 'Passenger airline' }, { kind: 'ink', label: 'Private and training aircraft' }, ...(data.flights.some((f) => aircraftKind(f) === 'military') ? [{ kind: 'military' as const, label: 'Military' }] : []), { kind: 'ring', label: `${AIRSPACE_RADIUS_NM} nautical mile ring` }]} />
 			</div>
 			<div class="night-right">
-				<div class="night-head"><div class="table-header">Close approaches this night</div></div>
+				<div class="night-head"><div class="table-header">Flagged events this night</div></div>
 				{#if data.incidents.length}
 					{#each data.incidents as inc (inc.id)}
 						<CloseApproachCard incident={inc} identA={data.idents[inc.flightA] ?? '?'} identB={data.idents[inc.flightB] ?? '?'} tz={airport.tz} />
 					{/each}
 				{:else}
-					<p class="no-incidents">No two aircraft came within 3 nautical miles and 1,000 feet of each other this night, across all {nightFlights} flights.</p>
+					<p class="no-incidents">No separation or wake-turbulence events were detected this night, across all {nightFlights} flights.</p>
 				{/if}
 				<div class="night-totals">
 					<div class="table-header">That night, in total</div>
@@ -223,7 +224,7 @@
 	}
 	.stats {
 		display: grid;
-		grid-template-columns: repeat(4, 1fr);
+		grid-template-columns: repeat(5, 1fr);
 	}
 	.stat {
 		padding: 12px 20px 16px;

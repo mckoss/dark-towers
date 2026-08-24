@@ -95,9 +95,12 @@ export interface Flight {
 }
 
 export type Severity = 'closer-than-allowed' | 'very-close';
+export type IncidentKind = 'separation' | 'wake-turbulence';
+export type WakeCategory = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I';
 
 export interface Incident {
 	id: string;
+	kind?: IncidentKind;
 	airport: string;
 	night: string;
 	/** Unix ms at the closest moment. */
@@ -117,6 +120,11 @@ export interface Incident {
 	/** Interpolated positions at the closest moment. */
 	posA: [number, number];
 	posB: [number, number];
+	/** Wake-only fields; flightA is the leader and flightB the follower. */
+	requiredNm?: number | null;
+	leaderCategory?: WakeCategory | null;
+	followerCategory?: WakeCategory | null;
+	trailSeconds?: number | null;
 }
 
 export interface NightSummary {
@@ -129,6 +137,7 @@ export interface NightSummary {
 	private: number;
 	positions: number;
 	incidents: number;
+	wakeIncidents?: number;
 	/** Whether the night has been fully processed (tracks fetched). */
 	complete: boolean;
 	/** Hourly altimeter settings ([unix ms, inHg]) from the airport's weather reports; null if unavailable. */
