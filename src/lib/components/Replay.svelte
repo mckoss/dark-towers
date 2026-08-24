@@ -17,6 +17,14 @@
 	import { onMount, untrack } from 'svelte';
 	import type { AirportConfig, Flight, Incident } from '$lib/types';
 	import { buildReplay, glyphHtml, glyphSizeFor, pairColors, silhouetteFor } from '$lib/replay';
+	import {
+		applyReplayLabelPlacement,
+		layoutReplayLabels,
+		updateReplayLabel,
+		type LabelSlot,
+		type ReplayLabelElements,
+		type ReplayLabelTarget
+	} from '$lib/replay-label-layout';
 	import { buildTrackSpline } from '$lib/separation';
 	import { fromLocalNm } from '$lib/geo';
 	import { localTime, localTimeZoned } from '$lib/time';
@@ -71,6 +79,8 @@
 			.filter((x): x is { f: Flight; track: NonNullable<typeof x.track> } => !!x.track && x.track.spline.t0 <= end && x.track.spline.t1 >= start)
 	);
 	const otherLayers = new Map<string, { mark: Leaflet.Marker; label: Leaflet.Marker; trail: Leaflet.Polyline }>();
+	const labelSlots = new Map<string, LabelSlot>();
+	type LabelDraw = { target: ReplayLabelTarget; elements: ReplayLabelElements; color: string };
 
 	/** Closest moment as a fraction of the replay window (scrubber pip position). */
 	const pipFrac = untrack(() => (incident.t - start) / span);
@@ -253,6 +263,7 @@
 			base?.destroy();
 			base = null;
 			layers = null;
+			labelSlots.clear();
 		};
 	});
 
@@ -268,25 +279,27 @@
 		return pts;
 	}
 
-	function placeLabel(marker: Leaflet.Marker, self: { lat: number; lon: number; alt: number; gs: number; vs: number; active: boolean; phase: 'before' | 'active' | 'after' }, other: { lat: number; lon: number }, color: string, text: string) {
+	function collectLabel(
+		labels: LabelDraw[],
+		id: string,
+		marker: Leaflet.Marker,
+		self: { lat: number; lon: number; alt: number; gs: number; vs: number; active: boolean; phase: 'before' | 'active' | 'after' },
+		color: string,
+		text: string,
+		preferred?: { x: number; y: number },
+		radius = glyph / 2
+	) {
 		if (!base) return;
 		marker.setLatLng([self.lat, self.lon]);
 		const host = marker.getElement();
 		if (!host) return;
-		host.innerHTML = labelHtml(color, text, self);
-		const el = host.firstElementChild as HTMLElement | null;
-		if (!el) return;
+		const elements = updateReplayLabel(host, labelHtml(color, text, self));
 		const p = base.map.latLngToContainerPoint([self.lat, self.lon]);
-		const q = base.map.latLngToContainerPoint([other.lat, other.lon]);
-		let dx = p.x - q.x,
-			dy = p.y - q.y;
-		const len = Math.hypot(dx, dy) || 1;
-		dx /= len;
-		dy /= len;
-		const reach = Math.max(18, glyph * 0.8);
-		const ox = Math.round(dx * reach),
-			oy = Math.round(dy * reach);
-		el.style.transform = ox < -6 ? `translate(calc(-100% + ${ox}px), ${oy}px)` : `translate(${Math.max(ox, 10)}px, ${oy}px)`;
+		labels.push({
+			target: { id, x: p.x, y: p.y, width: elements.offset.offsetWidth, height: elements.offset.offsetHeight, radius, preferred },
+			elements,
+			color
+		});
 	}
 
 	function placeGlyph(marker: Leaflet.Marker, s: { lat: number; lon: number; hdg: number; active: boolean }, alert: boolean) {
@@ -302,7 +315,7 @@
 	}
 
 	/** Other aircraft in the air at t: grey glyph, grey data block, three-minute trail. */
-	function drawOthers() {
+	function drawOthers(labels: LabelDraw[]) {
 		if (!base || !L) return;
 		const map = base.map;
 		for (const { f, track } of concurrent) {
@@ -315,6 +328,7 @@
 					g.label.remove();
 					g.trail.remove();
 					otherLayers.delete(f.id);
+					labelSlots.delete(f.id);
 				}
 				continue;
 			}
@@ -343,25 +357,33 @@
 			}
 			pts.push([lat, lon]);
 			g.trail.setLatLngs(pts);
-			g.label.setLatLng([lat, lon]);
-			const host = g.label.getElement();
-			if (host) {
-				host.innerHTML = labelHtml(GREY, dataLabel(f), { alt: v[2], gs: v[3] ?? 0, vs: vel ? vel[2] * 1000 : 0, active: true, phase: 'active' });
-				const inner = host.firstElementChild as HTMLElement | null;
-				if (inner) inner.style.transform = `translate(${Math.round(glyph * 0.7)}px, -50%)`;
-			}
+			collectLabel(labels, f.id, g.label, { lat, lon, alt: v[2], gs: v[3] ?? 0, vs: vel ? vel[2] * 1000 : 0, active: true, phase: 'active' }, GREY, dataLabel(f), undefined, glyph * 0.425);
 		}
 	}
 
 	function draw() {
-		if (!layers || !sample) return;
-		drawOthers();
+		if (!layers || !sample || !base) return;
+		const labels: LabelDraw[] = [];
+		drawOthers(labels);
 		layers.trailA.setLatLngs(trail('a', t));
 		layers.trailB.setLatLngs(trail('b', t));
 		placeGlyph(layers.markA, sample.a, sample.inside);
 		placeGlyph(layers.markB, sample.b, sample.inside);
-		placeLabel(layers.labelA, sample.a, sample.b, colorA, dataLabel(a));
-		placeLabel(layers.labelB, sample.b, sample.a, colorB, dataLabel(b));
+		const pa = base.map.latLngToContainerPoint([sample.a.lat, sample.a.lon]);
+		const pb = base.map.latLngToContainerPoint([sample.b.lat, sample.b.lon]);
+		collectLabel(labels, a.id, layers.labelA, sample.a, colorA, dataLabel(a), { x: pa.x - pb.x, y: pa.y - pb.y });
+		collectLabel(labels, b.id, layers.labelB, sample.b, colorB, dataLabel(b), { x: pb.x - pa.x, y: pb.y - pa.y });
+		const size = base.map.getSize();
+		const placements = layoutReplayLabels(
+			labels.map(({ target }) => target),
+			{ width: size.x, height: size.y },
+			labelSlots
+		);
+		for (const placement of placements) {
+			const label = labels.find(({ target }) => target.id === placement.id)!;
+			applyReplayLabelPlacement(label.elements, placement, label.target, label.target.radius, label.color);
+			labelSlots.set(placement.id, placement.slot);
+		}
 	}
 
 	$effect(() => {

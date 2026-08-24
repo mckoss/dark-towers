@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 
 /**
@@ -9,6 +9,21 @@ import { readFileSync } from 'node:fs';
 
 const NIGHT_WITH_INCIDENTS = '2026-08-17';
 const { version } = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as { version: string };
+
+async function expectNoOverlaps(blocks: Locator) {
+	const rects = await blocks.evaluateAll((nodes) =>
+		nodes.map((node) => {
+			const r = node.getBoundingClientRect();
+			return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
+		})
+	);
+	for (let i = 0; i < rects.length; i++) {
+		for (let j = i + 1; j < rects.length; j++) {
+			const overlap = Math.min(rects[i].right, rects[j].right) > Math.max(rects[i].left, rects[j].left) && Math.min(rects[i].bottom, rects[j].bottom) > Math.max(rects[i].top, rects[j].top);
+			expect(overlap, `datablocks ${i} and ${j} overlap`).toBe(false);
+		}
+	}
+}
 
 test.describe('home', () => {
 	test('renders headline, 30-night figures and the US map, naming no airport in copy', async ({ page }) => {
@@ -151,10 +166,17 @@ test.describe('airport detail', () => {
 		expect(await page.getByTestId('night-pip').count()).toBeGreaterThan(0);
 		const before = await page.getByTestId('night-time').getAttribute('data-t');
 		await play.click();
-		await page.waitForTimeout(1500);
-		expect(await page.getByTestId('night-time').getAttribute('data-t')).not.toBe(before);
+		// The replay can pause for 2.5 s on an event almost immediately after
+		// the first report; wait for the shared clock to continue past that hold.
+		await expect.poll(() => page.getByTestId('night-time').getAttribute('data-t'), { timeout: 6000 }).not.toBe(before);
 		await play.click();
 		await expect(play).toHaveAttribute('aria-label', 'Play');
+		const replayBlocks = page.locator('.replay-label-offset .datablock');
+		await expect(replayBlocks.first().locator('.db-id')).toContainText(/ · \S+/);
+		await expect(page.locator('.replay-label-leader').first()).toBeVisible();
+		expect(await page.locator('.replay-label-offset').first().evaluate((node) => getComputedStyle(node).transitionTimingFunction)).toContain('ease-in-out');
+		await page.waitForTimeout(250);
+		await expectNoOverlaps(replayBlocks);
 		// Single-step: +15 s then −15 s returns to the same clock reading.
 		const paused = await page.getByTestId('night-time').getAttribute('data-t');
 		await page.getByTestId('night-forward').click();
@@ -262,6 +284,8 @@ test.describe('close approach', () => {
 		const replayLabels = page.locator('.replay-label .db-id');
 		await expect(replayLabels.nth(0)).toContainText(' · ');
 		await expect(replayLabels.nth(1)).toContainText(' · ');
+		await expect(page.locator('.replay-label-leader')).toHaveCount(await page.locator('.replay-label-offset').count());
+		await expectNoOverlaps(page.locator('.replay-label-offset .datablock'));
 		// Playback starts on its own once the map is up.
 		await expect(play).toHaveAttribute('aria-label', 'Pause');
 		const clock = page.getByTestId('replay-time');
