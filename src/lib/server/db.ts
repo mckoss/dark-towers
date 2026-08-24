@@ -312,6 +312,9 @@ export interface RequestRow {
 export function listRequests(limit = 200): RequestRow[] {
 	return db().prepare(`SELECT * FROM requests ORDER BY id DESC LIMIT ?`).all(limit) as RequestRow[];
 }
+export function getRequest(id: number): RequestRow | undefined {
+	return db().prepare(`SELECT * FROM requests WHERE id = ?`).get(id) as RequestRow | undefined;
+}
 export function deleteRequest(id: number) {
 	db().prepare(`DELETE FROM requests WHERE id = ?`).run(id);
 }

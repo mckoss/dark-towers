@@ -133,18 +133,30 @@
 
 <section class="section cell">
 	<h2 class="section-heading">Add an airport</h2>
-	<form method="POST" action="?/create" use:enhance class="grid-form">
-		<label>Code (IATA/LID) <input name="code" placeholder="BLI" required maxlength="4" /></label>
-		<label>ICAO <input name="icao" placeholder="KBLI" required maxlength="4" /></label>
-		<label>Name <input name="name" /></label>
-		<label>City <input name="city" /></label>
-		<label>State <input name="state" maxlength="2" /></label>
-		<label>Time zone <input name="tz" value="America/Los_Angeles" /></label>
-		<label>Latitude <input name="lat" required /></label>
-		<label>Longitude <input name="lon" required /></label>
-		<label>Elevation (ft) <input name="elevation_ft" /></label>
-		<div class="actions"><button class="btn btn-ink" type="submit">Add (as requested, not tracked)</button></div>
+	<p class="hint">Enter the three-letter code. The FAA record supplies the airport details and tower hours; nothing is saved until you confirm.</p>
+	<form method="POST" action="?/lookupAirport" use:enhance class="lookup-form">
+		<label>Airport code <input name="code" placeholder="BLI" value={form?.code ?? ''} required minlength="3" maxlength="3" autocomplete="off" /></label>
+		<button class="btn btn-ink" type="submit">Look up airport</button>
 	</form>
+	{#if form?.candidate}
+		<div class="candidate" data-testid="airport-candidate">
+			<div>
+				<div class="code">{form.candidate.code}</div>
+				<strong>{form.candidate.name}</strong>
+				<p class="body">{form.candidate.city}, {form.candidate.state} · {form.candidate.icao}</p>
+			</div>
+			<dl>
+				<dt>Location</dt><dd>{form.candidate.lat.toFixed(4)}, {form.candidate.lon.toFixed(4)} · {form.candidate.elevationFt.toLocaleString()} ft</dd>
+				<dt>Time zone</dt><dd>{form.candidate.tz}</dd>
+				<dt>FAA tower record</dt><dd>{form.candidate.tower === 'none' ? 'No control tower' : form.candidate.towerHours}</dd>
+				<dt>Polling schedule</dt><dd>{hoursText(form.candidate.schedule.open, form.candidate.schedule.close)} local · effective {form.candidate.schedule.from}</dd>
+			</dl>
+			<form method="POST" action="?/confirmAirport" use:enhance>
+				<input type="hidden" name="code" value={form.candidate.code} />
+				<button class="btn btn-ink" type="submit">Confirm and start tracking</button>
+			</form>
+		</div>
+	{/if}
 </section>
 
 <style>
@@ -173,6 +185,13 @@
 	.grid-form input, .grid-form select, .sched input { padding: 8px 10px; border: 2px solid var(--hairline); background: #fff; font: inherit; font-size: 14px; }
 	.grid-form input:focus, .sched input:focus { border-color: var(--ink); }
 	.actions { grid-column: 1 / -1; display: flex; align-items: center; gap: 16px; }
+	.lookup-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-top: 14px; }
+	.lookup-form label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-60); }
+	.lookup-form input { width: 130px; padding: 10px 12px; border: 2px solid var(--ink); background: #fff; font: 20px/1 inherit; font-weight: 800; text-transform: uppercase; }
+	.candidate { display: grid; grid-template-columns: minmax(180px, 1fr) 2fr auto; gap: 24px; align-items: center; margin-top: 18px; padding: 18px; border: 2px solid var(--ink); background: var(--ground-alt); }
+	.candidate dl { display: grid; grid-template-columns: max-content 1fr; gap: 5px 14px; margin: 0; font-size: 13px; }
+	.candidate dt { color: var(--ink-60); }
+	.candidate dd { margin: 0; font-weight: 600; }
 	.sub { margin-top: 28px; font-size: 16px; font-weight: 800; }
 	.sched { display: grid; grid-template-columns: 120px 120px 64px 64px 1fr 110px; gap: 6px 10px; align-items: center; margin-top: 10px; }
 	.contents { display: contents; }
@@ -184,6 +203,7 @@
 		.head .pill, .head .dim { display: none; }
 		.detail { padding-left: 0; }
 		.grid-form { grid-template-columns: 1fr; }
+		.candidate { grid-template-columns: 1fr; }
 		.sched { grid-template-columns: 1fr 1fr; }
 	}
 </style>

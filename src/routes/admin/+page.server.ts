@@ -1,5 +1,6 @@
 import { listAirports } from '$lib/server/airports-store';
-import { altimeterCheck, deleteRequest, incompleteNights, listRequests, nightCounts, recentProblems, runActivity } from '$lib/server/db';
+import { altimeterCheck, deleteRequest, getRequest, incompleteNights, listRequests, nightCounts, recentProblems, runActivity } from '$lib/server/db';
+import { airportCandidate, confirmAirport } from '$lib/server/airport-onboarding';
 import { pressureOffsetFt } from '$lib/altimeter';
 import { cachedCapability, extendedHistoryAllowed, probeCapability } from '$lib/server/capability';
 import { BOOTED, currentJob, startBackfill, startCatchUp, startIngest } from '$lib/server/jobs';
@@ -131,5 +132,31 @@ export const actions: Actions = {
 		if (!Number.isInteger(id)) return fail(400, { error: 'Bad id.' });
 		deleteRequest(id);
 		return { deleted: id };
+	},
+	acceptRequest: async ({ request }) => {
+		const f = await request.formData();
+		const id = Number(f.get('id'));
+		if (!Number.isInteger(id)) return fail(400, { error: 'Bad request id.' });
+		const row = getRequest(id);
+		if (!row) return fail(404, { error: 'Request not found.' });
+		const code = row.code || row.value;
+		try {
+			return { candidate: airportCandidate(code), requestId: id };
+		} catch (e) {
+			return fail(400, { error: e instanceof Error ? e.message : String(e) });
+		}
+	},
+	confirmRequest: async ({ request, locals }) => {
+		const f = await request.formData();
+		const id = Number(f.get('id'));
+		if (!Number.isInteger(id)) return fail(400, { error: 'Bad request id.' });
+		const row = getRequest(id);
+		if (!row) return fail(404, { error: 'Request not found.' });
+		try {
+			const added = confirmAirport(row.code || row.value, locals.user!.email, id);
+			return { accepted: added.code };
+		} catch (e) {
+			return fail(400, { error: e instanceof Error ? e.message : String(e) });
+		}
 	}
 };

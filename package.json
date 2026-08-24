@@ -25,6 +25,7 @@
 		"aeroapi:probe": "tsx scripts/aeroapi-probe.ts"
 	},
 	"dependencies": {
+		"@photostructure/tz-lookup": "^11.6.1",
 		"better-sqlite3": "^12.4.1",
 		"node-cron": "^4.2.1"
 	},
