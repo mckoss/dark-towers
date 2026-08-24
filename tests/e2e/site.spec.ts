@@ -68,6 +68,41 @@ test.describe('home', () => {
 		const replay = page.getByRole('link', { name: /Watch replay/ }).first();
 		await expect(replay).toHaveAttribute('href', /\/close-approach\/PAE-/);
 	});
+
+	test('close approaches default to closest and can be grouped by date or airport', async ({ page }) => {
+		const rows = page.getByTestId('approach-row');
+		const values = () => rows.evaluateAll((nodes) => nodes.map((node) => ({
+			airport: node.getAttribute('data-airport')!,
+			night: node.getAttribute('data-night')!,
+			score: Math.hypot(Number(node.getAttribute('data-lateral')), Number(node.getAttribute('data-vertical')) / 6076.12)
+		})));
+		const expectClosestWithin = (items: { score: number }[]) => {
+			for (let i = 1; i < items.length; i++) expect(items[i].score).toBeGreaterThanOrEqual(items[i - 1].score);
+		};
+
+		await page.goto('/close-approaches');
+		await expect(page.getByRole('link', { name: 'Closest', exact: true })).toHaveAttribute('aria-current', 'page');
+		expectClosestWithin(await values());
+
+		await page.getByRole('link', { name: 'Date', exact: true }).click();
+		await expect(page).toHaveURL(/sort=date/);
+		const byDate = await values();
+		for (let i = 1; i < byDate.length; i++) {
+			expect(byDate[i].night <= byDate[i - 1].night).toBe(true);
+			if (byDate[i].night === byDate[i - 1].night) expect(byDate[i].score).toBeGreaterThanOrEqual(byDate[i - 1].score);
+		}
+
+		await page.getByRole('link', { name: 'Airport', exact: true }).click();
+		await expect(page).toHaveURL(/sort=airport/);
+		const byAirport = await values();
+		for (let i = 1; i < byAirport.length; i++) {
+			expect(byAirport[i].airport >= byAirport[i - 1].airport).toBe(true);
+			if (byAirport[i].airport === byAirport[i - 1].airport) expect(byAirport[i].score).toBeGreaterThanOrEqual(byAirport[i - 1].score);
+		}
+
+		await page.getByRole('link', { name: 'Closest', exact: true }).click();
+		await expect(page).toHaveURL(/\/close-approaches$/);
+	});
 });
 
 test.describe('navigation', () => {
