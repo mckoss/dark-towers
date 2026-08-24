@@ -203,13 +203,11 @@ export const SILHOUETTE_PATHS: Record<Silhouette, string> = {
 };
 
 /**
- * Which of the two design colours each aircraft gets: accent for the airline,
- * ink for the private aircraft. If both are the same kind, A takes accent so
- * the pair is still told apart. Shared by the replay and the aircraft cards.
+ * Which semantic colour each aircraft gets: accent only for passenger
+ * airlines, ink for every other category. Shared by the replay and cards.
  */
-export function pairColors(a: Flight, b: Flight): ['accent' | 'ink', 'accent' | 'ink'] {
-	const same = a.category === b.category;
-	return [same || a.category === 'airline' ? 'accent' : 'ink', !same && b.category === 'airline' ? 'accent' : 'ink'];
+export function pairColors(a: Pick<Flight, 'category'>, b: Pick<Flight, 'category'>): ['accent' | 'ink', 'accent' | 'ink'] {
+	return [a.category === 'airline' ? 'accent' : 'ink', b.category === 'airline' ? 'accent' : 'ink'];
 }
 
 /** Marker HTML for an aircraft glyph (ring for the alert state + silhouette), nose up; rotated by the caller. */

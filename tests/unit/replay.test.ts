@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aircraftKind, assignLanes, silhouetteFor } from '../../src/lib/replay';
+import { aircraftKind, assignLanes, pairColors, silhouetteFor } from '../../src/lib/replay';
 
 describe('assignLanes', () => {
 	it('keeps well-spaced marks on one row and drops colliding ones to the second', () => {
@@ -31,5 +31,14 @@ describe('aircraftKind / silhouetteFor', () => {
 		expect(silhouetteFor({ category: 'private', type: 'C172' })).toBe('light');
 		// Registry-described helicopters have no ICAO code, only an airframe.
 		expect(silhouetteFor({ category: 'private', type: 'BELL 429', airframe: 'helicopter' })).toBe('helicopter');
+	});
+});
+
+describe('pairColors', () => {
+	it('uses red only for aircraft categorized as passenger airlines', () => {
+		expect(pairColors({ category: 'private' }, { category: 'private' })).toEqual(['ink', 'ink']);
+		expect(pairColors({ category: 'airline' }, { category: 'private' })).toEqual(['accent', 'ink']);
+		expect(pairColors({ category: 'private' }, { category: 'airline' })).toEqual(['ink', 'accent']);
+		expect(pairColors({ category: 'airline' }, { category: 'airline' })).toEqual(['accent', 'accent']);
 	});
 });

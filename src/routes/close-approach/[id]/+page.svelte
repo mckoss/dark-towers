@@ -33,7 +33,7 @@
 			end = incident.t + WINDOW_AFTER_MS;
 		return others.some((f) => f.positions.length > 1 && f.positions[0].t <= end && f.positions[f.positions.length - 1].t >= start);
 	});
-	/** Key for the replay map: the pair's two colours by kind (both accent/ink when they share a kind), other traffic, the ring. */
+	/** Key for the replay map: red only for airlines, ink for other traffic, plus the ring. */
 	const legend = $derived.by(() => {
 		const kindLabel = (f: Flight) => {
 			const k = aircraftKind(f);

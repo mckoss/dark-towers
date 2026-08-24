@@ -402,6 +402,13 @@ test.describe('close approach', () => {
 		const res = await page.goto('/close-approach/PAE-00000000-nope');
 		expect(res?.status()).toBe(404);
 	});
+
+	test('never colors a private helicopter red merely to distinguish the pair', async ({ page }) => {
+		await page.goto('/close-approach/PAE-20260817-qtadcb');
+		await expect(page.getByRole('heading', { level: 1 })).toContainText('N456LF and N5298D');
+		const fills = await page.locator('.replay-glyph path').evaluateAll((paths) => paths.map((path) => path.getAttribute('fill')));
+		expect(fills).not.toContain('#ec3013');
+	});
 });
 
 test.describe('method', () => {
