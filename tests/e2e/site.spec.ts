@@ -191,10 +191,12 @@ test.describe('close approach', () => {
 		await expect(page.getByTestId('replay-pip')).toBeAttached();
 		// Playback starts on its own once the map is up.
 		await expect(play).toHaveAttribute('aria-label', 'Pause');
-		const before = await page.getByTestId('replay-time').getAttribute('data-t');
-		await page.waitForTimeout(1000);
-		const after = await page.getByTestId('replay-time').getAttribute('data-t');
-		expect(after).not.toBe(before);
+		const clock = page.getByTestId('replay-time');
+		const before = await clock.getAttribute('data-t');
+		expect(before).not.toBeNull();
+		// The replay intentionally holds for 2.5 s at the closest moment, so
+		// retry until playback resumes instead of assuming one second is enough.
+		await expect(clock).not.toHaveAttribute('data-t', before!);
 		await expect(page.getByTestId('replay-lateral')).toContainText('NM');
 		// Stepping pauses playback and moves the clock by 15 s.
 		await page.getByTestId('replay-forward').click();
