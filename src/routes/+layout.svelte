@@ -4,6 +4,7 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import { onMount } from 'svelte';
 	import { initAltView } from '$lib/altview.svelte';
+	import pkg from '../../package.json';
 
 	let { children } = $props();
 	onMount(initAltView);
@@ -29,6 +30,7 @@
 <header class="site-header">
 	<a href="/" class="brand" onclick={() => (menuOpen = false)}>
 		<span class="brand-name">DARK TOWERS</span>
+		<span class="brand-version">v{pkg.version}</span>
 		<span class="brand-tag">Flights with no tower on duty</span>
 	</a>
 	<nav class="site-nav" class:open={menuOpen} aria-label="Primary">
@@ -84,6 +86,13 @@
 		font-weight: 600;
 		letter-spacing: 0.14em;
 		text-transform: uppercase;
+		color: var(--ink-45);
+		white-space: nowrap;
+	}
+	.brand-version {
+		font-size: 10px;
+		font-weight: 600;
+		letter-spacing: 0.04em;
 		color: var(--ink-45);
 		white-space: nowrap;
 	}

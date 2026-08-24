@@ -86,6 +86,7 @@
 {#if form?.error}<p class="flash error" role="alert">{form.error}</p>{/if}
 {#if form?.started}<p class="flash">Started {form.started}.</p>{/if}
 {#if form?.deleted}<p class="flash">Request #{form.deleted} deleted.</p>{/if}
+{#if form?.accepted}<p class="flash">Added {form.accepted} to the airport list and hourly polling schedule.</p>{/if}
 
 <section class="section split">
 	<div class="cell">
@@ -183,7 +184,20 @@
 		<div class="table-header">When</div><div class="table-header">Request</div><div class="table-header">FAA tower record</div><div class="table-header">Email</div><div></div>
 		{#each data.requests as r (r.id)}
 			<div class="tabular">{when(r.created_at)}</div><div>{r.value}{#if r.code && r.code !== r.value} <span class="muted-text">→ {r.code}</span>{/if}</div><div class="tabular">{r.assessment ?? '—'}</div><div>{r.email ?? '—'}</div>
-			<form method="POST" action="?/deleteRequest" use:enhance><input type="hidden" name="id" value={r.id} /><button class="link-btn" type="submit">delete</button></form>
+			<div class="request-actions">
+				<form method="POST" action="?/acceptRequest" use:enhance><input type="hidden" name="id" value={r.id} /><button class="link-btn" type="submit">review &amp; accept</button></form>
+				<form method="POST" action="?/deleteRequest" use:enhance><input type="hidden" name="id" value={r.id} /><button class="link-btn muted-text" type="submit">delete</button></form>
+			</div>
+			{#if form?.candidate && form?.requestId === r.id}
+				<div class="request-candidate" data-testid="request-candidate">
+					<div><strong>{form.candidate.code} · {form.candidate.name}</strong><br />{form.candidate.city}, {form.candidate.state} · {form.candidate.icao}</div>
+					<div><strong>FAA:</strong> {form.candidate.tower === 'none' ? 'no control tower' : `tower ${form.candidate.towerHours}`}<br /><strong>Polling:</strong> {form.candidate.schedule.open == null ? 'all day' : `${form.candidate.schedule.open}:00–${form.candidate.schedule.close}:00 tower staffed`} · {form.candidate.tz}</div>
+					<form method="POST" action="?/confirmRequest" use:enhance>
+						<input type="hidden" name="id" value={r.id} />
+						<button class="btn btn-ink" type="submit">Confirm and start tracking</button>
+					</form>
+				</div>
+			{/if}
 		{:else}
 			<div class="muted-text">No requests yet.</div>
 		{/each}
@@ -211,7 +225,9 @@
 	.mono { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; color: var(--ink-60); }
 	.altcheck { grid-template-columns: 70px 100px 100px 80px 120px 110px 110px; max-height: 320px; overflow: auto; }
 	.problems { grid-template-columns: 170px 70px 110px 60px 1fr; }
-	.requests { grid-template-columns: 170px 1fr 1fr 1fr 60px; }
+	.requests { grid-template-columns: 170px 1fr 1fr 1fr 150px; }
+	.request-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
+	.request-candidate { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1.5fr auto; gap: 24px; align-items: center; padding: 16px; border: 2px solid var(--ink); background: var(--ground-alt); }
 	.msg { color: var(--ink-60); }
 	.sub { margin-top: 24px; font-size: 16px; font-weight: 800; }
 	.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
@@ -220,5 +236,6 @@
 	.link-btn { background: none; border: none; padding: 0; color: var(--accent-text); font: inherit; cursor: pointer; text-decoration: underline; }
 	@media (max-width: 760px) {
 		.grid { grid-template-columns: 1fr 1fr; }
+		.request-candidate { grid-template-columns: 1fr; }
 	}
 </style>

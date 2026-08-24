@@ -1,8 +1,9 @@
-import { applyJsonRow, createAirport, deleteSchedule, drift, getAirport, listAirports, nightsAffectedBySchedule, updateAirport, upsertSchedule } from '$lib/server/airports-store';
+import { applyJsonRow, deleteSchedule, drift, getAirport, listAirports, nightsAffectedBySchedule, updateAirport, upsertSchedule } from '$lib/server/airports-store';
 import { startReingest } from '$lib/server/jobs';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import type { AirportStatus, TowerSchedule } from '$lib/types';
+import { airportCandidate, confirmAirport } from '$lib/server/airport-onboarding';
 
 export const load: PageServerLoad = ({ locals }) => {
 	let driftRows: ReturnType<typeof drift> = [];
@@ -52,24 +53,25 @@ export const actions: Actions = {
 		return { saved: a.code };
 	},
 
-	create: async ({ request, locals }) => {
+	lookupAirport: async ({ request }) => {
 		const f = await request.formData();
 		const code = String(f.get('code') ?? '').trim().toUpperCase();
-		const icao = String(f.get('icao') ?? '').trim().toUpperCase();
-		if (!/^[A-Z0-9]{3,4}$/.test(code) || !/^[A-Z0-9]{4}$/.test(icao)) return fail(400, { error: 'Code (3–4 chars) and ICAO (4 chars) are required.' });
-		if (getAirport(code) || getAirport(icao)) return fail(400, { error: 'That airport already exists.' });
-		const lat = num(f.get('lat')),
-			lon = num(f.get('lon'));
-		if (!Number.isFinite(lat) || !Number.isFinite(lon)) return fail(400, { error: 'Latitude and longitude are required.' });
-		createAirport(
-			{
-				id: code, code, icao, name: String(f.get('name') ?? '').trim() || code, city: String(f.get('city') ?? '').trim(), state: String(f.get('state') ?? '').trim().toUpperCase(),
-				tz: String(f.get('tz') ?? 'America/Los_Angeles').trim(), lat, lon, elevation_ft: Number.isFinite(num(f.get('elevation_ft'))) ? num(f.get('elevation_ft')) : 0,
-				carriers: [], status: 'requested', tracked: false
-			},
-			locals.user!.email
-		);
-		return { saved: code };
+		try {
+			return { candidate: airportCandidate(code) };
+		} catch (e) {
+			return fail(400, { error: e instanceof Error ? e.message : String(e), code });
+		}
+	},
+
+	confirmAirport: async ({ request, locals }) => {
+		const f = await request.formData();
+		const code = String(f.get('code') ?? '').trim().toUpperCase();
+		try {
+			const added = confirmAirport(code, locals.user!.email);
+			return { saved: `${added.code} and its polling schedule`, added: added.code };
+		} catch (e) {
+			return fail(400, { error: e instanceof Error ? e.message : String(e), code });
+		}
 	},
 
 	schedule: async ({ request, locals }) => {

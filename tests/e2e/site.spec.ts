@@ -37,6 +37,11 @@ test.describe('home', () => {
 		const sw = await request.get('/service-worker.js');
 		expect(sw.ok()).toBeTruthy();
 	});
+
+	test('shows the application version in the header', async ({ page }) => {
+		await page.goto('/');
+		await expect(page.locator('.brand-version')).toHaveText('v0.2.0');
+	});
 });
 
 test.describe('navigation', () => {
@@ -256,6 +261,18 @@ test.describe('admin', () => {
 });
 
 test.describe('admin airports', () => {
+	test('looks up a three-letter code and shows FAA data before confirmation', async ({ page }) => {
+		await page.goto('/admin/airports');
+		await page.getByLabel('Airport code').fill('STS');
+		await page.getByRole('button', { name: 'Look up airport' }).click();
+		const candidate = page.getByTestId('airport-candidate');
+		await expect(candidate).toContainText('STS');
+		await expect(candidate).toContainText('CHARLES M SCHULZ/SONOMA COUNTY');
+		await expect(candidate).toContainText('0700-2000');
+		await expect(candidate).toContainText('America/Los_Angeles');
+		await expect(candidate.getByRole('button', { name: 'Confirm and start tracking' })).toBeVisible();
+	});
+
 	test('lists airports from the database, exports the seed JSON, and edits a schedule', async ({ page, request }) => {
 		await page.goto('/admin/airports');
 		await expect(page.getByRole('heading', { name: 'Airports and tower hours' })).toBeVisible();
