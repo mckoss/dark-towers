@@ -5,7 +5,7 @@
 			what: 'Automatic Dependent Surveillance–Broadcast. Nearly every aircraft carries a transponder that broadcasts its identity, position, altitude and speed about once a second, for anyone with a receiver to hear. It is how the FAA tracks aircraft today, and the source of every flight path on this site. The altitude it carries is measured against a standard air pressure, so we correct it to height above the field (AGL) using the airport\'s hourly weather reports; the raw figure is labelled "ADS-B altitude".'
 		},
 		{ name: 'FlightAware AeroAPI', what: 'arrival and departure records, and the ADS-B position signals each aircraft broadcast, collected by FlightAware\'s receiver network.' },
-		{ name: 'FAA Chart Supplement and NASR data', what: 'the official published tower hours and facility record, plus the physical latitude and longitude of each runway end and the declared runway dimensions used for the amber map overlay.' },
+		{ name: 'FAA Chart Supplement and NASR data', what: 'the official published tower hours and facility record, plus the physical latitude and longitude of each runway end and the declared runway dimensions used for the amber map overlay. Runways follow the current 28-day FAA cycle; an older replay may therefore show today’s published runway configuration.' },
 		{ name: 'Published airline schedules', what: 'to tell passenger flights apart from private ones.' },
 		{ name: 'OpenStreetMap and CARTO', what: 'basemap tiles.' }
 	];

@@ -85,6 +85,26 @@ export function createBaseMap(el: HTMLElement, center: LatLon, opts: BaseMapOpti
 			lineJoin: 'miter',
 			interactive: false
 		}).addTo(map);
+		const centerline = runway.ends.map((end) => end.pos);
+		// Preserve the exact FAA endpoints while giving each runway a minimum
+		// screen width at the 10 NM overview scale. The geographic polygon above
+		// still expands to its true declared width as the reader zooms in.
+		L.polyline(centerline, {
+			className: 'runway-casing',
+			color: TOKENS.runwayEdge,
+			weight: 8,
+			opacity: 0.95,
+			lineCap: 'butt',
+			interactive: false
+		}).addTo(map);
+		L.polyline(centerline, {
+			className: 'runway-highlight',
+			color: TOKENS.runway,
+			weight: 5,
+			opacity: 1,
+			lineCap: 'butt',
+			interactive: false
+		}).addTo(map);
 		for (const end of runway.ends) {
 			const label = L.marker(end.pos, {
 				icon: L.divIcon({ className: 'runway-end-label', html: '<span></span>', iconSize: [0, 0], iconAnchor: [0, 0] }),
@@ -102,11 +122,14 @@ export function createBaseMap(el: HTMLElement, center: LatLon, opts: BaseMapOpti
 		fill: false,
 		interactive: false
 	}).addTo(map);
-	// Field marker: small ink square.
-	L.marker(center, {
-		icon: L.divIcon({ className: 'field-marker', html: '<span></span>', iconSize: [10, 10], iconAnchor: [5, 5] }),
-		interactive: false
-	}).addTo(map);
+	// The runway layout already locates the field more precisely. Keep the
+	// legacy point marker only as a fallback when FAA runway data is unavailable.
+	if (!opts.runways?.length) {
+		L.marker(center, {
+			icon: L.divIcon({ className: 'field-marker', html: '<span></span>', iconSize: [10, 10], iconAnchor: [5, 5] }),
+			interactive: false
+		}).addTo(map);
+	}
 	const ringBounds = ring.getBounds();
 	map.fitBounds(ringBounds, { padding: [8, 8] });
 	return {

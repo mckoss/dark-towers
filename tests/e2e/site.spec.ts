@@ -120,7 +120,9 @@ test.describe('airport detail', () => {
 		expect(await page.locator('main').textContent()).not.toMatch(/positions analy/i);
 		// FAA physical runway endpoints are overlaid above the pale base map.
 		await expect(page.locator('.runway-surface')).toHaveCount(2);
+		await expect(page.locator('.runway-highlight')).toHaveCount(2);
 		await expect(page.locator('.runway-end-label')).toHaveCount(4);
+		await expect(page.locator('.field-marker')).toHaveCount(0);
 		await expect(page.getByTestId('map-legend')).toContainText('FAA runway layout');
 	});
 

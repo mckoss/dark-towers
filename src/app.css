@@ -282,13 +282,15 @@ p {
 .runway-end-label span {
 	display: block;
 	transform: translate(-50%, -50%);
-	padding: 1px 3px;
-	background: rgb(243 242 242 / 88%);
-	color: #5d3c00;
-	font: 700 9px/1 var(--font);
+	padding: 2px 4px;
+	background: #5d3c00;
+	border: 1px solid #f0a500;
+	color: #fff7e0;
+	font: 800 10px/1 var(--font);
 	letter-spacing: 0.04em;
 	white-space: nowrap;
 	pointer-events: none;
+	box-shadow: 0 1px 2px rgb(32 30 29 / 35%);
 }
 
 .datablock {
