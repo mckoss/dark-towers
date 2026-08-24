@@ -183,6 +183,17 @@ test.describe('airport detail', () => {
 		expect(await page.getByTestId('night-time').getAttribute('data-t')).not.toBe(paused);
 		await page.getByTestId('night-back').click();
 		expect(await page.getByTestId('night-time').getAttribute('data-t')).toBe(paused);
+		// Moving beyond the currently visible aircraft leaves its datablock in
+		// the pane for the half-second fade instead of removing it immediately.
+		const scrubber = page.getByTestId('night-scrubber');
+		await scrubber.evaluate((input: HTMLInputElement) => {
+			input.value = input.max;
+			input.dispatchEvent(new Event('input', { bubbles: true }));
+		});
+		const fading = page.locator('.replay-label-offset:not(.visible)');
+		await expect(fading.first()).toBeAttached({ timeout: 300 });
+		expect(await fading.first().evaluate((node) => getComputedStyle(node).transitionDuration)).toContain('0.5s');
+		await expect(fading).toHaveCount(0, { timeout: 1200 });
 	});
 
 	test('keeps aircraft trails attached while a mobile pinch zoom is in progress', async ({ page }, testInfo) => {

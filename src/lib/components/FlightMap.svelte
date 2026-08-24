@@ -7,6 +7,8 @@
 	import { aircraftKind, assignLanes, glyphHtml, MILITARY_BLUE, silhouetteFor } from '$lib/replay';
 	import {
 		applyReplayLabelPlacement,
+		cardinalDirectionAway,
+		fadeOutReplayLabel,
 		layoutReplayLabels,
 		updateReplayLabel,
 		type LabelSlot,
@@ -204,7 +206,27 @@
 	}
 	const glyphs = new Map<string, { mark: LeafletNS.Marker; label: LeafletNS.Marker; trail: LeafletNS.Polyline }>();
 	const labelSlots = new Map<string, LabelSlot>();
+	const fadingLabels = new Map<string, { label: LeafletNS.Marker; timer: ReturnType<typeof setTimeout> }>();
 	let sepLines: LeafletNS.Polyline[] = [];
+	function fadeLabel(id: string, label: LeafletNS.Marker) {
+		const prior = fadingLabels.get(id);
+		if (prior) {
+			clearTimeout(prior.timer);
+			prior.label.remove();
+		}
+		const timer = fadeOutReplayLabel(label.getElement(), () => {
+			label.remove();
+			if (fadingLabels.get(id)?.label === label) fadingLabels.delete(id);
+		});
+		fadingLabels.set(id, { label, timer });
+	}
+	function clearFadingLabel(id: string) {
+		const fading = fadingLabels.get(id);
+		if (!fading) return;
+		clearTimeout(fading.timer);
+		fading.label.remove();
+		fadingLabels.delete(id);
+	}
 	// Leaflet animates a pinch by transforming the existing marker and SVG
 	// panes. Mutating their geometry mid-gesture makes the two renderers use
 	// different pixel origins, briefly detaching a trail from its aircraft.
@@ -238,10 +260,10 @@
 		}
 		const map = base.map;
 		if (!started) {
-			for (const g of glyphs.values()) {
+			for (const [id, g] of glyphs) {
 				g.mark.remove();
-				g.label.remove();
 				g.trail.remove();
+				fadeLabel(id, g.label);
 			}
 			glyphs.clear();
 			labelSlots.clear();
@@ -251,6 +273,7 @@
 		}
 		const alerts = alertPairs(t);
 		const alertIds = new Set(alerts.flatMap(([a, b]) => [a.id, b.id]));
+		const airportPoint = map.latLngToContainerPoint(center);
 		const labels: { target: ReplayLabelTarget; elements: ReplayLabelElements; color: string }[] = [];
 		for (const f of flights) {
 			const entry = splines.get(f.id);
@@ -259,8 +282,8 @@
 			if (!active) {
 				if (g) {
 					g.mark.remove();
-					g.label.remove();
 					g.trail.remove();
+					fadeLabel(f.id, g.label);
 					glyphs.delete(f.id);
 					labelSlots.delete(f.id);
 				}
@@ -271,6 +294,7 @@
 			const vel = entry!.spline.velocityAt(t);
 			const at: LeafletNS.LatLngExpression = [v[0], v[1]];
 			if (!g) {
+				clearFadingLabel(f.id);
 				g = {
 					mark: L.marker(at, { interactive: false, zIndexOffset: 1000, icon: L.divIcon({ className: 'replay-marker', iconSize: [0, 0], iconAnchor: [0, 0], html: glyphHtml(color, silhouetteFor(f), GLYPH_PX) }) }).addTo(map),
 					label: L.marker(at, { interactive: false, zIndexOffset: -500, icon: L.divIcon({ className: 'replay-label', iconSize: [0, 0], iconAnchor: [0, 0], html: '' }) }).addTo(map),
@@ -302,11 +326,19 @@
 				const shown = displayAlt(v[2], alt, altView.mode);
 				const elements = updateReplayLabel(
 					host,
-					dataBlockHtml({ label: dataLabel(f), altFt: shown.ft, altUnit: shown.mode === 'agl' ? 'AGL' : 'ADS-B', gsKt: v[3], trend: trendOf(vel ? vel[2] * 1000 : null) }, color)
+					dataBlockHtml({ label: dataLabel(f), altFt: v[2], plainAltFt: shown.ft, altUnit: shown.mode === 'agl' ? 'AGL' : 'ADS-B', gsKt: v[3], trend: trendOf(vel ? vel[2] * 1000 : null) }, color)
 				);
 				const point = map.latLngToContainerPoint(at);
 				labels.push({
-					target: { id: f.id, x: point.x, y: point.y, width: elements.offset.offsetWidth, height: elements.offset.offsetHeight, radius: GLYPH_PX / 2 },
+					target: {
+						id: f.id,
+						x: point.x,
+						y: point.y,
+						width: elements.offset.offsetWidth,
+						height: elements.offset.offsetHeight,
+						radius: GLYPH_PX / 2,
+						preferred: cardinalDirectionAway(point, airportPoint)
+					},
 					elements,
 					color
 				});
@@ -388,7 +420,7 @@
 		const vel = entry.spline.velocityAt(t);
 		const color = aircraftKind(f) === 'military' ? MILITARY_BLUE : f.category === 'airline' ? '#ec3013' : '#201e1d';
 		const shown = displayAlt(v[2], alt, altView.mode);
-		const html = dataBlockHtml({ label: dataLabel(f), altFt: shown.ft, altUnit: shown.mode === 'agl' ? 'AGL' : 'ADS-B', gsKt: v[3], trend: trendOf(vel ? vel[2] * 1000 : null), time: localTimeZoned(tz, t, true) }, color);
+		const html = dataBlockHtml({ label: dataLabel(f), altFt: v[2], plainAltFt: shown.ft, altUnit: shown.mode === 'agl' ? 'AGL' : 'ADS-B', gsKt: v[3], trend: trendOf(vel ? vel[2] * 1000 : null), time: localTimeZoned(tz, t, true) }, color);
 		const at: LeafletNS.LatLngExpression = [v[0], v[1]];
 		if (!hoverDot) hoverDot = L.circleMarker(at, { radius: 4, color, weight: 2, fillColor: '#f3f2f2', fillOpacity: 1, interactive: false }).addTo(base.map);
 		else hoverDot.setLatLng(at).setStyle({ color });
@@ -485,6 +517,11 @@
 		return () => {
 			cancelled = true;
 			mapReady = false;
+			for (const { timer, label } of fadingLabels.values()) {
+				clearTimeout(timer);
+				label.remove();
+			}
+			fadingLabels.clear();
 			layer?.remove();
 			base?.destroy();
 			base = null;

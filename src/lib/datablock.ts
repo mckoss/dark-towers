@@ -1,13 +1,15 @@
 /**
  * ATC-style data block: what a controller's scope shows beside a target.
  *   line 1  callsign / friendly label
- *   line 2  altitude (hundreds of feet, three digits; above the field unless the reader chose reported) · climb/descent arrow · groundspeed (knots)
- * A third, plain-language line spells the same out for everyone else.
+ *   line 2  raw ADS-B pressure altitude (hundreds of feet, three digits) · climb/descent arrow · groundspeed (knots)
+ * A third, plain-language line gives the corrected height or raw report selected by the reader.
  */
 export interface DataBlockInput {
 	label: string;
-	/** Feet, already in the unit named by `altUnit`. */
+	/** Raw ADS-B pressure altitude in feet; always used by the compact ATC line. */
 	altFt: number;
+	/** Corrected/display altitude for the plain-language line; defaults to `altFt`. */
+	plainAltFt?: number;
 	/** Suffix for the plain-language line: "AGL" (default; above ground level, i.e. the field) or "ADS-B" (raw broadcast altitude). */
 	altUnit?: string;
 	/** Knots. */
@@ -28,10 +30,11 @@ export function trendArrow(trend: number | undefined): string {
 
 export function dataBlockLines(d: DataBlockInput): [string, string, string] {
 	const arrow = trendArrow(d.trend);
+	const plainAltFt = d.plainAltFt ?? d.altFt;
 	return [
 		d.label,
 		`${altitudeHundreds(d.altFt)}${arrow} ${String(Math.round(d.gsKt)).padStart(3, ' ')}`,
-		`${Math.round(d.altFt).toLocaleString('en-US')} ft ${d.altUnit ?? 'AGL'}${arrow ? ' ' + arrow : ''} · ${Math.round(d.gsKt)} kt`
+		`${Math.round(plainAltFt).toLocaleString('en-US')} ft ${d.altUnit ?? 'AGL'}${arrow ? ' ' + arrow : ''} · ${Math.round(d.gsKt)} kt`
 	];
 }
 

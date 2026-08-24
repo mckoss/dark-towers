@@ -38,6 +38,14 @@ const DIRECTIONS = [
 	['s', 0, 1]
 ] as const;
 
+/** Dominant screen-space direction from the airport to an aircraft. */
+export function cardinalDirectionAway(point: { x: number; y: number }, airport: { x: number; y: number }): { x: number; y: number } {
+	const dx = point.x - airport.x;
+	const dy = point.y - airport.y;
+	if (Math.abs(dx) >= Math.abs(dy)) return { x: dx < 0 ? -1 : 1, y: 0 };
+	return { x: 0, y: dy < 0 ? -1 : 1 };
+}
+
 function overlapArea(a: Rect, b: Rect, pad = 0): number {
 	const width = Math.min(a.x + a.width + pad, b.x + b.width + pad) - Math.max(a.x - pad, b.x - pad);
 	const height = Math.min(a.y + a.height + pad, b.y + b.height + pad) - Math.max(a.y - pad, b.y - pad);
@@ -96,6 +104,8 @@ export function layoutReplayLabels(
 
 		for (const [rank, slot] of slots.entries()) {
 			const rect = rectFor(target, slot);
+			const baseSlot = (slot.endsWith('2') ? slot.slice(0, -1) : slot) as (typeof DIRECTIONS)[number][0];
+			const [, dx, dy] = DIRECTIONS.find(([name]) => name === baseSlot)!;
 			const labelOverlap = placed.reduce((sum, other) => sum + overlapArea(rect, other, 5), 0);
 			const aircraftOverlap = aircraftRects.reduce((sum, other) => sum + overlapArea(rect, other, 3), 0);
 			const clipped = outsideArea(rect, viewport, 6);
@@ -105,7 +115,9 @@ export function layoutReplayLabels(
 			// and must give way as soon as a clear near slot becomes available.
 			const changed = prior && slot !== prior ? 40 : 0;
 			const far = slot.endsWith('2') ? 200 : 0;
-			const score = clipped * 20_000 + labelOverlap * 10_000 + aircraftOverlap * 2_000 + far + changed + distance + rank;
+			const direction = preferred ? (1 - (dx * preferred.x + dy * preferred.y) / Math.hypot(dx, dy)) * 120 : 0;
+			const diagonal = preferred && dx !== 0 && dy !== 0 ? 80 : 0;
+			const score = clipped * 20_000 + labelOverlap * 10_000 + aircraftOverlap * 2_000 + far + direction + diagonal + changed + distance + rank;
 			if (!best || score < best.score) best = { slot, rect, score };
 		}
 
@@ -128,6 +140,8 @@ export interface ReplayLabelElements {
 	offset: HTMLElement;
 	leader: HTMLElement;
 }
+
+export const REPLAY_LABEL_FADE_MS = 500;
 
 /** Keep the positioning wrapper alive while the datablock's live values change. */
 export function updateReplayLabel(host: HTMLElement, html: string): ReplayLabelElements {
@@ -153,6 +167,7 @@ export function applyReplayLabelPlacement(
 	radius: number,
 	color: string
 ): void {
+	const firstPlacement = !elements.offset.classList.contains('positioned');
 	const x = placement.x - aircraft.x;
 	const y = placement.y - aircraft.y;
 	elements.offset.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
@@ -171,6 +186,20 @@ export function applyReplayLabelPlacement(
 	// The first layout is immediate so newly appearing labels do not animate
 	// outward from one overlapping pile at the aircraft origins. Later slot
 	// changes use the CSS ease-in-out transition.
-	elements.offset.classList.add('positioned');
-	elements.leader.classList.add('positioned');
+	if (firstPlacement) {
+		// Commit the final offset while still transparent. The first visual
+		// transition is therefore a fade, not a flight outward from the target.
+		void elements.offset.offsetWidth;
+	}
+	elements.offset.classList.add('positioned', 'visible');
+	elements.leader.classList.add('positioned', 'visible');
+}
+
+/** Begin the shared half-second fade; callers retain the Leaflet marker until done. */
+export function fadeOutReplayLabel(host: HTMLElement | null | undefined, done: () => void): ReturnType<typeof setTimeout> {
+	const offset = host?.querySelector<HTMLElement>(':scope > .replay-label-offset');
+	const leader = host?.querySelector<HTMLElement>(':scope > .replay-label-leader');
+	offset?.classList.remove('visible');
+	leader?.classList.remove('visible');
+	return setTimeout(done, REPLAY_LABEL_FADE_MS);
 }
