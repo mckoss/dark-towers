@@ -165,7 +165,7 @@
 
 		<section class="log">
 			<h2 class="log-title">Flight log — {nightLabel(data.selectedNight)}</h2>
-			<FlightLog flights={data.flights} tz={airport.tz} night={data.selectedNight} {focus} onfocus={(id) => (focus = id)} />
+			<FlightLog flights={data.flights} incidents={data.incidents} tz={airport.tz} night={data.selectedNight} {focus} onfocus={(id) => (focus = id)} />
 		</section>
 	{/if}
 {/if}
