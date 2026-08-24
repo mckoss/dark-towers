@@ -7,6 +7,20 @@
 	const nm = (n: number) => `${n.toFixed(2)} NM`;
 	const heading = $derived(data.airport ? `Close approaches at ${data.airport.name}` : 'Close approaches');
 	const periodLabel = $derived(data.night ? `Night of ${nightLabel(data.night)}` : data.period.label);
+	const sortOptions = [
+		{ value: 'closest', label: 'Closest' },
+		{ value: 'airport', label: 'Airport' },
+		{ value: 'date', label: 'Date' }
+	] as const;
+	function sortHref(sort: 'closest' | 'airport' | 'date'): string {
+		const q = new URLSearchParams();
+		if (data.airport) q.set('airport', data.airport.code);
+		if (data.night) q.set('night', data.night);
+		else if (data.period.month) q.set('month', data.period.month);
+		if (sort !== 'closest') q.set('sort', sort);
+		const query = q.toString();
+		return `/close-approaches${query ? `?${query}` : ''}`;
+	}
 </script>
 
 <svelte:head>
@@ -20,6 +34,17 @@
 </section>
 
 <section class="section listing" aria-label="Close approaches">
+	<div class="sort-bar">
+		<div>
+			<div class="table-header">Sort by</div>
+			<div class="sort-note">Closest uses straight-line proximity; airport and date groups rank their closest approaches first.</div>
+		</div>
+		<nav class="sort-options" aria-label="Sort close approaches">
+			{#each sortOptions as option (option.value)}
+				<a href={sortHref(option.value)} class:active={data.sort === option.value} aria-current={data.sort === option.value ? 'page' : undefined}>{option.label}</a>
+			{/each}
+		</nav>
+	</div>
 	<div class="row table-header thead">
 		<div>When</div>
 		<div>Airport</div>
@@ -29,7 +54,7 @@
 		<div></div>
 	</div>
 	{#each data.rows as incident (incident.id)}
-		<a class="row item" href="/close-approach/{incident.id}">
+		<a class="row item" href="/close-approach/{incident.id}" data-testid="approach-row" data-airport={incident.airportCode} data-night={incident.night} data-lateral={incident.lateralNm} data-vertical={incident.verticalFt}>
 			<div class="when tabular"><strong>{nightLabel(incident.night)}</strong><span>{localTime(incident.tz, incident.t, true)}</span></div>
 			<div><strong>{incident.airportCode}</strong><span>{incident.airportName}</span></div>
 			<div class="pair">{incident.identA} × {incident.identB}</div>
@@ -58,6 +83,42 @@
 	}
 	.listing {
 		padding: 0 var(--gutter) 64px;
+	}
+	.sort-bar {
+		display: flex;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 20px;
+		padding: 12px 0;
+		border-top: var(--rule);
+	}
+	.sort-note {
+		margin-top: 4px;
+		font-size: 12px;
+		color: var(--ink-60);
+	}
+	.sort-options {
+		display: flex;
+		border: 2px solid var(--ink);
+	}
+	.sort-options a {
+		padding: 8px 13px;
+		border: none;
+		color: var(--ink);
+		font-size: 12px;
+		font-weight: 800;
+	}
+	.sort-options a + a {
+		border-left: 2px solid var(--ink);
+	}
+	.sort-options a:hover,
+	.sort-options a:focus-visible {
+		background: var(--ground-alt);
+		color: var(--ink);
+	}
+	.sort-options a.active {
+		background: var(--ink);
+		color: white;
 	}
 	.row {
 		display: grid;
@@ -98,6 +159,10 @@
 		color: var(--ink-60);
 	}
 	@media (max-width: 800px) {
+		.sort-bar {
+			align-items: flex-start;
+			flex-direction: column;
+		}
 		.thead { display: none; }
 		.row {
 			grid-template-columns: 1fr 1fr;

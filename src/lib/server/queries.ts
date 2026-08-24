@@ -10,6 +10,7 @@ import { addDays, todayKey } from '$lib/time';
 import type { AirportConfig, Flight, Incident, NightSummary } from '$lib/types';
 import * as db from './db';
 import { nasrData } from './nasr';
+import { sortCloseApproaches, type CloseApproachSort } from '$lib/close-approach-sort';
 
 export const PERIOD_NIGHTS = 30;
 
@@ -222,7 +223,7 @@ export interface ListedCloseApproach extends Incident {
 }
 
 /** Public close-approach listing, optionally narrowed to an airport and/or night. */
-export function closeApproachesData(airportCode?: string | null, night?: string | null, month?: string | null) {
+export function closeApproachesData(airportCode?: string | null, night?: string | null, month?: string | null, requestedSort?: string | null) {
 	const airport = airportCode ? getAirport(airportCode) : null;
 	if (airportCode && !airport) return null;
 	const validNight = night && /^\d{4}-\d{2}-\d{2}$/.test(night) ? night : null;
@@ -240,5 +241,6 @@ export function closeApproachesData(airportCode?: string | null, night?: string 
 			? [{ ...incident, airportCode: found.code, airportName: found.name, tz: found.tz, identA: idents[incident.flightA] ?? '?', identB: idents[incident.flightB] ?? '?' }]
 			: [];
 	});
-	return { airport, period, night: validNight, rows };
+	const sort: CloseApproachSort = requestedSort === 'airport' || requestedSort === 'date' ? requestedSort : 'closest';
+	return { airport, period, night: validNight, sort, rows: sortCloseApproaches(rows, sort) };
 }
