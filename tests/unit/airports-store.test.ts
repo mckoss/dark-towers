@@ -104,6 +104,25 @@ describe('airports store', () => {
 		expect(st.drift(out)).toEqual([]);
 	});
 
+	it('derives carriers from stored airline flights while retaining the seed fallback for export', async () => {
+		const st = await store();
+		const dbm = await import('../../src/lib/server/db');
+		const operators = await import('../../src/lib/server/operators-store');
+		st.seedFromJson(seed());
+		const flight = (id: string, operator: string) => ({
+			id, airport: 'KPAE', night: '2026-08-14', ident: `${operator}123`, tail: null, type: null, airframe: null,
+			category: 'airline' as const, operator, operatorName: null, operatorShort: null, direction: 'arrival' as const,
+			eventTime: Date.UTC(2026, 7, 15), otherCode: null, otherName: null, otherCity: null, positions: []
+		});
+		dbm.upsertFlight(flight('aal', 'AAL'));
+		dbm.upsertFlight(flight('qxe', 'QXE'));
+
+		expect(st.getAirport('PAE')).toMatchObject({ carriers: ['American', 'Horizon'], carriersObserved: true, configuredCarriers: ['Alaska'] });
+		operators.upsertOperator({ icao: 'QXE', name: 'Horizon Air', short: 'Horizon Regional' }, 'admin@example.com');
+		expect(st.getAirport('PAE')?.carriers).toEqual(['American', 'Horizon Regional']);
+		expect(st.exportJson().airports[0].carriers).toEqual(['Alaska']);
+	});
+
 	it('drift flags airports present on only one side', async () => {
 		const st = await store();
 		st.seedFromJson(seed());
