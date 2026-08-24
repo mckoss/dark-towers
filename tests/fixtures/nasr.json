@@ -1,4 +1,5 @@
 {
+ "schema": 2,
  "cycle": "2026-08-06",
  "airports": {
   "PAE": {
@@ -12,7 +13,29 @@
    "elevFt": 607,
    "tower": "part-time",
    "towerHours": "0700-2100",
-   "part139": true
+   "part139": true,
+   "runways": [
+    {
+     "id": "16L/34R",
+     "ends": [
+      { "id": "16L", "pos": [47.90642472, -122.27169266] },
+      { "id": "34R", "pos": [47.89819161, -122.2716013] }
+     ],
+     "lengthFt": 3004,
+     "widthFt": 75,
+     "surface": "ASPH"
+    },
+    {
+     "id": "16R/34L",
+     "ends": [
+      { "id": "16R", "pos": [47.91308658, -122.28566763] },
+      { "id": "34L", "pos": [47.89664002, -122.28530252] }
+     ],
+     "lengthFt": 6000,
+     "widthFt": 150,
+     "surface": "ASPH-CONC"
+    }
+   ]
   },
   "SEA": {
    "id": "SEA",

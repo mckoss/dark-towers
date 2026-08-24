@@ -9,6 +9,8 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { destination, type LatLon } from './geo';
+import { runwayOutline } from './runways';
+import type { Runway } from './types';
 
 export const TOKENS = {
 	ground: '#f3f2f2',
@@ -16,13 +18,17 @@ export const TOKENS = {
 	ink: '#201e1d',
 	ink25: '#bab6b6',
 	accent: '#ec3013',
-	accentText: '#ae1800'
+	accentText: '#ae1800',
+	runway: '#f0a500',
+	runwayEdge: '#5d3c00'
 };
 
 export interface BaseMapOptions {
 	tiles?: 'carto' | 'off';
 	radiusNm?: number;
 	interactive?: boolean;
+	/** FAA physical runway geometry to draw above the base tiles. */
+	runways?: Runway[];
 }
 
 export interface BaseMap {
@@ -65,6 +71,28 @@ export function createBaseMap(el: HTMLElement, center: LatLon, opts: BaseMapOpti
 	} else {
 		for (const r of [2, 5]) {
 			L.polygon(ringLatLngs(center, r), { color: TOKENS.ink, weight: 1, opacity: 0.25, fill: false, interactive: false }).addTo(map);
+		}
+	}
+	for (const runway of opts.runways ?? []) {
+		L.polygon(runwayOutline(runway), {
+			className: 'runway-surface',
+			color: TOKENS.runwayEdge,
+			weight: 2,
+			opacity: 0.95,
+			fillColor: TOKENS.runway,
+			fillOpacity: 0.82,
+			lineCap: 'square',
+			lineJoin: 'miter',
+			interactive: false
+		}).addTo(map);
+		for (const end of runway.ends) {
+			const label = L.marker(end.pos, {
+				icon: L.divIcon({ className: 'runway-end-label', html: '<span></span>', iconSize: [0, 0], iconAnchor: [0, 0] }),
+				interactive: false,
+				zIndexOffset: -900
+			}).addTo(map);
+			const span = label.getElement()?.querySelector('span');
+			if (span) span.textContent = end.id;
 		}
 	}
 	const ring = L.polygon(ringLatLngs(center, radiusNm), {

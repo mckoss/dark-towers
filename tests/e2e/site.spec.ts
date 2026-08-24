@@ -118,6 +118,10 @@ test.describe('airport detail', () => {
 		await expect(page.getByText(/(Horizon|Alaska|Southwest) \d+/).first()).toBeVisible();
 		// No process metrics on the page.
 		expect(await page.locator('main').textContent()).not.toMatch(/positions analy/i);
+		// FAA physical runway endpoints are overlaid above the pale base map.
+		await expect(page.locator('.runway-surface')).toHaveCount(2);
+		await expect(page.locator('.runway-end-label')).toHaveCount(4);
+		await expect(page.getByTestId('map-legend')).toContainText('FAA runway layout');
 	});
 
 	test('selecting a calendar night reloads the panel and shows close approaches', async ({ page }) => {
@@ -236,6 +240,7 @@ test.describe('close approach', () => {
 		await page.getByRole('link', { name: /Replay this close approach/ }).first().click();
 		await expect(page).toHaveURL(/\/close-approach\/PAE-/);
 		await expect(page.getByRole('heading', { level: 1 })).toContainText(/ and /);
+		await expect(page.locator('.runway-surface')).toHaveCount(2);
 		await expect(page.getByText(/\d+' at \d+\.\d\d NM/)).toBeVisible();
 		await expect(page.getByText(/one is enough/)).toBeVisible();
 		await expect(page.getByText(/Nearest approach · \d+:\d\d:\d\d [ap]m/)).toBeVisible();

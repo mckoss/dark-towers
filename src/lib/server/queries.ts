@@ -9,6 +9,7 @@ import { flightLabel } from '$lib/flights';
 import { addDays, todayKey } from '$lib/time';
 import type { AirportConfig, Flight, Incident, NightSummary } from '$lib/types';
 import * as db from './db';
+import { nasrData } from './nasr';
 
 export const PERIOD_NIGHTS = 30;
 
@@ -106,9 +107,15 @@ export interface AirportDetail {
 	nightSummary: NightSummary | null;
 }
 
+/** Add current FAA runway geometry without making it editable application state. */
+function withRunways(airport: AirportConfig): AirportConfig {
+	return { ...airport, runways: nasrData()?.airports[airport.code]?.runways ?? [] };
+}
+
 export function airportDetail(code: string, night?: string | null, month?: string | null): AirportDetail | null {
-	const airport = getAirport(code);
-	if (!airport) return null;
+	const storedAirport = getAirport(code);
+	if (!storedAirport) return null;
+	const airport = withRunways(storedAirport);
 	const range = db
 		.db()
 		.prepare(`SELECT MIN(night) first, MAX(night) last FROM nights WHERE airport = ?`)
@@ -163,10 +170,11 @@ export interface IncidentDetail {
 export function incidentDetail(id: string): IncidentDetail | null {
 	const incident = db.incidentById(id);
 	if (!incident) return null;
-	const airport = getAirport(incident.airport);
+	const storedAirport = getAirport(incident.airport);
 	const a = db.flightById(incident.flightA);
 	const b = db.flightById(incident.flightB);
-	if (!airport || !a || !b) return null;
+	if (!storedAirport || !a || !b) return null;
+	const airport = withRunways(storedAirport);
 	decorate([a, b]);
 	const others = decorate(db.flightsForNight(airport.icao, incident.night).filter((f) => f.id !== a.id && f.id !== b.id && f.positions.length > 1));
 	const period = currentPeriod();

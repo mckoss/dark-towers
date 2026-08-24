@@ -279,6 +279,18 @@ p {
 }
 
 /* ---- ATC-style data block (flight map hover, replay) ---- */
+.runway-end-label span {
+	display: block;
+	transform: translate(-50%, -50%);
+	padding: 1px 3px;
+	background: rgb(243 242 242 / 88%);
+	color: #5d3c00;
+	font: 700 9px/1 var(--font);
+	letter-spacing: 0.04em;
+	white-space: nowrap;
+	pointer-events: none;
+}
+
 .datablock {
 	display: inline-block;
 	padding: 5px 8px 6px;

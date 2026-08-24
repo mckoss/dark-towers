@@ -47,7 +47,8 @@
 			{ kind: swatch(b, colors[1]), label: same ? flightLabel(b) : kindLabel(b) }
 		];
 		const grey = concurrentOthers ? [{ kind: 'grey' as const, label: 'Other aircraft flying at the time' }] : [];
-		return [...items, ...grey, { kind: 'ring' as const, label: `${AIRSPACE_RADIUS_NM} nautical mile ring` }];
+		const runways = airport.runways?.length ? [{ kind: 'runway' as const, label: 'FAA runway layout' }] : [];
+		return [...items, ...grey, ...runways, { kind: 'ring' as const, label: `${AIRSPACE_RADIUS_NM} nautical mile ring` }];
 	});
 	const nm = (n: number) => `${n.toFixed(2)} NM`;
 	const ft = (n: number) => `${Math.round(n).toLocaleString('en-US')}'`;

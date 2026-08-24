@@ -33,7 +33,9 @@ let cache: NasrData | null = null;
 
 function readCached(cycle: string): NasrData | null {
 	try {
-		return JSON.parse(fs.readFileSync(fileFor(cycle), 'utf8')) as NasrData;
+		const data = JSON.parse(fs.readFileSync(fileFor(cycle), 'utf8')) as NasrData;
+		// Force one refresh of caches written before runway geometry was added.
+		return data.schema === 2 ? data : null;
 	} catch {
 		return null;
 	}
@@ -70,7 +72,7 @@ export async function updateNasr(opts: NasrOptions = {}): Promise<NasrData | nul
 			if (!e) throw new Error(`${name} missing from NASR zip`);
 			return readZipEntry(buf, e).toString('utf8');
 		};
-		const data = buildNasr(cycle, get('APT_BASE.csv'), get('ATC_BASE.csv'));
+		const data = buildNasr(cycle, get('APT_BASE.csv'), get('ATC_BASE.csv'), get('APT_RWY.csv'), get('APT_RWY_END.csv'));
 		fs.mkdirSync(dir(), { recursive: true });
 		fs.writeFileSync(fileFor(cycle), JSON.stringify(data));
 		opts.log?.(`NASR: ${Object.keys(data.airports).length} airports for cycle ${cycle}`);

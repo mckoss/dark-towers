@@ -129,11 +129,11 @@
 					<div class="night-hours" data-testid="night-hours">{nightHours(data.selectedNight)}</div>
 				</div>
 				{#if hasTracks}
-					<FlightMap center={airport.pos} flights={data.flights} {focus} height={560} alt={altCtx} tz={airport.tz} incidents={data.incidents} replay onfocus={(id) => (focus = id)} />
+					<FlightMap center={airport.pos} flights={data.flights} {focus} height={560} alt={altCtx} tz={airport.tz} incidents={data.incidents} runways={airport.runways} replay onfocus={(id) => (focus = id)} />
 				{:else}
 					<div class="no-tracks inset">Flight paths for this night are not available.</div>
 				{/if}
-				<MapLegend items={[{ kind: 'accent', label: 'Passenger airline' }, { kind: 'ink', label: 'Private and training aircraft' }, ...(data.flights.some((f) => aircraftKind(f) === 'military') ? [{ kind: 'military' as const, label: 'Military' }] : []), { kind: 'ring', label: `${AIRSPACE_RADIUS_NM} nautical mile ring` }]} />
+				<MapLegend items={[{ kind: 'accent', label: 'Passenger airline' }, { kind: 'ink', label: 'Private and training aircraft' }, ...(data.flights.some((f) => aircraftKind(f) === 'military') ? [{ kind: 'military' as const, label: 'Military' }] : []), ...(airport.runways?.length ? [{ kind: 'runway' as const, label: 'FAA runway layout' }] : []), { kind: 'ring', label: `${AIRSPACE_RADIUS_NM} nautical mile ring` }]} />
 			</div>
 			<div class="night-right">
 				<div class="night-head"><div class="table-header">Flagged events this night</div></div>

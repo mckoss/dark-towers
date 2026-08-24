@@ -24,6 +24,15 @@ export interface TowerSchedule {
 	note: string;
 }
 
+/** FAA-published physical runway geometry from the current NASR cycle. */
+export interface Runway {
+	id: string;
+	ends: [{ id: string; pos: [number, number] }, { id: string; pos: [number, number] }];
+	lengthFt: number;
+	widthFt: number;
+	surface: string;
+}
+
 export interface AirportConfig {
 	/** IATA / local code shown to users, e.g. "PAE". */
 	code: string;
@@ -46,6 +55,8 @@ export interface AirportConfig {
 	status: AirportStatus;
 	/** Whether the nightly pipeline should collect data for this airport. */
 	tracked: boolean;
+	/** Current FAA runway endpoints and dimensions, when the NASR cache is available. */
+	runways?: Runway[];
 }
 
 export type FlightCategory = 'airline' | 'private';

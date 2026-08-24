@@ -5,6 +5,7 @@
  * $lib/server/nasr.
  */
 import { parseCsv } from './zip';
+import type { Runway } from './types';
 
 export type TowerKind = 'none' | 'part-time' | 'full-time';
 
@@ -24,9 +25,13 @@ export interface NasrAirport {
 	towerHours: string;
 	/** Part 139 certificated (the airports with scheduled airline service are a subset). */
 	part139: boolean;
+	/** Physical runway ends and declared dimensions from APT_RWY*.csv. */
+	runways: Runway[];
 }
 
 export interface NasrData {
+	/** Cache schema; version 2 adds runway geometry. */
+	schema: 2;
 	cycle: string;
 	airports: Record<string, NasrAirport>;
 }
@@ -42,8 +47,8 @@ export function towerKindOf(facilityType: string, hours: string): TowerKind {
 	return hours.trim() === '24' ? 'full-time' : 'part-time';
 }
 
-/** Build the compact airport table from APT_BASE.csv and ATC_BASE.csv text. */
-export function buildNasr(cycle: string, aptCsv: string, atcCsv: string): NasrData {
+/** Build the compact airport table from the FAA airport, tower and runway CSV groups. */
+export function buildNasr(cycle: string, aptCsv: string, atcCsv: string, runwayCsv = '', runwayEndCsv = ''): NasrData {
 	const apt = parseCsv(aptCsv.replace(/^﻿/, ''));
 	const atc = parseCsv(atcCsv.replace(/^﻿/, ''));
 	const ah = apt[0],
@@ -71,10 +76,46 @@ export function buildNasr(cycle: string, aptCsv: string, atcCsv: string): NasrDa
 			elevFt: Math.round(Number(r[A.elev])),
 			tower: t ? towerKindOf(t.type, t.hours) : 'none',
 			towerHours: t?.hours ?? '',
-			part139: !!r[A.p139]
+			part139: !!r[A.p139],
+			runways: []
 		};
 	}
-	return { cycle, airports };
+	if (runwayCsv && runwayEndCsv) {
+		const runways = parseCsv(runwayCsv.replace(/^﻿/, ''));
+		const ends = parseCsv(runwayEndCsv.replace(/^﻿/, ''));
+		const rh = runways[0],
+			eh = ends[0];
+		const R = {
+			airport: col(rh, 'ARPT_ID'), id: col(rh, 'RWY_ID'), length: col(rh, 'RWY_LEN'), width: col(rh, 'RWY_WIDTH'), surface: col(rh, 'SURFACE_TYPE_CODE')
+		};
+		const E = {
+			airport: col(eh, 'ARPT_ID'), runway: col(eh, 'RWY_ID'), id: col(eh, 'RWY_END_ID'), lat: col(eh, 'LAT_DECIMAL'), lon: col(eh, 'LONG_DECIMAL')
+		};
+		const endByRunway = new Map<string, { id: string; pos: [number, number] }[]>();
+		for (const r of ends.slice(1)) {
+			const lat = Number(r[E.lat]),
+				lon = Number(r[E.lon]);
+			if (!airports[r[E.airport]] || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+			const key = `${r[E.airport]}\0${r[E.runway]}`;
+			if (!endByRunway.has(key)) endByRunway.set(key, []);
+			endByRunway.get(key)!.push({ id: r[E.id], pos: [lat, lon] });
+		}
+		for (const r of runways.slice(1)) {
+			const airport = airports[r[R.airport]],
+				id = r[R.id],
+				lengthFt = Number(r[R.length]),
+				widthFt = Number(r[R.width]);
+			if (!airport || !id || !(lengthFt > 0) || !(widthFt > 0)) continue;
+			const names = id.split('/');
+			const found = endByRunway.get(`${r[R.airport]}\0${id}`) ?? [];
+			const a = found.find((e) => e.id === names[0]),
+				b = found.find((e) => e.id === names[1]);
+			if (!a || !b) continue;
+			airport.runways.push({ id, ends: [a, b], lengthFt, widthFt, surface: r[R.surface] });
+		}
+		for (const airport of Object.values(airports)) airport.runways.sort((a, b) => a.id.localeCompare(b.id));
+	}
+	return { schema: 2, cycle, airports };
 }
 
 /** Find an airport by FAA id or ICAO id (case-insensitive; "KPAE" and "PAE" both work). */
