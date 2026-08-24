@@ -657,23 +657,35 @@ p {
 	position: absolute;
 	left: 0;
 	top: 0;
+	opacity: 0;
+	transition: opacity 500ms ease-in-out;
 }
 .replay-label-offset.positioned {
-	transition: transform 220ms ease-in-out;
+	transition:
+		transform 220ms ease-in-out,
+		opacity 500ms ease-in-out;
+}
+.replay-label-offset.visible {
+	opacity: 1;
 }
 .replay-label-leader {
 	position: absolute;
 	height: 2px;
 	transform-origin: 0 50%;
-	opacity: 0.62;
+	opacity: 0;
 	pointer-events: none;
+	transition: opacity 500ms ease-in-out;
 }
 .replay-label-leader.positioned {
 	transition:
 		left 220ms ease-in-out,
 		top 220ms ease-in-out,
 		width 220ms ease-in-out,
-		transform 220ms ease-in-out;
+		transform 220ms ease-in-out,
+		opacity 500ms ease-in-out;
+}
+.replay-label-leader.visible {
+	opacity: 0.62;
 }
 .replay-label .replay-chip {
 	display: block;

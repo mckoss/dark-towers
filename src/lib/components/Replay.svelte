@@ -19,6 +19,8 @@
 	import { buildReplay, glyphHtml, glyphSizeFor, pairColors, silhouetteFor } from '$lib/replay';
 	import {
 		applyReplayLabelPlacement,
+		cardinalDirectionAway,
+		fadeOutReplayLabel,
 		layoutReplayLabels,
 		updateReplayLabel,
 		type LabelSlot,
@@ -79,8 +81,28 @@
 			.filter((x): x is { f: Flight; track: NonNullable<typeof x.track> } => !!x.track && x.track.spline.t0 <= end && x.track.spline.t1 >= start)
 	);
 	const otherLayers = new Map<string, { mark: Leaflet.Marker; label: Leaflet.Marker; trail: Leaflet.Polyline }>();
+	const fadingLabels = new Map<string, { label: Leaflet.Marker; timer: ReturnType<typeof setTimeout> }>();
 	const labelSlots = new Map<string, LabelSlot>();
 	type LabelDraw = { target: ReplayLabelTarget; elements: ReplayLabelElements; color: string };
+	function fadeLabel(id: string, label: Leaflet.Marker) {
+		const prior = fadingLabels.get(id);
+		if (prior) {
+			clearTimeout(prior.timer);
+			prior.label.remove();
+		}
+		const timer = fadeOutReplayLabel(label.getElement(), () => {
+			label.remove();
+			if (fadingLabels.get(id)?.label === label) fadingLabels.delete(id);
+		});
+		fadingLabels.set(id, { label, timer });
+	}
+	function clearFadingLabel(id: string) {
+		const fading = fadingLabels.get(id);
+		if (!fading) return;
+		clearTimeout(fading.timer);
+		fading.label.remove();
+		fadingLabels.delete(id);
+	}
 
 	/** Closest moment as a fraction of the replay window (scrubber pip position). */
 	const pipFrac = untrack(() => (incident.t - start) / span);
@@ -194,7 +216,7 @@
 			return `<div class="replay-chip" style="color:${color};border-color:${color}">${text}${note}</div>`;
 		}
 		const shown = displayAlt(s.alt, alt, altView.mode);
-		return dataBlockHtml({ label: text, altFt: shown.ft, altUnit: shown.mode === 'agl' ? 'AGL' : 'ADS-B', gsKt: s.gs, trend: trendOf(s.vs) }, color);
+		return dataBlockHtml({ label: text, altFt: s.alt, plainAltFt: shown.ft, altUnit: shown.mode === 'agl' ? 'AGL' : 'ADS-B', gsKt: s.gs, trend: trendOf(s.vs) }, color);
 	}
 
 	onMount(() => {
@@ -264,6 +286,11 @@
 			base = null;
 			layers = null;
 			labelSlots.clear();
+			for (const { timer, label } of fadingLabels.values()) {
+				clearTimeout(timer);
+				label.remove();
+			}
+			fadingLabels.clear();
 		};
 	});
 
@@ -286,7 +313,6 @@
 		self: { lat: number; lon: number; alt: number; gs: number; vs: number; active: boolean; phase: 'before' | 'active' | 'after' },
 		color: string,
 		text: string,
-		preferred?: { x: number; y: number },
 		radius = glyph / 2
 	) {
 		if (!base) return;
@@ -295,8 +321,9 @@
 		if (!host) return;
 		const elements = updateReplayLabel(host, labelHtml(color, text, self));
 		const p = base.map.latLngToContainerPoint([self.lat, self.lon]);
+		const airportPoint = base.map.latLngToContainerPoint(airport.pos);
 		labels.push({
-			target: { id, x: p.x, y: p.y, width: elements.offset.offsetWidth, height: elements.offset.offsetHeight, radius, preferred },
+			target: { id, x: p.x, y: p.y, width: elements.offset.offsetWidth, height: elements.offset.offsetHeight, radius, preferred: cardinalDirectionAway(p, airportPoint) },
 			elements,
 			color
 		});
@@ -325,8 +352,8 @@
 			if (!active) {
 				if (g) {
 					g.mark.remove();
-					g.label.remove();
 					g.trail.remove();
+					fadeLabel(f.id, g.label);
 					otherLayers.delete(f.id);
 					labelSlots.delete(f.id);
 				}
@@ -336,6 +363,7 @@
 			const vel = sp.velocityAt(t);
 			const [lat, lon] = fromLocalNm(airport.pos, [v[0], v[1]]);
 			if (!g) {
+				clearFadingLabel(f.id);
 				g = {
 					mark: L.marker([lat, lon], { interactive: false, zIndexOffset: 500, icon: L.divIcon({ className: 'replay-marker', iconSize: [0, 0], iconAnchor: [0, 0], html: glyphHtml(GREY, silhouetteFor(f), Math.round(glyph * 0.85)) }) }).addTo(map),
 					label: L.marker([lat, lon], { interactive: false, zIndexOffset: -600, icon: L.divIcon({ className: 'replay-label', iconSize: [0, 0], iconAnchor: [0, 0], html: '' }) }).addTo(map),
@@ -357,7 +385,7 @@
 			}
 			pts.push([lat, lon]);
 			g.trail.setLatLngs(pts);
-			collectLabel(labels, f.id, g.label, { lat, lon, alt: v[2], gs: v[3] ?? 0, vs: vel ? vel[2] * 1000 : 0, active: true, phase: 'active' }, GREY, dataLabel(f), undefined, glyph * 0.425);
+			collectLabel(labels, f.id, g.label, { lat, lon, alt: v[2], gs: v[3] ?? 0, vs: vel ? vel[2] * 1000 : 0, active: true, phase: 'active' }, GREY, dataLabel(f), glyph * 0.425);
 		}
 	}
 
@@ -369,10 +397,8 @@
 		layers.trailB.setLatLngs(trail('b', t));
 		placeGlyph(layers.markA, sample.a, sample.inside);
 		placeGlyph(layers.markB, sample.b, sample.inside);
-		const pa = base.map.latLngToContainerPoint([sample.a.lat, sample.a.lon]);
-		const pb = base.map.latLngToContainerPoint([sample.b.lat, sample.b.lon]);
-		collectLabel(labels, a.id, layers.labelA, sample.a, colorA, dataLabel(a), { x: pa.x - pb.x, y: pa.y - pb.y });
-		collectLabel(labels, b.id, layers.labelB, sample.b, colorB, dataLabel(b), { x: pb.x - pa.x, y: pb.y - pa.y });
+		collectLabel(labels, a.id, layers.labelA, sample.a, colorA, dataLabel(a));
+		collectLabel(labels, b.id, layers.labelB, sample.b, colorB, dataLabel(b));
 		const size = base.map.getSize();
 		const placements = layoutReplayLabels(
 			labels.map(({ target }) => target),

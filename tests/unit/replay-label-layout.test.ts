@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { layoutReplayLabels, replayLeaderEnd, type LabelSlot } from '../../src/lib/replay-label-layout';
+import { cardinalDirectionAway, layoutReplayLabels, replayLeaderEnd, REPLAY_LABEL_FADE_MS, type LabelSlot } from '../../src/lib/replay-label-layout';
 
 describe('layoutReplayLabels', () => {
+	it('uses a half-second datablock fade', () => {
+		expect(REPLAY_LABEL_FADE_MS).toBe(500);
+	});
+
+	it('chooses the dominant cardinal direction away from the airport', () => {
+		expect(cardinalDirectionAway({ x: 40, y: 90 }, { x: 100, y: 100 })).toEqual({ x: -1, y: 0 });
+		expect(cardinalDirectionAway({ x: 110, y: 170 }, { x: 100, y: 100 })).toEqual({ x: 0, y: 1 });
+	});
+
 	it('moves nearby datablocks into non-overlapping slots inside the map', () => {
 		const placements = layoutReplayLabels(
 			[
@@ -29,15 +38,18 @@ describe('layoutReplayLabels', () => {
 		expect(placement.slot).toBe('nw');
 	});
 
-	it('returns an edge-displaced datablock to the nearest slot as its aircraft enters the map', () => {
-		const target = { id: 'a', x: -100, y: 150, width: 100, height: 48, radius: 18 };
+	it('keeps an inbound block visible, then moves it to the airport-opposite side', () => {
+		const target = { id: 'a', x: -100, y: 150, width: 100, height: 48, radius: 18, preferred: { x: -1, y: 0 } };
 		const [offscreen] = layoutReplayLabels([target], { width: 400, height: 300 });
 		expect(offscreen.slot).toBe('e2');
 
 		const previous = new Map<string, LabelSlot>([['a', offscreen.slot]]);
-		const [onscreen] = layoutReplayLabels([{ ...target, x: 30 }], { width: 400, height: 300 }, previous);
-		expect(onscreen.slot).toBe('e');
-		expect(onscreen.x - 30).toBeLessThan(offscreen.x - target.x);
+		const [entering] = layoutReplayLabels([{ ...target, x: 30 }], { width: 400, height: 300 }, previous);
+		expect(entering.slot).toBe('e');
+		expect(entering.x - 30).toBeLessThan(offscreen.x - target.x);
+
+		const [clear] = layoutReplayLabels([{ ...target, x: 150 }], { width: 400, height: 300 }, new Map([['a', entering.slot]]));
+		expect(clear.slot).toBe('w');
 	});
 
 	it('points the leader to the nearest edge of the datablock', () => {
