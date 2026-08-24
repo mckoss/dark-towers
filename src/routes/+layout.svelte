@@ -29,8 +29,10 @@
 
 <header class="site-header">
 	<a href="/" class="brand" onclick={() => (menuOpen = false)}>
-		<span class="brand-name">DARK TOWERS</span>
-		<span class="brand-version">v{pkg.version}</span>
+		<span class="brand-mark">
+			<span class="brand-name">DARK TOWERS</span>
+			<span class="brand-version">v{pkg.version}</span>
+		</span>
 		<span class="brand-tag">Flights with no tower on duty</span>
 	</a>
 	<nav class="site-nav" class:open={menuOpen} aria-label="Primary">
@@ -81,6 +83,12 @@
 		letter-spacing: -0.02em;
 		white-space: nowrap;
 	}
+	.brand-mark {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		line-height: 1;
+	}
 	.brand-tag {
 		font-size: 11px;
 		font-weight: 600;
@@ -90,6 +98,7 @@
 		white-space: nowrap;
 	}
 	.brand-version {
+		margin-top: 2px;
 		font-size: 10px;
 		font-weight: 600;
 		letter-spacing: 0.04em;

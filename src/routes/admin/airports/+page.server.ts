@@ -45,7 +45,7 @@ export const actions: Actions = {
 			{
 				name: String(f.get('name') ?? '').trim(), city: String(f.get('city') ?? '').trim(), state: String(f.get('state') ?? '').trim().toUpperCase(),
 				tz: String(f.get('tz') ?? '').trim(), lat, lon, elevation_ft: elev,
-				carriers: String(f.get('carriers') ?? '').split(',').map((c) => c.trim()).filter(Boolean),
+				carriers: a.configuredCarriers,
 				status, tracked: f.get('tracked') === 'on'
 			},
 			locals.user!.email

@@ -92,7 +92,10 @@
 							<label>Latitude <input name="lat" value={a.pos[0]} required /></label>
 							<label>Longitude <input name="lon" value={a.pos[1]} required /></label>
 							<label>Elevation (ft) <input name="elevation_ft" value={a.elevationFt} required /></label>
-							<label>Airlines (comma-separated) <input name="carriers" value={a.carriers.join(', ')} /></label>
+							<label>Airlines
+								<output>{a.carriers.join(', ') || 'None yet'}</output>
+								<span class="field-note">{a.carriersObserved ? 'Observed in stored airline flights; updates automatically.' : 'Seed fallback until airline flights are observed.'}</span>
+							</label>
 							<label>Status
 								<select name="status" value={a.status}>
 									<option value="tracking">tracking</option><option value="requested">requested</option>
@@ -183,6 +186,8 @@
 	.grid-form label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-60); }
 	.grid-form label.check { flex-direction: row; align-items: center; text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 600; color: var(--ink); grid-column: span 2; }
 	.grid-form input, .grid-form select, .sched input { padding: 8px 10px; border: 2px solid var(--hairline); background: #fff; font: inherit; font-size: 14px; }
+	.grid-form output { min-height: 20px; padding: 8px 10px; border: 2px solid var(--hairline); background: var(--ground-alt); color: var(--ink); font-size: 14px; text-transform: none; letter-spacing: 0; }
+	.field-note { font-size: 11px; font-weight: 500; line-height: 1.35; letter-spacing: 0; text-transform: none; }
 	.grid-form input:focus, .sched input:focus { border-color: var(--ink); }
 	.actions { grid-column: 1 / -1; display: flex; align-items: center; gap: 16px; }
 	.lookup-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-top: 14px; }

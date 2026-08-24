@@ -75,7 +75,7 @@
 		</div>
 		<div class="fact">
 			<div class="fact-label">Airlines serving</div>
-			<div class="fact-value">{airport.carriers.join(', ')}</div>
+			<div class="fact-value">{airport.carriers.join(', ') || 'None observed yet'}</div>
 		</div>
 		<div class="fact">
 			<div class="fact-label">Detailed data</div>

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 
 /**
  * End-to-end coverage of every route against the built app with the sample
@@ -7,6 +8,7 @@ import { expect, test } from '@playwright/test';
  */
 
 const NIGHT_WITH_INCIDENTS = '2026-08-17';
+const { version } = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as { version: string };
 
 test.describe('home', () => {
 	test('renders headline, 30-night figures and the US map, naming no airport in copy', async ({ page }) => {
@@ -40,7 +42,7 @@ test.describe('home', () => {
 
 	test('shows the application version in the header', async ({ page }) => {
 		await page.goto('/');
-		await expect(page.locator('.brand-version')).toHaveText('v0.2.0');
+		await expect(page.locator('.brand-version')).toHaveText(`v${version}`);
 	});
 });
 
@@ -283,6 +285,9 @@ test.describe('admin airports', () => {
 		expect(exp.ok()).toBeTruthy();
 		const json = await exp.json();
 		expect(json.airports.find((a: { code: string }) => a.code === 'PAE').schedules.length).toBeGreaterThan(0);
+		const pae = page.getByTestId('airport-PAE');
+		await pae.getByRole('button', { name: /PAE/ }).click();
+		await expect(pae.getByText('Observed in stored airline flights; updates automatically.')).toBeVisible();
 
 		// Add a future schedule row for an untracked airport (no stored nights → no re-ingest warning).
 		const card = page.getByTestId('airport-SBA');

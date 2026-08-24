@@ -11,6 +11,7 @@ import type { AirportConfig, AirportStatus, TowerSchedule } from '$lib/types';
 import { towerHoursOn } from '$lib/airports';
 import { todayKey } from '$lib/time';
 import { db } from './db';
+import { operatorMap } from './operators-store';
 
 export interface AirportJson {
 	id: string;
@@ -146,12 +147,37 @@ function rowToSchedule(r: SRow): TowerSchedule {
 
 export interface AirportRecord extends AirportConfig {
 	id: string;
+	/** Seed/manual fallback retained for export; observed flight operators replace it at read time. */
+	configuredCarriers: string[];
+	/** True when `carriers` came from stored airline flights instead of the configured fallback. */
+	carriersObserved: boolean;
 	updatedAt: number | null;
 	updatedBy: string | null;
 }
 
-function toRecord(r: ARow, schedules: TowerSchedule[]): AirportRecord {
-	const base: AirportRecord = { id: r.id, code: r.code, icao: r.icao, name: r.name, city: r.city, state: r.state, tz: r.tz, pos: [r.lat, r.lon], elevationFt: r.elevation_ft, carriers: JSON.parse(r.carriers) as string[], status: r.status as AirportStatus, tracked: !!r.tracked, schedules, towerHours: null, updatedAt: r.updated_at, updatedBy: r.updated_by };
+function observedCarriers(): Map<string, string[]> {
+	const operators = operatorMap();
+	const rows = db()
+		.prepare(`SELECT DISTINCT airport, operator FROM flights WHERE category = 'airline' AND operator IS NOT NULL ORDER BY airport, operator`)
+		.all() as { airport: string; operator: string }[];
+	const byAirport = new Map<string, Set<string>>();
+	for (const row of rows) {
+		const code = row.operator.toUpperCase();
+		const name = operators.get(code)?.short.trim() || code;
+		if (!byAirport.has(row.airport)) byAirport.set(row.airport, new Set());
+		byAirport.get(row.airport)!.add(name);
+	}
+	return new Map([...byAirport].map(([icao, names]) => [icao, [...names].sort((a, b) => a.localeCompare(b))]));
+}
+
+function toRecord(r: ARow, schedules: TowerSchedule[], observed: Map<string, string[]>): AirportRecord {
+	const configuredCarriers = JSON.parse(r.carriers) as string[];
+	const seen = observed.get(r.icao) ?? [];
+	const base: AirportRecord = {
+		id: r.id, code: r.code, icao: r.icao, name: r.name, city: r.city, state: r.state, tz: r.tz, pos: [r.lat, r.lon], elevationFt: r.elevation_ft,
+		carriers: seen.length ? seen : configuredCarriers, configuredCarriers, carriersObserved: seen.length > 0,
+		status: r.status as AirportStatus, tracked: !!r.tracked, schedules, towerHours: null, updatedAt: r.updated_at, updatedBy: r.updated_by
+	};
 	base.towerHours = towerHoursOn(base, todayKey(r.tz));
 	return base;
 }
@@ -166,7 +192,8 @@ export function listAirports(): AirportRecord[] {
 		if (!by.has(s.airport_id)) by.set(s.airport_id, []);
 		by.get(s.airport_id)!.push(rowToSchedule(s));
 	}
-	return rows.map((r) => toRecord(r, by.get(r.id) ?? []));
+	const observed = observedCarriers();
+	return rows.map((r) => toRecord(r, by.get(r.id) ?? [], observed));
 }
 
 export function getAirport(codeOrIcao: string): AirportRecord | undefined {
@@ -175,7 +202,7 @@ export function getAirport(codeOrIcao: string): AirportRecord | undefined {
 	const r = db().prepare(`SELECT * FROM airports WHERE code = ? OR icao = ?`).get(c, c) as ARow | undefined;
 	if (!r) return undefined;
 	const sched = (db().prepare(`SELECT * FROM tower_schedules WHERE airport_id = ? ORDER BY effective_from`).all(r.id) as SRow[]).map(rowToSchedule);
-	return toRecord(r, sched);
+	return toRecord(r, sched, observedCarriers());
 }
 
 export function trackedAirports(): AirportRecord[] {
@@ -251,7 +278,7 @@ export function exportJson(): SeedFile {
 		$comment: comment,
 		airports: listAirports().map((a) => ({
 			id: a.id, code: a.code, icao: a.icao, name: a.name, city: a.city, state: a.state, tz: a.tz, lat: a.pos[0], lon: a.pos[1], elevation_ft: a.elevationFt,
-			carriers: a.carriers, status: a.status, tracked: a.tracked, schedules: a.schedules
+			carriers: a.configuredCarriers, status: a.status, tracked: a.tracked, schedules: a.schedules
 		}))
 	};
 }
