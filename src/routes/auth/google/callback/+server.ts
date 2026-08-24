@@ -1,6 +1,5 @@
 import { exchangeCode } from '$lib/server/google';
 import { setSessionCookie } from '$lib/server/session';
-import { isAdmin } from '$lib/server/config';
 import { error, redirect, type RequestHandler } from '@sveltejs/kit';
 
 export const GET: RequestHandler = async ({ url, cookies, fetch }) => {
@@ -24,7 +23,6 @@ export const GET: RequestHandler = async ({ url, cookies, fetch }) => {
 		error(502, 'Google sign-in failed.');
 	}
 	if (!user.email_verified) error(403, 'Google reports this email as unverified.');
-	if (!isAdmin(user.email)) error(403, `${user.email} is not authorised for admin.`);
 	setSessionCookie(cookies, { email: user.email.toLowerCase(), name: user.name }, url.protocol === 'https:');
 	redirect(303, saved.next || '/admin');
 };

@@ -1,6 +1,7 @@
 /**
  * Signed session cookie (HMAC-SHA256, no server-side store). Payload is the
- * signed-in user's email and an expiry. Only admins ever get a session.
+ * signed-in user's email and an expiry. Any verified Google user may get a
+ * session; /admin authorization is enforced separately in hooks.server.ts.
  */
 import crypto from 'node:crypto';
 import type { Cookies } from '@sveltejs/kit';

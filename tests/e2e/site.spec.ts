@@ -77,14 +77,31 @@ test.describe('airports', () => {
 		await expect(page).toHaveURL(/\/airport\/PAE/);
 	});
 
-	test('request form checks the FAA tower record: a 24-hour tower is declined, a no-tower airport is accepted', async ({ page }) => {
+	test('request lookup qualifies a new airport before collecting verified contact details', async ({ page, isMobile }) => {
 		await page.goto('/airports');
 		await page.getByPlaceholder(/Airport code/).fill('SEA');
-		await page.getByRole('button', { name: 'Send request' }).click();
+		await page.getByRole('button', { name: 'Look up airport' }).click();
 		await expect(page.getByRole('alert')).toContainText(/staffed 24 hours/);
-		await page.getByPlaceholder(/Airport code/).fill('KMMH');
-		await page.getByRole('button', { name: 'Send request' }).click();
-		await expect(page.getByTestId('request-ok')).toContainText(/MMH .*no control tower.*added to the request list/);
+		await page.getByPlaceholder(/Airport code/).fill('PAE');
+		await page.getByRole('button', { name: 'Look up airport' }).click();
+		await expect(page.getByRole('alert')).toContainText(/already on the Dark Towers airport list/);
+
+		const code = isMobile ? 'ACV' : 'MMH';
+		await page.getByPlaceholder(/Airport code/).fill(code);
+		await page.getByRole('button', { name: 'Look up airport' }).click();
+		const candidate = page.getByTestId('request-candidate');
+		await expect(candidate).toContainText(code);
+		await expect(candidate).toContainText('no control tower');
+		await expect(candidate).toContainText('FAA Part 139 air-carrier airport');
+		await expect(candidate.locator('input[name="value"]')).toHaveCount(0);
+		await expect(candidate.getByText('open@localhost')).toBeVisible();
+		await candidate.getByLabel('Your name').fill(isMobile ? 'Mobile Reader' : 'Desktop Reader');
+		const comment = `${isMobile ? 'Mobile' : 'Desktop'} request comment`;
+		await candidate.getByLabel('Comment (optional)').fill(comment);
+		await candidate.getByRole('button', { name: 'Submit airport request' }).click();
+		await expect(page.getByTestId('request-ok')).toContainText(`request for ${code}`);
+		await page.goto('/admin');
+		await expect(page.getByText(comment)).toBeVisible();
 		const text = await page.locator('main').textContent();
 		expect(text).not.toMatch(/we will review|within \d+ (days|hours)/i);
 	});
