@@ -1,8 +1,8 @@
 import { listAirports } from '$lib/server/airports-store';
-import { altimeterCheck, deleteRequest, incompleteNights, listRequests, nightCounts, recentRuns, runActivity } from '$lib/server/db';
+import { altimeterCheck, deleteRequest, incompleteNights, listRequests, nightCounts, recentProblems, runActivity } from '$lib/server/db';
 import { pressureOffsetFt } from '$lib/altimeter';
 import { cachedCapability, extendedHistoryAllowed, probeCapability } from '$lib/server/capability';
-import { currentJob, startBackfill, startCatchUp, startIngest } from '$lib/server/jobs';
+import { BOOTED, currentJob, startBackfill, startCatchUp, startIngest } from '$lib/server/jobs';
 import { config, flightAwareApiKey } from '$lib/server/config';
 import { nasrData } from '$lib/server/nasr';
 import { registryData } from '$lib/server/registry';
@@ -90,7 +90,8 @@ export const load: PageServerLoad = ({ locals }) => {
 		})(),
 		schedulerOn: s.scheduler,
 		activity: runActivity(Date.now() - 24 * 3600_000),
-		runs: recentRuns(),
+		booted: BOOTED,
+		problems: recentProblems(Date.now() - 48 * 3600_000),
 		requests: listRequests(),
 		job: currentJob()
 	};

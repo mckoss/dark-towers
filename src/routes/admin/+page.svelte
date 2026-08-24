@@ -6,6 +6,19 @@
 
 	let { data, form } = $props();
 
+	/** One-line failure description: AeroAPI errors arrive as 'STATUS {json}'; show the human detail. */
+	const brief = (m: string | null) => {
+		if (!m) return '—';
+		const j = m.match(/^(\d{3})\s*(\{.*\})\s*$/s);
+		if (j) {
+			try {
+				const e = JSON.parse(j[2]);
+				return `${j[1]} · ${e.detail ?? e.title ?? ''}`.trim();
+			} catch { /* fall through */ }
+		}
+		return m.length > 120 ? m.slice(0, 117) + '…' : m;
+	};
+
 	/** Human-readable bytes: 412 KB, 38.2 MB, 1.4 GB. */
 	const size = (n: number) => {
 		if (n < 1024) return `${n} B`;
@@ -79,7 +92,7 @@
 		<h2 class="section-heading">Run the pipeline</h2>
 		<p class="hint activity">
 			{#if data.schedulerOn}Scheduler is on: this runs by itself hourly at :07.{:else}Scheduler is <strong>off</strong> — nights are only collected when started here.{/if}
-			Last 24 hours: {data.activity.runs === 0 ? 'no runs' : `${data.activity.runs} run${data.activity.runs === 1 ? '' : 's'}, ${data.activity.apiCalls} API call${data.activity.apiCalls === 1 ? '' : 's'}`}{data.activity.failed ? `, ${data.activity.failed} failed` : ''}{#if data.activity.lastAt}; last {when(data.activity.lastAt)} {data.activity.lastOk ? '✓' : '✗'}{/if}. Details under Recent runs below.
+			Last 24 hours: {data.activity.runs === 0 ? 'no runs' : `${data.activity.runs} run${data.activity.runs === 1 ? '' : 's'}, ${data.activity.apiCalls} API call${data.activity.apiCalls === 1 ? '' : 's'}`}{data.activity.failed ? `, ${data.activity.failed} failed` : ''}{#if data.activity.lastAt}; last {when(data.activity.lastAt)} {data.activity.lastOk ? '✓' : '✗'}{/if}. Failures appear under Problems below.
 		</p>
 		<form method="POST" action="?/catchup" use:enhance class="row">
 			<button class="btn" type="submit" disabled={running}>Catch up now</button>
@@ -113,7 +126,7 @@
 			<p class="body"><strong>{data.job.name}</strong> · started {when(data.job.startedAt)} · {data.job.finishedAt ? (data.job.ok ? 'finished OK' : 'FAILED') : 'running…'}</p>
 			<pre class="log">{data.job.log.slice(-40).join('\n')}</pre>
 		{:else}
-			<p class="body muted-text">No job has run since the server started.</p>
+			<p class="body muted-text">No job has run since the server started ({when(data.booted)}). The scheduler’s hourly catch-up will show here when it fires.</p>
 		{/if}
 	</div>
 </section>
@@ -152,15 +165,14 @@
 </section>
 
 <section class="section cell">
-	<h2 class="section-heading">Recent runs</h2>
-	<div class="grid runs">
-		<div class="table-header">Started</div><div class="table-header">Airport</div><div class="table-header">Night</div><div class="table-header">Result</div><div class="table-header">Message</div>
-		{#each data.runs as r (r.id)}
-			<div class="tabular">{when(r.started_at)}</div><div>{r.airport}</div><div>{r.night}</div>
-			<div class={r.ok === 0 ? 'accent' : ''}>{r.ok == null ? 'running' : r.ok ? 'ok' : 'failed'}</div>
-			<div class="msg">{r.message ?? ''}</div>
+	<h2 class="section-heading">Problems</h2>
+	<p class="hint">Failed runs from the last two days, one row per distinct failure. Routine successes are summarised in the activity line above.</p>
+	<div class="grid problems">
+		<div class="table-header">Last seen</div><div class="table-header">Airport</div><div class="table-header">Night</div><div class="table-header">Times</div><div class="table-header">What failed</div>
+		{#each data.problems as p (p.airport + p.night + (p.message ?? ''))}
+			<div class="tabular">{when(p.lastAt)}</div><div>{p.airport}</div><div>{p.night}</div><div class="tabular">{p.times}×</div><div class="msg">{brief(p.message)}</div>
 		{:else}
-			<div class="muted-text">No runs recorded.</div>
+			<div class="muted-text">No failed runs in the last two days.</div>
 		{/each}
 	</div>
 </section>
@@ -198,7 +210,7 @@
 	.storage { grid-template-columns: 220px 1fr 90px 100px; }
 	.mono { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; color: var(--ink-60); }
 	.altcheck { grid-template-columns: 70px 100px 100px 80px 120px 110px 110px; max-height: 320px; overflow: auto; }
-	.runs { grid-template-columns: 170px 70px 110px 80px 1fr; }
+	.problems { grid-template-columns: 170px 70px 110px 60px 1fr; }
 	.requests { grid-template-columns: 170px 1fr 1fr 1fr 60px; }
 	.msg { color: var(--ink-60); }
 	.sub { margin-top: 24px; font-size: 16px; font-weight: 800; }

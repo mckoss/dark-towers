@@ -296,6 +296,16 @@ export function runActivity(sinceMs: number): { runs: number; apiCalls: number; 
 	return { runs: rows.length, apiCalls, failed, lastAt: rows[0]?.started_at ?? null, lastOk: rows[0] ? !!rows[0].ok : null };
 }
 
+/** Failed runs in a recent window, grouped: one row per airport/night/message with a count and the latest time. */
+export function recentProblems(sinceMs: number): { airport: string; night: string; message: string | null; times: number; lastAt: number }[] {
+	return db()
+		.prepare(
+			`SELECT airport, night, message, COUNT(*) AS times, MAX(started_at) AS lastAt
+			 FROM runs WHERE ok = 0 AND started_at >= ? GROUP BY airport, night, message ORDER BY lastAt DESC LIMIT 30`
+		)
+		.all(sinceMs) as { airport: string; night: string; message: string | null; times: number; lastAt: number }[];
+}
+
 export interface RequestRow {
 	id: number; value: string; email: string | null; code: string | null; assessment: string | null; created_at: number;
 }

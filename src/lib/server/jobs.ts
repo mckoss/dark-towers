@@ -14,6 +14,9 @@ export interface JobState {
 	log: string[];
 }
 
+/** When this server process started (shown when no job has run yet). */
+export const BOOTED = Date.now();
+
 let current: JobState | null = null;
 
 export function currentJob(): JobState | null {
@@ -27,7 +30,7 @@ function start(name: string, fn: (log: (m: string) => void) => Promise<void>): b
 	const log = (m: string) => {
 		job.log.push(`${new Date().toISOString().slice(11, 19)} ${m}`);
 		if (job.log.length > 400) job.log.shift();
-		console.log(`[admin:${name}] ${m}`);
+		console.log(`[job:${name}] ${m}`);
 	};
 	fn(log)
 		.then(() => {
@@ -45,6 +48,11 @@ function start(name: string, fn: (log: (m: string) => void) => Promise<void>): b
 
 export function startCatchUp(): boolean {
 	return start('catch-up', (log) => catchUp(log));
+}
+
+/** The hourly tick and boot-time catch-up run through the same tracker so /admin shows them. Skipped (false) while a manual job runs. */
+export function startScheduledCatchUp(): boolean {
+	return start('scheduled catch-up', (log) => catchUp(log));
 }
 
 export function startIngest(code: string, night: string, force: boolean): boolean {

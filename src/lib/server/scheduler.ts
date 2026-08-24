@@ -53,14 +53,15 @@ void nasrTask;
 
 export function startScheduler(log: (m: string) => void = console.log) {
 	if (task) return;
-	task = cron.schedule('7 * * * *', () => void catchUp(log));
+	const scheduledCatchUp = () => void import('./jobs').then((j) => j.startScheduledCatchUp() || log('scheduled catch-up skipped: a job is already running'));
+	task = cron.schedule('7 * * * *', scheduledCatchUp);
 	// FAA NASR facility data: new 28-day cycle picked up within a day of release.
 	nasrTask = cron.schedule('41 4 * * *', () => void updateNasr({ log }));
 	// FAA aircraft registry: refreshed monthly (cached by month).
 	cron.schedule('51 4 * * *', () => void updateRegistry({ log }));
 	log('scheduler: hourly catch-up enabled');
 	// Also catch up shortly after boot.
-	setTimeout(() => void ensureCapability({ log }).then(() => catchUp(log)), 15_000).unref();
+	setTimeout(() => void ensureCapability({ log }).then(() => scheduledCatchUp()), 15_000).unref();
 	setTimeout(() => void updateNasr({ log }), 30_000).unref();
 	setTimeout(() => void updateRegistry({ log }), 45_000).unref();
 }
