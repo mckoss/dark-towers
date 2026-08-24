@@ -13,6 +13,9 @@ import { nasrData } from './nasr';
 import { qualifyingAirports, towerHoursText } from '$lib/nasr';
 import { towerHoursLabel } from '$lib/airports';
 import { sortCloseApproaches, type CloseApproachSort } from '$lib/close-approach-sort';
+import { lookupTail } from './registry';
+import { registryKey, type RegistryEntry } from '$lib/registry';
+import { aircraftIdentity, type AircraftIdentityData } from '$lib/aircraft';
 
 export const PERIOD_NIGHTS = 30;
 
@@ -225,7 +228,7 @@ export interface IncidentDetail {
 	/** Every other flight with positions that night (context traffic). */
 	others: Flight[];
 	/** Other close approaches at the same airport in the period. */
-	related: (Incident & { identA: string; identB: string })[];
+	related: (Incident & { identA: string; identB: string; identityA: AircraftIdentityData; identityB: AircraftIdentityData })[];
 	/** The night's summary, carrying the altimeter readings used to show altitudes above the field. */
 	night: NightSummary | null;
 }
@@ -244,7 +247,11 @@ export function incidentDetail(id: string): IncidentDetail | null {
 	const related = db
 		.incidentsForAirport(airport.icao, period.from)
 		.filter((i) => i.id !== id)
-		.map((i) => ({ ...i, identA: labelFor(i.flightA), identB: labelFor(i.flightB) }));
+		.map((i) => {
+			const identityA = identityFor(i.flightA);
+			const identityB = identityFor(i.flightB);
+			return { ...i, identA: identityA.label, identB: identityB.label, identityA, identityB };
+		});
 	return { incident, airport, a, b, others, related, night: db.nightSummary(airport.icao, incident.night) };
 }
 
@@ -255,8 +262,52 @@ export function decorate(flights: Flight[]): Flight[] {
 		const o = f.operator ? ops.get(f.operator.toUpperCase()) : undefined;
 		f.operatorName = o?.name ?? null;
 		f.operatorShort = o?.short ?? null;
+		f.registry = lookupTail(f.tail);
 	}
 	return flights;
+}
+
+export interface AircraftSighting {
+	flight: Flight;
+	airportCode: string;
+	airportName: string;
+	tz: string;
+	closeApproaches: { id: string; kind: Incident['kind']; t: number }[];
+}
+
+export interface AircraftDetail {
+	registration: string;
+	registry: RegistryEntry | null;
+	sightings: AircraftSighting[];
+}
+
+/** Current registry facts plus every Dark Towers flight recorded for this N-number. */
+export function aircraftDetail(value: string): AircraftDetail | null {
+	const key = registryKey(value);
+	if (!key) return null;
+	const registration = `N${key}`;
+	const registry = lookupTail(registration);
+	const flights = decorate(db.flightsForTail(registration));
+	if (!registry && !flights.length) return null;
+	const airportByIcao = new Map(listAirports().map((airport) => [airport.icao, airport]));
+	const incidentByFlight = new Map<string, { id: string; kind: Incident['kind']; t: number }[]>();
+	for (const incident of db.incidentsForTail(registration)) {
+		for (const id of [incident.flightA, incident.flightB]) {
+			if (!incidentByFlight.has(id)) incidentByFlight.set(id, []);
+			incidentByFlight.get(id)!.push({ id: incident.id, kind: incident.kind, t: incident.t });
+		}
+	}
+	const sightings = flights.map((flight) => {
+		const airport = airportByIcao.get(flight.airport);
+		return {
+			flight,
+			airportCode: airport?.code ?? flight.airport.replace(/^K/, ''),
+			airportName: airport?.name ?? flight.airport,
+			tz: airport?.tz ?? 'UTC',
+			closeApproaches: incidentByFlight.get(flight.id) ?? []
+		};
+	});
+	return { registration, registry, sightings };
 }
 
 /** Friendly label ("Alaska 1712") for a stored flight id. */
@@ -265,6 +316,13 @@ export function labelFor(flightId: string): string {
 	if (!f) return '?';
 	decorate([f]);
 	return flightLabel(f);
+}
+
+export function identityFor(flightId: string): AircraftIdentityData {
+	const flight = db.flightById(flightId);
+	if (!flight) return { label: '?', sublabel: null, tail: null, href: null, registry: null };
+	decorate([flight]);
+	return aircraftIdentity(flight);
 }
 
 /** Friendly labels for every flight referenced by the incidents. */
@@ -282,6 +340,8 @@ export interface ListedCloseApproach extends Incident {
 	tz: string;
 	identA: string;
 	identB: string;
+	identityA: AircraftIdentityData;
+	identityB: AircraftIdentityData;
 }
 
 /** Public close-approach listing, optionally narrowed to an airport and/or night. */
@@ -295,12 +355,15 @@ export function closeApproachesData(airportCode?: string | null, night?: string 
 			? monthPeriod(month)
 			: currentPeriod();
 	const incidents = db.separationIncidents(period.from, period.to, airport?.icao);
-	const idents = identsFor(incidents);
+	const identities: Record<string, AircraftIdentityData> = {};
+	for (const incident of incidents) {
+		for (const id of [incident.flightA, incident.flightB]) if (!identities[id]) identities[id] = identityFor(id);
+	}
 	const airports = new Map(listAirports().map((a) => [a.icao, a]));
 	const rows: ListedCloseApproach[] = incidents.flatMap((incident) => {
 		const found = airports.get(incident.airport);
 		return found
-			? [{ ...incident, airportCode: found.code, airportName: found.name, tz: found.tz, identA: idents[incident.flightA] ?? '?', identB: idents[incident.flightB] ?? '?' }]
+			? [{ ...incident, airportCode: found.code, airportName: found.name, tz: found.tz, identA: identities[incident.flightA]?.label ?? '?', identB: identities[incident.flightB]?.label ?? '?', identityA: identities[incident.flightA], identityB: identities[incident.flightB] }]
 			: [];
 	});
 	const sort: CloseApproachSort = requestedSort === 'airport' || requestedSort === 'date' ? requestedSort : 'closest';

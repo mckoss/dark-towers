@@ -8,6 +8,7 @@
 <script lang="ts">
 	import { flightLabel } from '$lib/flights';
 	import { dataBlockHtml, trendOf } from '$lib/datablock';
+	import { dataBlockAircraft } from '$lib/aircraft';
 	import { displayAlt, NO_CORRECTION, type AltContext } from '$lib/altview.svelte';
 	/**
 	 * Animated replay of a close approach. Both aircraft are sampled from their
@@ -210,15 +211,17 @@
 	} | null = null;
 
 	/** ATC-style data block beside each aircraft (label / altitude·trend·speed). */
-	function labelHtml(color: string, text: string, s?: { alt: number; gs: number; vs: number; active: boolean; phase: 'before' | 'active' | 'after' }): string {
+	function labelHtml(color: string, f: Flight, s?: { alt: number; gs: number; vs: number; active: boolean; phase: 'before' | 'active' | 'after' }): string {
+		const text = dataLabel(f);
+		const aircraft = dataBlockAircraft(f);
 		// Before its first report or after its last, the aircraft is parked at
 		// that report; its altitude and speed then are not known, so show none.
 		if (!s || s.phase !== 'active') {
 			const note = !s ? '' : s.phase === 'after' ? ' · track ended' : ' · not yet reporting';
-			return `<div class="replay-chip" style="color:${color};border-color:${color}">${text}${note}</div>`;
+			return `<div class="replay-chip" style="color:${color};border-color:${color}">${aircraft ? `<a href="${aircraft.href}">${text}</a>` : text}${note}</div>`;
 		}
 		const shown = displayAlt(s.alt, alt);
-		return dataBlockHtml({ label: text, altFt: s.alt, plainAltFt: shown.ft, altUnit: shown.mode === 'agl' ? 'AGL' : 'ADS-B', gsKt: s.gs, trend: trendOf(s.vs) }, color);
+		return dataBlockHtml({ label: text, altFt: s.alt, plainAltFt: shown.ft, altUnit: shown.mode === 'agl' ? 'AGL' : 'ADS-B', gsKt: s.gs, trend: trendOf(s.vs), aircraft }, color);
 	}
 
 	onMount(() => {
@@ -272,9 +275,9 @@
 				}).addTo(map);
 			const lb = (color: string, f: Flight) =>
 				L!.marker([c.a.lat, c.a.lon], {
-					interactive: false,
+					interactive: true,
 					zIndexOffset: -500,
-					icon: L!.divIcon({ className: 'replay-label', iconSize: [0, 0], iconAnchor: [0, 0], html: labelHtml(color, dataLabel(f)) })
+					icon: L!.divIcon({ className: 'replay-label', iconSize: [0, 0], iconAnchor: [0, 0], html: labelHtml(color, f) })
 				}).addTo(map);
 			layers = { trailA, trailB, markA: mk(colorA, a), markB: mk(colorB, b), labelA: lb(colorA, a), labelB: lb(colorB, b) };
 
@@ -324,14 +327,14 @@
 		marker: Leaflet.Marker,
 		self: { lat: number; lon: number; alt: number; gs: number; vs: number; active: boolean; phase: 'before' | 'active' | 'after' },
 		color: string,
-		text: string,
+		flight: Flight,
 		radius = glyph / 2
 	) {
 		if (!base) return;
 		marker.setLatLng([self.lat, self.lon]);
 		const host = marker.getElement();
 		if (!host) return;
-		const elements = updateReplayLabel(host, labelHtml(color, text, self));
+		const elements = updateReplayLabel(host, labelHtml(color, flight, self));
 		const p = base.map.latLngToContainerPoint([self.lat, self.lon]);
 		const airportPoint = base.map.latLngToContainerPoint(airport.pos);
 		labels.push({
@@ -378,7 +381,7 @@
 				clearFadingLabel(f.id);
 				g = {
 					mark: L.marker([lat, lon], { interactive: false, zIndexOffset: 500, icon: L.divIcon({ className: 'replay-marker', iconSize: [0, 0], iconAnchor: [0, 0], html: glyphHtml(GREY, silhouetteFor(f), Math.round(glyph * 0.85)) }) }).addTo(map),
-					label: L.marker([lat, lon], { interactive: false, zIndexOffset: -600, icon: L.divIcon({ className: 'replay-label', iconSize: [0, 0], iconAnchor: [0, 0], html: '' }) }).addTo(map),
+					label: L.marker([lat, lon], { interactive: true, zIndexOffset: -600, icon: L.divIcon({ className: 'replay-label', iconSize: [0, 0], iconAnchor: [0, 0], html: '' }) }).addTo(map),
 					trail: L.polyline([], { color: GREY, weight: 2, opacity: 0.8, interactive: false }).addTo(map)
 				};
 				otherLayers.set(f.id, g);
@@ -397,7 +400,7 @@
 			}
 			pts.push([lat, lon]);
 			g.trail.setLatLngs(pts);
-			collectLabel(labels, f.id, g.label, { lat, lon, alt: v[2], gs: v[3] ?? 0, vs: vel ? vel[2] * 1000 : 0, active: true, phase: 'active' }, GREY, dataLabel(f), glyph * 0.425);
+			collectLabel(labels, f.id, g.label, { lat, lon, alt: v[2], gs: v[3] ?? 0, vs: vel ? vel[2] * 1000 : 0, active: true, phase: 'active' }, GREY, f, glyph * 0.425);
 		}
 	}
 
@@ -415,8 +418,8 @@
 		layers.trailB.setLatLngs(trail('b', t));
 		placeGlyph(layers.markA, sample.a, sample.inside);
 		placeGlyph(layers.markB, sample.b, sample.inside);
-		collectLabel(labels, a.id, layers.labelA, sample.a, colorA, dataLabel(a));
-		collectLabel(labels, b.id, layers.labelB, sample.b, colorB, dataLabel(b));
+		collectLabel(labels, a.id, layers.labelA, sample.a, colorA, a);
+		collectLabel(labels, b.id, layers.labelB, sample.b, colorB, b);
 		const size = base.map.getSize();
 		const placements = layoutReplayLabels(
 			labels.map(({ target }) => target),

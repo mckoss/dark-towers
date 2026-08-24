@@ -1,8 +1,10 @@
 <script lang="ts">
 	import Replay from '$lib/components/Replay.svelte';
 	import MapLegend from '$lib/components/MapLegend.svelte';
+	import AircraftIdentity from '$lib/components/AircraftIdentity.svelte';
+	import { aircraftIdentity } from '$lib/aircraft';
 	import { AIRSPACE_RADIUS_NM } from '$lib/airports';
-	import { flightLabel, flightSubLabel } from '$lib/flights';
+	import { flightLabel } from '$lib/flights';
 	import { aircraftKind, pairColors, WINDOW_AFTER_MS, WINDOW_BEFORE_MS } from '$lib/replay';
 	import { localTime, localTimeZoned, nightLabel } from '$lib/time';
 	import { altContextFor, displayAlt, type AltContext } from '$lib/altview.svelte';
@@ -73,7 +75,7 @@
 		<a class="back" href="/airport/{airport.code}">← {airport.name}</a>
 		<span class="ref">{nightLabel(incident.night)}</span>
 	</div>
-	<h1 class="headline">{flightLabel(a)} and {flightLabel(b)} — <span class:accent-text={incident.kind === 'wake-turbulence' || incident.severity === 'very-close'}>{incident.kind === 'wake-turbulence' ? 'wake-turbulence event' : incident.severity === 'very-close' ? 'very close approach' : 'close approach'} at {localTimeZoned(airport.tz, incident.t)}</span></h1>
+	<h1 class="headline"><AircraftIdentity identity={aircraftIdentity(a)} details={false} /> and <AircraftIdentity identity={aircraftIdentity(b)} details={false} /> — <span class:accent-text={incident.kind === 'wake-turbulence' || incident.severity === 'very-close'}>{incident.kind === 'wake-turbulence' ? 'wake-turbulence event' : incident.severity === 'very-close' ? 'very close approach' : 'close approach'} at {localTimeZoned(airport.tz, incident.t)}</span></h1>
 </section>
 
 <section class="section split">
@@ -94,7 +96,7 @@
 					<div class="moment-row">
 						<span class="swatch" class:swatch-military={aircraftKind(row.f) === 'military'} class:swatch-accent={aircraftKind(row.f) !== 'military' && row.swatch === 'accent'} class:swatch-ink={aircraftKind(row.f) !== 'military' && row.swatch === 'ink'}></span>
 						<span class="who">
-							<span class="who-name">{flightLabel(row.f)}{#if flightSubLabel(row.f)}<span class="who-sub">{flightSubLabel(row.f)}</span>{/if}</span>
+							<span class="who-name"><AircraftIdentity identity={aircraftIdentity(row.f)} /></span>
 							<span class="who-desc">{describe(row.f)} · {movement(row.f)}</span>
 						</span>
 						<span class="tabular">{showAlt(row.alt)}</span>
@@ -134,12 +136,13 @@
 		<div>Vertical</div>
 	</div>
 	{#each related as r (r.id)}
-		<a class="row item" href="/close-approach/{r.id}">
+		<div class="row item">
+			<a class="row-link" href="/close-approach/{r.id}" aria-label="Watch {r.identA} and {r.identB}"></a>
 			<div class="ref tabular">{nightLabel(r.night)} · {localTime(airport.tz, r.t)}</div>
-			<div class="pair">{r.identA} × {r.identB}</div>
+			<div class="pair"><AircraftIdentity identity={r.identityA} /><span>×</span><AircraftIdentity identity={r.identityB} /></div>
 			<div class="num tabular">{nm(r.lateralNm)}</div>
 			<div class="num tabular">{ft(r.verticalFt)}</div>
-		</a>
+		</div>
 	{:else}
 		<div class="empty">No other close approaches in the last 30 days.</div>
 	{/each}
@@ -227,11 +230,6 @@
 	.who-name {
 		font-weight: 700;
 	}
-	.who-sub {
-		margin-left: 0.45em;
-		font-weight: 400;
-		color: var(--ink-45);
-	}
 	.who-desc {
 		font-size: 12px;
 		color: var(--ink-60);
@@ -294,10 +292,14 @@
 		border-bottom: var(--row-rule);
 	}
 	.item {
+		position: relative;
 		padding: 16px 0;
 		border-bottom: var(--row-rule);
 		color: var(--ink);
 	}
+	.row-link { position: absolute; inset: 0; z-index: 1; border: 0; }
+	.item > :not(.row-link) { position: relative; z-index: 2; pointer-events: none; }
+	.item :global(.identity-link) { pointer-events: auto; }
 	.item:hover {
 		background: var(--ground-alt);
 		color: var(--ink);
@@ -309,6 +311,9 @@
 		text-transform: none;
 	}
 	.pair {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px 7px;
 		font-size: 16px;
 		font-weight: 600;
 	}

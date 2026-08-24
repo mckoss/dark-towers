@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { localTime, nightLabel } from '$lib/time';
+	import AircraftIdentity from '$lib/components/AircraftIdentity.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -54,14 +55,15 @@
 		<div></div>
 	</div>
 	{#each data.rows as incident (incident.id)}
-		<a class="row item" href="/close-approach/{incident.id}" data-testid="approach-row" data-airport={incident.airportCode} data-night={incident.night} data-lateral={incident.lateralNm} data-vertical={incident.verticalFt}>
+		<div class="row item" data-testid="approach-row" data-airport={incident.airportCode} data-night={incident.night} data-lateral={incident.lateralNm} data-vertical={incident.verticalFt}>
+			<a class="row-link" href="/close-approach/{incident.id}" aria-label="Watch replay of {incident.identA} and {incident.identB}"></a>
 			<div class="when tabular"><strong>{nightLabel(incident.night)}</strong><span>{localTime(incident.tz, incident.t, true)}</span></div>
 			<div><strong>{incident.airportCode}</strong><span>{incident.airportName}</span></div>
-			<div class="pair">{incident.identA} × {incident.identB}</div>
+			<div class="pair"><AircraftIdentity identity={incident.identityA} /><span>×</span><AircraftIdentity identity={incident.identityB} /></div>
 			<div class="tabular">{nm(incident.lateralNm)}</div>
 			<div class="tabular">{ft(incident.verticalFt)}</div>
 			<div class="watch">Watch replay →</div>
-		</a>
+		</div>
 	{:else}
 		<div class="empty">No close approaches were detected in this period.</div>
 	{/each}
@@ -132,8 +134,12 @@
 		border-top: var(--rule);
 	}
 	.item {
+		position: relative;
 		color: inherit;
 	}
+	.row-link { position: absolute; inset: 0; z-index: 1; border: 0; }
+	.item > :not(.row-link) { position: relative; z-index: 2; pointer-events: none; }
+	.item :global(.identity-link) { pointer-events: auto; }
 	.item:hover,
 	.item:focus-visible {
 		background: var(--ground-alt);
@@ -147,6 +153,9 @@
 		color: var(--ink-60);
 	}
 	.pair {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px 7px;
 		font-weight: 700;
 	}
 	.watch {

@@ -9,9 +9,9 @@ const ACFTREF = `﻿CODE,MFR,MODEL,TYPE-ACFT,TYPE-ENG,AC-CAT,
 9999999,UNUSED                        ,X                   ,4,1 ,1,
 `;
 const MASTER = [
-	'﻿N-NUMBER,SERIAL NUMBER,MFR MDL CODE,ENG MFR MDL,YEAR MFR,',
-	'433LF,57484                         ,1182220,52299,2023,',
-	'65KD,172S1234                      ,2072739,41512,2005,',
+	'﻿N-NUMBER,SERIAL NUMBER,MFR MDL CODE,ENG MFR MDL,YEAR MFR,TYPE REGISTRANT,NAME,STREET,STREET2,CITY,STATE,ZIP,REGION,COUNTY,COUNTRY,',
+	'433LF,57484                         ,1182220,52299,2023,7,EVERETT ROTOR LLC,100 OMITTED,,EVERETT,WA,98201,1,61,UNITED STATES,',
+	'65KD,172S1234                      ,2072739,41512,2005,1,ADA READER,200 OMITTED,,SEATTLE,WA,98101,1,33,UNITED STATES,',
 	'1AB,x,0000000,,,'
 ];
 
@@ -29,9 +29,14 @@ describe('registry', () => {
 	});
 	it('builds a compact table keeping only used models', async () => {
 		const data = await buildRegistry('2026-08-21', ACFTREF, MASTER);
+		expect(data.schema).toBe(2);
 		expect(Object.keys(data.models).sort()).toEqual(['1182220', '2072739']);
-		expect(data.tails['433LF']).toBe('1182220');
-		expect(lookupRegistry(data, 'N433LF')).toEqual({ manufacturer: 'BELL TEXTRON CANADA LTD', model: '429', airframe: 'helicopter', label: 'BELL 429' });
+		expect(data.tails['433LF']).toEqual(['1182220', '2023', '7', 'EVERETT ROTOR LLC', 'EVERETT', 'WA', 'UNITED STATES']);
+		expect(lookupRegistry(data, 'N433LF')).toEqual({
+			registration: 'N433LF', manufacturer: 'BELL TEXTRON CANADA LTD', model: '429', airframe: 'helicopter', year: 2023,
+			registrantType: 'LLC', ownerName: 'EVERETT ROTOR LLC', ownerCity: 'EVERETT', ownerState: 'WA', ownerCountry: 'UNITED STATES',
+			asOf: '2026-08-21', label: 'BELL 429'
+		});
 		expect(lookupRegistry(data, 'N1AB')).toBeNull();
 	});
 	it('fills blank types and airframes from the registry without overriding FlightAware', async () => {

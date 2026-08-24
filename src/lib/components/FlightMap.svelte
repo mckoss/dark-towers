@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { flightLabel } from '$lib/flights';
 	import { dataBlockHtml, trendOf } from '$lib/datablock';
+	import { dataBlockAircraft } from '$lib/aircraft';
 	import { displayAlt, NO_CORRECTION, type AltContext } from '$lib/altview.svelte';
 	import { localTime, localTimeZoned } from '$lib/time';
 	import { PAUSE_ICON, PLAY_ICON, REPLAY_ICON } from './Replay.svelte';
@@ -299,7 +300,7 @@
 				clearFadingLabel(f.id);
 				g = {
 					mark: L.marker(at, { interactive: false, zIndexOffset: 1000, icon: L.divIcon({ className: 'replay-marker', iconSize: [0, 0], iconAnchor: [0, 0], html: glyphHtml(color, silhouetteFor(f), GLYPH_PX) }) }).addTo(map),
-					label: L.marker(at, { interactive: false, zIndexOffset: -500, icon: L.divIcon({ className: 'replay-label', iconSize: [0, 0], iconAnchor: [0, 0], html: '' }) }).addTo(map),
+					label: L.marker(at, { interactive: true, zIndexOffset: -500, icon: L.divIcon({ className: 'replay-label', iconSize: [0, 0], iconAnchor: [0, 0], html: '' }) }).addTo(map),
 					trail: L.polyline([], { color, weight: f.category === 'airline' ? 4 : 3, opacity: 0.95, interactive: false }).addTo(map)
 				};
 				glyphs.set(f.id, g);
@@ -328,7 +329,7 @@
 				const shown = displayAlt(v[2], alt);
 				const elements = updateReplayLabel(
 					host,
-					dataBlockHtml({ label: dataLabel(f), altFt: v[2], plainAltFt: shown.ft, altUnit: shown.mode === 'agl' ? 'AGL' : 'ADS-B', gsKt: v[3], trend: trendOf(vel ? vel[2] * 1000 : null) }, color)
+					dataBlockHtml({ label: dataLabel(f), altFt: v[2], plainAltFt: shown.ft, altUnit: shown.mode === 'agl' ? 'AGL' : 'ADS-B', gsKt: v[3], trend: trendOf(vel ? vel[2] * 1000 : null), aircraft: dataBlockAircraft(f) }, color)
 				);
 				const point = map.latLngToContainerPoint(at);
 				labels.push({
@@ -422,7 +423,7 @@
 		const vel = entry.spline.velocityAt(t);
 		const color = aircraftKind(f) === 'military' ? MILITARY_BLUE : f.category === 'airline' ? '#ec3013' : '#201e1d';
 		const shown = displayAlt(v[2], alt);
-		const html = dataBlockHtml({ label: dataLabel(f), altFt: v[2], plainAltFt: shown.ft, altUnit: shown.mode === 'agl' ? 'AGL' : 'ADS-B', gsKt: v[3], trend: trendOf(vel ? vel[2] * 1000 : null), time: localTimeZoned(tz, t, true) }, color);
+		const html = dataBlockHtml({ label: dataLabel(f), altFt: v[2], plainAltFt: shown.ft, altUnit: shown.mode === 'agl' ? 'AGL' : 'ADS-B', gsKt: v[3], trend: trendOf(vel ? vel[2] * 1000 : null), time: localTimeZoned(tz, t, true), aircraft: dataBlockAircraft(f) }, color);
 		const at: LeafletNS.LatLngExpression = [v[0], v[1]];
 		if (!hoverDot) hoverDot = L.circleMarker(at, { radius: 4, color, weight: 2, fillColor: '#f3f2f2', fillOpacity: 1, interactive: false }).addTo(base.map);
 		else hoverDot.setLatLng(at).setStyle({ color });

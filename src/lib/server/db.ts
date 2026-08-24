@@ -221,6 +221,20 @@ export function flightsForNight(airport: string, night: string): Flight[] {
 	return (db().prepare(`SELECT * FROM flights WHERE airport = ? AND night = ? ORDER BY event_time`).all(airport, night) as FlightRow[]).map(rowToFlight);
 }
 
+/** Every stored sighting of one registration, newest first. */
+export function flightsForTail(tail: string): Flight[] {
+	return (db().prepare(`SELECT * FROM flights WHERE tail = ? COLLATE NOCASE ORDER BY event_time DESC`).all(tail) as FlightRow[]).map(rowToFlight);
+}
+
+export function incidentsForTail(tail: string): Incident[] {
+	const rows = db().prepare(
+		`SELECT DISTINCT i.* FROM incidents i
+		 JOIN flights f ON f.id = i.flight_a OR f.id = i.flight_b
+		 WHERE f.tail = ? COLLATE NOCASE ORDER BY i.t DESC`
+	).all(tail) as IncidentRow[];
+	return rows.map(rowToIncident);
+}
+
 export function flightById(id: string): Flight | null {
 	const r = db().prepare(`SELECT * FROM flights WHERE id = ?`).get(id) as FlightRow | undefined;
 	return r ? rowToFlight(r) : null;

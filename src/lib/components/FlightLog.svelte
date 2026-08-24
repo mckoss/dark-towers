@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { flightKind, flightLabel, flightSubLabel } from '$lib/flights';
+	import { flightKind, flightLabel } from '$lib/flights';
+	import { aircraftIdentity } from '$lib/aircraft';
+	import AircraftIdentity from './AircraftIdentity.svelte';
 	/* Flight log table (README §3). Row hover reports the flight id via onfocus
 	   so the map can highlight the matching track. */
 	import type { Flight, Incident } from '$lib/types';
@@ -38,29 +40,31 @@
 		<div>Other airport</div>
 	</div>
 	{#each flights as f (f.id)}
-		<a
+		<div
 			class="row"
+			role="group"
 			class:focused={f.id === focus}
 			class:close-approach={closeApproachFlights.has(f.id)}
 			data-testid="flight-log-row"
-			href={`?night=${encodeURIComponent(night)}&t=${f.eventTime}#night-replay`}
 			onmouseenter={() => onfocus?.(f.id)}
 			onmouseleave={() => onfocus?.(null)}
-			onfocus={() => onfocus?.(f.id)}
-			onblur={() => onfocus?.(null)}
+			onfocusin={() => onfocus?.(f.id)}
+			onfocusout={() => onfocus?.(null)}
 		>
+			<a class="row-link" href={`?night=${encodeURIComponent(night)}&t=${f.eventTime}#night-replay`} aria-label="View ${flightLabel(f)} in the night replay"></a>
 			<div class="time tabular">{localTime(tz, f.eventTime)}</div>
 			<div class="kind" class:airline={f.category === 'airline'}><span class="swatch" class:airline={f.category === 'airline'}></span>{kind(f)}</div>
-			<div class="dim">{f.direction === 'arrival' ? 'Arriving' : 'Leaving'}</div>
-			<div class="ident">{flightLabel(f)}{#if flightSubLabel(f)}<span class="tail">{flightSubLabel(f)}</span>{/if}{#if closeApproachFlights.has(f.id)}<span class="sr-only"> — close approach participant</span>{/if}</div>
-			<div class="dim">{f.type ?? '—'}</div>
-			<div class="dim">{other(f)}</div>
-		</a>
+			<div class="dim movement">{f.direction === 'arrival' ? 'Arriving' : 'Leaving'}</div>
+			<div class="ident"><AircraftIdentity identity={aircraftIdentity(f)} />{#if closeApproachFlights.has(f.id)}<span class="sr-only"> — close approach participant</span>{/if}</div>
+			<div class="dim type">{f.type ?? '—'}</div>
+			<div class="dim other">{other(f)}</div>
+		</div>
 	{/each}
 </div>
 
 <style>
 	.row {
+		position: relative;
 		display: grid;
 		grid-template-columns: 92px 150px 110px 1fr 90px 1.4fr;
 		align-items: center;
@@ -71,12 +75,16 @@
 		color: inherit;
 		text-decoration: none;
 	}
+	.row-link { position: absolute; inset: 0; z-index: 0; border: 0; }
+	.row > :not(.row-link) { position: relative; z-index: 1; pointer-events: none; }
+	.row .ident { pointer-events: none; }
+	.row .ident :global(.identity-link) { pointer-events: auto; }
 	.row.head {
 		border-top: var(--rule);
 		padding: 10px 0;
 	}
 	.row:not(.head):hover,
-	.row:not(.head):focus-visible,
+	.row:not(.head):has(.row-link:focus-visible),
 	.row.focused {
 		background: var(--ground-alt);
 	}
@@ -88,7 +96,7 @@
 	.row.close-approach.focused {
 		background: #ffe0d9;
 	}
-	.row:not(.head):focus-visible {
+	.row:not(.head):has(.row-link:focus-visible) {
 		outline: 2px solid var(--accent);
 		outline-offset: -2px;
 	}
@@ -118,11 +126,6 @@
 	.ident {
 		font-weight: 600;
 	}
-	.tail {
-		margin-left: 0.45em;
-		font-weight: 400;
-		color: var(--ink-45);
-	}
 	.dim {
 		color: var(--ink-60);
 	}
@@ -140,9 +143,9 @@
 		}
 		.time { grid-area: time; }
 		.kind { grid-area: kind; }
-		.row > :nth-child(3) { grid-area: dir; }
+		.movement { grid-area: dir; }
 		.ident { grid-area: ident; }
-		.row > :nth-child(5) { grid-area: type; }
-		.row > :nth-child(6) { grid-area: other; }
+		.type { grid-area: type; }
+		.other { grid-area: other; }
 	}
 </style>

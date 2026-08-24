@@ -1,7 +1,8 @@
 /**
  * Download and cache the FAA aircraft registry, reduced by $lib/registry to a
- * tail → model table (~8 MB JSON at data/registry/<month>.json). The FAA
- * republishes nightly; a monthly refresh is plenty for make/model. A failed
+ * tail → aircraft and non-address registrant facts (~8 MB JSON at
+ * data/registry/<month>.json). The FAA republishes nightly; Dark Towers
+ * refreshes monthly. A failed
  * download falls back to the newest cached month. The registry site rejects
  * requests without a browser-like user agent.
  */
@@ -46,7 +47,7 @@ export interface RegistryOptions {
 export async function updateRegistry(opts: RegistryOptions = {}): Promise<RegistryData | null> {
 	const month = monthFor(opts.now);
 	const have = readFile(fileFor(month));
-	if (have) return (cache = have);
+	if (have?.schema === 2) return (cache = have);
 	try {
 		opts.log?.(`registry: downloading FAA aircraft registry for ${month}`);
 		const res = await (opts.fetchImpl ?? fetch)(REGISTRY_URL, { headers: { 'user-agent': 'Mozilla/5.0 (compatible; dark-towers.org aircraft lookup)' } });

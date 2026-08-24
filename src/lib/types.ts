@@ -1,5 +1,5 @@
 import type { AltimeterReading, OnFieldPoint } from './altimeter';
-import type { Airframe } from './registry';
+import type { Airframe, RegistryEntry } from './registry';
 
 /** Shared domain types. Everything user-facing is in plain language (see README). */
 
@@ -89,6 +89,8 @@ export interface Flight {
 	type: string | null;
 	/** Airplane or helicopter per the FAA registry, when the tail is US-registered and known. */
 	airframe?: Airframe | null;
+	/** Current FAA registry details, attached at read time rather than stored with the historical flight. */
+	registry?: RegistryEntry | null;
 	category: FlightCategory;
 	/** ICAO operator code, e.g. ASA. */
 	operator: string | null;

@@ -6,6 +6,7 @@
 		},
 		{ name: 'FlightAware AeroAPI', what: 'arrival and departure records, and the ADS-B position signals each aircraft broadcast, collected by FlightAware\'s receiver network.' },
 		{ name: 'FAA Chart Supplement and NASR data', what: 'the official published tower hours and facility record, plus the physical latitude and longitude of each runway end and the declared runway dimensions used for the amber map overlay. Runways follow the current 28-day FAA cycle; an older replay may therefore show today’s published runway configuration.' },
+		{ name: 'FAA Aircraft Registry', what: 'aircraft make, model, airframe, year, registration type, registered name, and city/state. Dark Towers uses only the releasable FAA fields and does not display street addresses or ZIP codes.' },
 		{ name: 'Published airline schedules', what: 'to tell passenger flights apart from private ones.' },
 		{ name: 'OpenStreetMap and CARTO', what: 'basemap tiles.' }
 	];

@@ -305,10 +305,49 @@ p {
 	box-shadow: 0 1px 0 rgba(32, 30, 29, 0.12);
 }
 .datablock .db-id {
+	position: relative;
 	font-size: 12px;
 	font-weight: 800;
 	letter-spacing: 0.02em;
 	color: var(--db-color, var(--ink));
+}
+.datablock .db-identity {
+	position: relative;
+	pointer-events: auto;
+}
+.datablock .db-identity > a {
+	border-bottom: 1px dotted currentColor;
+	color: inherit;
+}
+.datablock .db-aircraft-popover {
+	position: absolute;
+	left: 0;
+	bottom: calc(100% + 7px);
+	z-index: 1200;
+	display: none;
+	min-width: 220px;
+	padding: 10px 12px;
+	border: 1.5px solid var(--ink);
+	background: var(--ground);
+	box-shadow: 3px 3px 0 rgb(32 30 29 / 22%);
+	color: var(--ink);
+	font-family: var(--font);
+	font-size: 11px;
+	font-weight: 500;
+	line-height: 1.35;
+	letter-spacing: normal;
+}
+.datablock .db-identity:hover .db-aircraft-popover,
+.datablock .db-identity:focus-within .db-aircraft-popover {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+.datablock .db-aircraft-popover .as-of {
+	margin-top: 3px;
+	color: var(--ink-45);
+	font-size: 9px;
+	text-transform: uppercase;
 }
 .datablock .db-atc {
 	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -694,6 +733,11 @@ p {
 	background: #f3f2f2;
 	padding: 3px 5px;
 	border: 1px solid currentColor;
+}
+.replay-label .replay-chip a {
+	color: inherit;
+	border-bottom: 1px dotted currentColor;
+	pointer-events: auto;
 }
 @media (prefers-reduced-motion: reduce) {
 	.replay-label-offset.positioned,
