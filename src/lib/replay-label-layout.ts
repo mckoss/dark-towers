@@ -20,6 +20,11 @@ export interface ReplayLabelPlacement {
 	height: number;
 }
 
+export interface ReplayLabelMotionState {
+	placement: ReplayLabelPlacement;
+	aircraft: { x: number; y: number };
+}
+
 interface Rect {
 	x: number;
 	y: number;
@@ -136,6 +141,54 @@ export function replayLeaderEnd(placement: Pick<ReplayLabelPlacement, 'x' | 'y' 
 	};
 }
 
+export const REPLAY_LABEL_SPEED_RATIO = 0.5;
+
+/** Whether a pinned datablock remains visible and clear of aircraft and labels. */
+export function replayLabelPlacementIsClear(
+	placement: ReplayLabelPlacement,
+	targets: ReplayLabelTarget[],
+	viewport: { width: number; height: number },
+	occupied: ReplayLabelPlacement[] = []
+): boolean {
+	if (outsideArea(placement, viewport, 6) > 0) return false;
+	const aircraft = targets.map((target) => ({
+		x: target.x - target.radius,
+		y: target.y - target.radius,
+		width: target.radius * 2,
+		height: target.radius * 2
+	}));
+	if (aircraft.some((rect) => overlapArea(placement, rect, 3) > 0)) return false;
+	return occupied.every((other) => overlapArea(placement, other, 5) === 0);
+}
+
+/**
+ * Hold a datablock at its prior screen position until it must move. When it
+ * does move, limit it to half of the aircraft's screen travel since the last
+ * frame so the leader can do most of the visual tracking.
+ */
+export function stabilizeReplayLabelPlacement(
+	desired: ReplayLabelPlacement,
+	previous: ReplayLabelMotionState | undefined,
+	aircraft: { x: number; y: number },
+	mustMove: boolean
+): ReplayLabelPlacement {
+	if (!previous) return desired;
+	const pinned = { ...desired, slot: previous.placement.slot, x: previous.placement.x, y: previous.placement.y };
+	if (!mustMove) return pinned;
+
+	const dx = desired.x - pinned.x;
+	const dy = desired.y - pinned.y;
+	const distance = Math.hypot(dx, dy);
+	const aircraftTravel = Math.hypot(aircraft.x - previous.aircraft.x, aircraft.y - previous.aircraft.y);
+	const step = Math.min(distance, aircraftTravel * REPLAY_LABEL_SPEED_RATIO);
+	if (!distance || step >= distance) return desired;
+	return {
+		...pinned,
+		x: pinned.x + (dx / distance) * step,
+		y: pinned.y + (dy / distance) * step
+	};
+}
+
 export interface ReplayLabelElements {
 	offset: HTMLElement;
 	leader: HTMLElement;
@@ -165,7 +218,8 @@ export function applyReplayLabelPlacement(
 	placement: ReplayLabelPlacement,
 	aircraft: { x: number; y: number },
 	radius: number,
-	color: string
+	color: string,
+	screenPinned = false
 ): void {
 	const firstPlacement = !elements.offset.classList.contains('positioned');
 	const x = placement.x - aircraft.x;
@@ -183,6 +237,8 @@ export function applyReplayLabelPlacement(
 	elements.leader.style.width = `${Math.max(0, length - start).toFixed(1)}px`;
 	elements.leader.style.transform = `rotate(${Math.atan2(end.y, end.x)}rad)`;
 	elements.leader.style.backgroundColor = color;
+	elements.offset.classList.toggle('screen-pinned', screenPinned);
+	elements.leader.classList.toggle('screen-pinned', screenPinned);
 	// The first layout is immediate so newly appearing labels do not animate
 	// outward from one overlapping pile at the aircraft origins. Later slot
 	// changes use the CSS ease-in-out transition.

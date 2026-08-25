@@ -22,9 +22,13 @@
 		applyReplayLabelPlacement,
 		cardinalDirectionAway,
 		layoutReplayLabels,
+		replayLabelPlacementIsClear,
+		stabilizeReplayLabelPlacement,
 		updateReplayLabel,
 		type LabelSlot,
 		type ReplayLabelElements,
+		type ReplayLabelMotionState,
+		type ReplayLabelPlacement,
 		type ReplayLabelTarget
 	} from '$lib/replay-label-layout';
 	import { buildTrackSpline } from '$lib/separation';
@@ -81,6 +85,7 @@
 	);
 	const otherLayers = new Map<string, { mark: Leaflet.Marker }>();
 	const labelSlots = new Map<string, LabelSlot>();
+	const labelMotion = new Map<string, ReplayLabelMotionState>();
 	type LabelDraw = { target: ReplayLabelTarget; elements: ReplayLabelElements; color: string };
 
 	/** Closest moment as a fraction of the replay window (scrubber pip position). */
@@ -211,11 +216,16 @@
 			L = mod.L;
 			base = mod.createBaseMap(mapEl, airport.pos, { tiles, runways: airport.runways });
 			const map = base.map;
+			// Persistent dashed paths stay beneath the datablocks. The live snake
+			// trails share a higher pane with their aircraft silhouettes.
+			map.createPane('replay-labels').style.zIndex = '550';
+			map.createPane('replay-aircraft').style.zIndex = '600';
 			map.on('zoomstart', () => {
 				mapZooming = true;
 			});
 			map.on('zoomend', () => {
 				mapZooming = false;
+				labelMotion.clear();
 				if (drawDeferred) {
 					drawDeferred = false;
 					draw();
@@ -229,7 +239,7 @@
 			] as const) {
 				L.polyline(
 					f.positions.map((p) => [p.lat, p.lon] as [number, number]),
-					{ color, weight: 2.5, opacity: 0.5, dashArray: '5 6', interactive: false }
+					{ className: 'replay-whole-path', color, weight: 2.5, opacity: 0.5, dashArray: '5 6', interactive: false }
 				).addTo(map);
 			}
 
@@ -243,23 +253,24 @@
 			const q = map.latLngToContainerPoint([c.b.lat, c.b.lon]);
 			glyph = glyphSizeFor(Math.hypot(p.x - q.x, p.y - q.y));
 
-			const trailA = L.polyline([], { color: colorA, weight: 4, opacity: 0.95, interactive: false }).addTo(map);
-			const trailB = L.polyline([], { color: colorB, weight: 3, opacity: 0.85, interactive: false }).addTo(map);
+			const trailA = L.polyline([], { pane: 'replay-aircraft', className: 'replay-snake', color: colorA, weight: 4, opacity: 0.95, interactive: false }).addTo(map);
+			const trailB = L.polyline([], { pane: 'replay-aircraft', className: 'replay-snake', color: colorB, weight: 3, opacity: 0.85, interactive: false }).addTo(map);
 			const mk = (color: string, f: Flight) =>
 				L!.marker([c.a.lat, c.a.lon], {
 					interactive: false,
-					zIndexOffset: 1000,
+					pane: 'replay-aircraft',
 					icon: L!.divIcon({ className: 'replay-marker replay-marker-focus', iconSize: [0, 0], iconAnchor: [0, 0], html: glyphHtml(color, silhouetteFor(f), glyph) })
 				}).addTo(map);
 			const lb = (color: string, f: Flight) =>
 				L!.marker([c.a.lat, c.a.lon], {
 					interactive: true,
-					zIndexOffset: -500,
+					pane: 'replay-labels',
 					icon: L!.divIcon({ className: 'replay-label', iconSize: [0, 0], iconAnchor: [0, 0], html: labelHtml(color, f) })
 				}).addTo(map);
 			layers = { trailA, trailB, markA: mk(colorA, a), markB: mk(colorB, b), labelA: lb(colorA, a), labelB: lb(colorB, b) };
 
 			ro = new ResizeObserver(() => {
+				labelMotion.clear();
 				map.invalidateSize();
 				map.fitBounds(L!.latLngBounds(seen), { padding: [40, 40] });
 				draw();
@@ -279,6 +290,7 @@
 			base = null;
 			layers = null;
 			labelSlots.clear();
+			labelMotion.clear();
 		};
 	});
 
@@ -349,7 +361,7 @@
 			const [lat, lon] = fromLocalNm(airport.pos, [v[0], v[1]]);
 			if (!g) {
 				g = {
-					mark: L.marker([lat, lon], { interactive: false, zIndexOffset: 500, icon: L.divIcon({ className: 'replay-marker replay-marker-other', iconSize: [0, 0], iconAnchor: [0, 0], html: glyphHtml(GREY, silhouetteFor(f), Math.round(glyph * 0.85)) }) }).addTo(map)
+					mark: L.marker([lat, lon], { interactive: false, pane: 'replay-aircraft', icon: L.divIcon({ className: 'replay-marker replay-marker-other', iconSize: [0, 0], iconAnchor: [0, 0], html: glyphHtml(GREY, silhouetteFor(f), Math.round(glyph * 0.85)) }) }).addTo(map)
 				};
 				otherLayers.set(f.id, g);
 			}
@@ -380,15 +392,27 @@
 		collectLabel(labels, a.id, layers.labelA, sample.a, colorA, a);
 		collectLabel(labels, b.id, layers.labelB, sample.b, colorB, b);
 		const size = base.map.getSize();
-		const placements = layoutReplayLabels(
-			labels.map(({ target }) => target),
-			{ width: size.x, height: size.y },
+		const viewport = { width: size.x, height: size.y };
+		const targets = labels.map(({ target }) => target);
+		const desiredPlacements = layoutReplayLabels(
+			targets,
+			viewport,
 			labelSlots
 		);
-		for (const placement of placements) {
-			const label = labels.find(({ target }) => target.id === placement.id)!;
-			applyReplayLabelPlacement(label.elements, placement, label.target, label.target.radius, label.color);
+		const placed: ReplayLabelPlacement[] = [];
+		for (const desired of desiredPlacements) {
+			const label = labels.find(({ target }) => target.id === desired.id)!;
+			let previous = labelMotion.get(desired.id);
+			// A chip becoming a full datablock changes its footprint; establish a
+			// fresh safe anchor instead of preserving a now-invalid small rectangle.
+			if (previous && (previous.placement.width !== desired.width || previous.placement.height !== desired.height)) previous = undefined;
+			const pinned = previous ? { ...desired, slot: previous.placement.slot, x: previous.placement.x, y: previous.placement.y } : desired;
+			const mustMove = !!previous && !replayLabelPlacementIsClear(pinned, targets, viewport, placed);
+			const placement = stabilizeReplayLabelPlacement(desired, previous, label.target, mustMove);
+			applyReplayLabelPlacement(label.elements, placement, label.target, label.target.radius, label.color, true);
 			labelSlots.set(placement.id, placement.slot);
+			labelMotion.set(placement.id, { placement, aircraft: { x: label.target.x, y: label.target.y } });
+			placed.push(placement);
 		}
 	}
 
