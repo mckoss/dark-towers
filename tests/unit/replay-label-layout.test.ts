@@ -1,14 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
 	cardinalDirectionAway,
+	CLOSE_APPROACH_ANGLE_STEP,
+	layoutCloseApproachLabels,
 	layoutReplayLabels,
-	replayLabelPlacementIsClear,
+	planCloseApproachLabelRoute,
 	replayLeaderEnd,
 	REPLAY_LABEL_FADE_MS,
-	REPLAY_LABEL_SPEED_RATIO,
-	stabilizeReplayLabelPlacement,
-	type LabelSlot,
-	type ReplayLabelPlacement
+	type LabelSlot
 } from '../../src/lib/replay-label-layout';
 
 describe('layoutReplayLabels', () => {
@@ -67,34 +66,40 @@ describe('layoutReplayLabels', () => {
 		expect(replayLeaderEnd({ x: 20, y: 140, width: 100, height: 50 }, { x: 100, y: 100 })).toEqual({ x: 0, y: 40 });
 	});
 
-	it('keeps a clear datablock pinned while its aircraft moves', () => {
-		const desired: ReplayLabelPlacement = { id: 'a', slot: 'e', x: 180, y: 100, width: 100, height: 48 };
-		const previous = {
-			placement: { ...desired, x: 120 },
-			aircraft: { x: 90, y: 124 }
-		};
-		expect(stabilizeReplayLabelPlacement(desired, previous, { x: 110, y: 124 }, false)).toEqual(previous.placement);
+	it('jointly places close-approach blocks without the old 16 fixed slots', () => {
+		expect(360 / CLOSE_APPROACH_ANGLE_STEP).toBeGreaterThan(16);
+		const placements = layoutCloseApproachLabels(
+			[
+				{ id: 'a', x: 200, y: 150, width: 130, height: 58, radius: 20 },
+				{ id: 'b', x: 204, y: 153, width: 130, height: 58, radius: 20 }
+			],
+			{ width: 500, height: 320 }
+		);
+		const [a, b] = placements;
+		const overlapWidth = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
+		const overlapHeight = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
+		expect(overlapWidth <= 0 || overlapHeight <= 0).toBe(true);
+		for (const placement of placements) {
+			expect(placement.radial).toBe(0);
+			expect(placement.angle % CLOSE_APPROACH_ANGLE_STEP).toBe(0);
+		}
 	});
 
-	it('caps necessary datablock motion at half the aircraft travel', () => {
-		expect(REPLAY_LABEL_SPEED_RATIO).toBe(0.5);
-		const desired: ReplayLabelPlacement = { id: 'a', slot: 'e', x: 200, y: 100, width: 100, height: 48 };
-		const previous = {
-			placement: { ...desired, x: 100, slot: 'w' as const },
-			aircraft: { x: 90, y: 124 }
-		};
-		const moved = stabilizeReplayLabelPlacement(desired, previous, { x: 110, y: 124 }, true);
-		expect(moved.x).toBe(110);
-		expect(moved.y).toBe(100);
-		expect(moved.slot).toBe('w');
-	});
-
-	it('only relocates pinned datablocks that clip, overlap an aircraft, or overlap another block', () => {
-		const placement: ReplayLabelPlacement = { id: 'a', slot: 'e', x: 120, y: 80, width: 100, height: 48 };
-		const targets = [{ id: 'a', x: 80, y: 104, width: 100, height: 48, radius: 18 }];
-		expect(replayLabelPlacementIsClear(placement, targets, { width: 400, height: 300 })).toBe(true);
-		expect(replayLabelPlacementIsClear({ ...placement, x: 2 }, targets, { width: 400, height: 300 })).toBe(false);
-		expect(replayLabelPlacementIsClear({ ...placement, x: 75 }, targets, { width: 400, height: 300 })).toBe(false);
-		expect(replayLabelPlacementIsClear(placement, targets, { width: 400, height: 300 }, [{ ...placement, id: 'b' }])).toBe(false);
+	it('plans across the whole route and lets a datablock move less than its aircraft', () => {
+		const frames = Array.from({ length: 9 }, (_, index) => [
+			{ id: 'a', x: 100 + index * 24, y: 120, width: 110, height: 52, radius: 18 },
+			{ id: 'b', x: 390, y: 240, width: 110, height: 52, radius: 18 }
+		]);
+		const plan = planCloseApproachLabelRoute(frames, { width: 520, height: 320 });
+		expect(plan).toHaveLength(frames.length);
+		for (const placements of plan) {
+			const [a, b] = placements;
+			const overlapWidth = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
+			const overlapHeight = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
+			expect(overlapWidth <= 0 || overlapHeight <= 0).toBe(true);
+		}
+		const aircraftTravel = frames.at(-1)![0].x - frames[0][0].x;
+		const blockTravel = plan.slice(1).reduce((sum, placements, index) => sum + Math.hypot(placements[0].x - plan[index][0].x, placements[0].y - plan[index][0].y), 0);
+		expect(blockTravel).toBeLessThan(aircraftTravel);
 	});
 });

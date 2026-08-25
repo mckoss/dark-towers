@@ -25,6 +25,17 @@ async function expectNoOverlaps(blocks: Locator) {
 	}
 }
 
+async function expectAvoidsAircraft(blocks: Locator, aircraft: Locator) {
+	const blockRects = await blocks.evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().toJSON()));
+	const aircraftRects = await aircraft.evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().toJSON()));
+	for (const block of blockRects) {
+		for (const marker of aircraftRects) {
+			const overlaps = Math.min(block.right, marker.right) > Math.max(block.left, marker.left) && Math.min(block.bottom, marker.bottom) > Math.max(block.top, marker.top);
+			expect(overlaps, 'stabilized datablock overlaps an aircraft marker').toBe(false);
+		}
+	}
+}
+
 test.describe('home', () => {
 	test('renders headline, 30-night figures and the US map, naming no airport in copy', async ({ page }) => {
 		await page.goto('/');
@@ -267,6 +278,9 @@ test.describe('airport detail', () => {
 		const play = page.getByTestId('night-play');
 		await expect(play).toBeVisible();
 		await expect(play).toHaveAttribute('aria-label', 'Play');
+		const nightTracks = page.locator('.night-track');
+		expect(await nightTracks.count()).toBeGreaterThan(1);
+		expect(await nightTracks.evaluateAll((tracks) => tracks.every((track) => track.getAttribute('data-track-visibility') === '1.000'))).toBe(true);
 		// A red pip on the scrubber for every close approach that night.
 		expect(await page.getByTestId('night-pip').count()).toBeGreaterThan(0);
 		const before = await page.getByTestId('night-time').getAttribute('data-t');
@@ -274,6 +288,7 @@ test.describe('airport detail', () => {
 		// The replay can pause for 2.5 s on an event almost immediately after
 		// the first report; wait for the shared clock to continue past that hold.
 		await expect.poll(() => page.getByTestId('night-time').getAttribute('data-t'), { timeout: 6000 }).not.toBe(before);
+		expect(await page.locator('.night-track.track-hidden').count()).toBeGreaterThan(0);
 		await play.click();
 		await expect(play).toHaveAttribute('aria-label', 'Play');
 		const replayBlocks = page.locator('.replay-label-offset .datablock');
@@ -291,6 +306,24 @@ test.describe('airport detail', () => {
 		// Moving beyond the currently visible aircraft leaves its datablock in
 		// the pane for the half-second fade instead of removing it immediately.
 		const scrubber = page.getByTestId('night-scrubber');
+		await scrubber.evaluate((input: HTMLInputElement) => {
+			input.value = String(Math.round(Number(input.max) * 0.5));
+			input.dispatchEvent(new Event('input', { bubbles: true }));
+		});
+		const scrubbedAt = Number(await page.getByTestId('night-time').getAttribute('data-t'));
+		const scrubbedTracksMatch = await nightTracks.evaluateAll((tracks, at) => tracks.every((track) => {
+			const from = Number((track as HTMLElement).dataset.visibleFrom);
+			const to = Number((track as HTMLElement).dataset.visibleTo);
+			const expected = at <= from - 5_000 || at >= to + 5_000
+				? 0
+				: at < from
+					? (at - (from - 5_000)) / 5_000
+					: at > to
+						? 1 - (at - to) / 5_000
+						: 1;
+			return Math.abs(Number((track as HTMLElement).dataset.trackVisibility) - expected) <= 0.001;
+		}), scrubbedAt);
+		expect(scrubbedTracksMatch).toBe(true);
 		await scrubber.evaluate((input: HTMLInputElement) => {
 			input.value = input.max;
 			input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -498,7 +531,10 @@ test.describe('close approach', () => {
 		await expect(atcLine).toBeVisible();
 		await expect(atcLine).toHaveText(/^\d{3}[↑↓]?\s+\d{1,3}$/);
 		await expect(page.locator('.replay-label-leader')).toHaveCount(await page.locator('.replay-label-offset').count());
+		await play.click();
+		await expect(play).toHaveAttribute('aria-label', /Play|Replay/);
 		await expectNoOverlaps(page.locator('.replay-label-offset .datablock'));
+		await expectAvoidsAircraft(page.locator('.replay-label-offset .datablock'), page.locator('.replay-marker-focus .replay-glyph'));
 		await expect(page.getByTestId('replay-lateral')).toContainText('NM');
 		// Stepping pauses playback and moves the clock by 15 s.
 		await page.getByTestId('replay-forward').click();
