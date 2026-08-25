@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { COVERAGE_ALERT, COVERAGE_GREY, COVERAGE_HIT_RADIUS_MIN, TRACKING_RADIUS_MAX, coverageMarkerStyle, trackingRadius } from '../../src/lib/coverage-map';
+import { COVERAGE_ALERT, COVERAGE_GREY, COVERAGE_HIT_RADIUS_MIN, TRACKING_RADIUS_MAX, coverageMarkerStyle, coverageOverlayOffset, trackingRadius } from '../../src/lib/coverage-map';
 
 describe('coverage map marker sizing', () => {
 	it('uses a capped logarithmic scale for tracked airport operations', () => {
@@ -23,5 +23,20 @@ describe('coverage map marker sizing', () => {
 		expect(available.radius).toBeLessThan(requested.radius);
 		expect(requested.hitRadius).toBe(COVERAGE_HIT_RADIUS_MIN);
 		expect(available.hitRadius).toBe(COVERAGE_HIT_RADIUS_MIN);
+	});
+});
+
+describe('coverage map overlay placement', () => {
+	const container = { left: 100, top: 50, right: 500, bottom: 350 };
+
+	it('leaves a fully visible airport card in place', () => {
+		expect(coverageOverlayOffset(container, { left: 200, top: 100, right: 400, bottom: 220 })).toEqual({ x: 0, y: 0 });
+	});
+
+	it('shifts airport cards inward at every display edge', () => {
+		expect(coverageOverlayOffset(container, { left: 90, top: 100, right: 290, bottom: 220 })).toEqual({ x: 18, y: 0 });
+		expect(coverageOverlayOffset(container, { left: 350, top: 100, right: 510, bottom: 220 })).toEqual({ x: -18, y: 0 });
+		expect(coverageOverlayOffset(container, { left: 200, top: 40, right: 400, bottom: 160 })).toEqual({ x: 0, y: 18 });
+		expect(coverageOverlayOffset(container, { left: 200, top: 240, right: 400, bottom: 360 })).toEqual({ x: 0, y: -18 });
 	});
 });
