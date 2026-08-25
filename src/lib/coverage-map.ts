@@ -5,6 +5,25 @@ export const COVERAGE_ALERT = '#dc3e27';
 export const TRACKING_RADIUS_MAX = 18;
 export const COVERAGE_HIT_RADIUS_MIN = 9;
 
+interface Rectangle {
+	left: number;
+	top: number;
+	right: number;
+	bottom: number;
+}
+
+/** Pixel adjustment that keeps an overlay fully inside its container. */
+export function coverageOverlayOffset(container: Rectangle, overlay: Rectangle, padding = 8): { x: number; y: number } {
+	const minLeft = container.left + padding;
+	const maxRight = container.right - padding;
+	const minTop = container.top + padding;
+	const maxBottom = container.bottom - padding;
+	return {
+		x: overlay.left < minLeft ? minLeft - overlay.left : overlay.right > maxRight ? maxRight - overlay.right : 0,
+		y: overlay.top < minTop ? minTop - overlay.top : overlay.bottom > maxBottom ? maxBottom - overlay.bottom : 0
+	};
+}
+
 /** Logarithmic operation scaling prevents a high-volume airport dominating the map. */
 export function trackingRadius(operations: number): number {
 	const radius = 6 + Math.log1p(Math.max(0, operations)) * 1.6;

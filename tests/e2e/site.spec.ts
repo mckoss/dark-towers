@@ -40,6 +40,24 @@ test.describe('home', () => {
 		await marker.focus();
 		await marker.press('Enter');
 		await expect(page.getByRole('link', { name: 'View airport' })).toHaveAttribute('href', '/airport/PAE');
+		await page.keyboard.press('Escape');
+		const edgeCode = await page.locator('.coverage-marker').evaluateAll((markers, map) => {
+			const bounds = (map as HTMLElement).getBoundingClientRect();
+			return markers
+				.map((marker) => {
+					const rect = marker.getBoundingClientRect();
+					return { code: (marker as HTMLElement).dataset.code!, edge: Math.min(rect.left - bounds.left, bounds.right - rect.right, rect.top - bounds.top, bounds.bottom - rect.bottom) };
+				})
+				.sort((a, b) => a.edge - b.edge)[0].code;
+		}, await page.getByTestId('us-map').elementHandle());
+		await page.locator(`.coverage-marker[data-code="${edgeCode}"]`).hover();
+		const tooltip = page.locator('.coverage-tooltip').filter({ hasText: edgeCode });
+		await expect(tooltip).toBeVisible();
+		await expect.poll(async () => tooltip.evaluate((tip, map) => {
+			const outer = (map as HTMLElement).getBoundingClientRect();
+			const inner = tip.getBoundingClientRect();
+			return inner.left >= outer.left + 7 && inner.right <= outer.right - 7 && inner.top >= outer.top + 7 && inner.bottom <= outer.bottom - 7;
+		}, await page.getByTestId('us-map').elementHandle())).toBe(true);
 		// Copy (not the map labels) never names an airport.
 		const copy = await page.locator('main h1, main p').allTextContents();
 		expect(copy.join(' ')).not.toMatch(/Paine|Everett|PAE\b/);

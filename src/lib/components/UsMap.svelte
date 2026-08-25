@@ -7,7 +7,7 @@
 	import type { Topology, GeometryCollection } from 'topojson-specification';
 	import type { FeatureCollection, Geometry } from 'geojson';
 	import type { CoverageAirport } from '$lib/server/queries';
-	import { coverageMarkerStyle } from '$lib/coverage-map';
+	import { coverageMarkerStyle, coverageOverlayOffset } from '$lib/coverage-map';
 	import atlas from '$lib/data/us-atlas.json';
 
 	interface Props { airports: CoverageAirport[]; }
@@ -117,6 +117,19 @@
 				});
 				marker.bindTooltip(details(airport), { direction: 'top', offset: [0, -style.radius], className: 'coverage-tooltip' });
 				marker.bindPopup(popup(airport), { closeButton: true, className: 'coverage-popup', offset: [0, -style.radius] });
+				marker.on('tooltipopen', () => {
+					const tooltip = marker.getTooltip()?.getElement();
+					if (!tooltip) return;
+					tooltip.style.marginLeft = '0px';
+					tooltip.style.marginTop = '0px';
+					requestAnimationFrame(() => {
+						if (!tooltip.isConnected) return;
+						const offset = coverageOverlayOffset(mapEl.getBoundingClientRect(), tooltip.getBoundingClientRect());
+						tooltip.style.marginLeft = `${offset.x}px`;
+						tooltip.style.marginTop = `${offset.y}px`;
+						tooltip.style.setProperty('--coverage-arrow-shift-x', `${-offset.x}px`);
+					});
+				});
 				marker.on('add', () => {
 					const path = (marker as unknown as { _path?: SVGPathElement })._path;
 					if (!path) return;
@@ -166,7 +179,7 @@
 		box-shadow: 3px 3px 0 rgba(32, 30, 29, 0.22);
 		color: var(--ink);
 	}
-	:global(.leaflet-tooltip.coverage-tooltip::before) { border-top-color: var(--ink); }
+	:global(.leaflet-tooltip.coverage-tooltip::before) { border-top-color: var(--ink); transform: translateX(var(--coverage-arrow-shift-x, 0)); }
 	:global(.leaflet-popup.coverage-popup .leaflet-popup-tip) { background: var(--ground); }
 	:global(.coverage-details) { display: flex; min-width: 190px; flex-direction: column; gap: 4px; font: 12px/1.35 var(--font); }
 	:global(.coverage-details strong) { font-size: 13px; }
