@@ -7,6 +7,7 @@
 	import type { Topology, GeometryCollection } from 'topojson-specification';
 	import type { FeatureCollection, Geometry } from 'geojson';
 	import type { CoverageAirport } from '$lib/server/queries';
+	import { coverageMarkerStyle } from '$lib/coverage-map';
 	import atlas from '$lib/data/us-atlas.json';
 
 	interface Props { airports: CoverageAirport[]; }
@@ -19,7 +20,9 @@
 	const topo = atlas as unknown as Topology<{ states: GeometryCollection; nation: GeometryCollection }>;
 	const states = feature(topo, topo.objects.states) as FeatureCollection<Geometry>;
 	const projection = geoAlbersUsa().fitSize([W, H], states);
-	const rank = { available: 0, requested: 1, tracking: 2 } as const;
+	// Draw the smallest dots last so their intentionally larger hit targets are
+	// not swallowed by nearby high-volume tracked airports.
+	const rank = { tracking: 0, requested: 1, available: 2 } as const;
 
 	function details(airport: CoverageAirport): HTMLDivElement {
 		const card = document.createElement('div');
@@ -34,6 +37,17 @@
 		status.className = `coverage-status ${airport.status}`;
 		status.textContent = airport.status === 'tracking' ? 'Tracking' : airport.status === 'requested' ? 'Requested — awaiting review' : 'Qualifies for tracking';
 		card.append(title, location, tower, status);
+		if (airport.status === 'tracking') {
+			const activity = document.createElement('span');
+			activity.textContent = `${airport.operations.toLocaleString('en-US')} operations in the last 30 days`;
+			card.append(activity);
+			if (airport.veryClose) {
+				const alert = document.createElement('span');
+				alert.className = 'coverage-alert';
+				alert.textContent = 'Very close encounter recorded';
+				card.append(alert);
+			}
+		}
 		return card;
 	}
 
@@ -73,29 +87,44 @@
 				style: { renderer, color: '#201e1d', weight: 0.7, opacity: 0.34, fillColor: '#e7e5e4', fillOpacity: 1 }
 			}).addTo(map);
 
-			const colors = { tracking: '#dc3e27', requested: '#477ea8', available: '#737675' } as const;
 			for (const airport of [...airports].sort((a, b) => rank[a.status] - rank[b.status])) {
 				const point = projection([airport.pos[1], airport.pos[0]]);
 				if (!point) continue;
-				const radius = airport.status === 'tracking' ? 7 + Math.sqrt(Math.max(0, airport.incidents)) * 3 : airport.status === 'requested' ? 6 : 3.5;
-				const color = colors[airport.status];
-				const marker = L.circleMarker([H - point[1], point[0]], {
+				const style = coverageMarkerStyle(airport.status, airport.operations, airport.veryClose);
+				const at: [number, number] = [H - point[1], point[0]];
+				L.circleMarker(at, {
 					renderer,
-					radius,
-					color,
-					weight: airport.status === 'available' ? 1 : 2,
-					opacity: airport.status === 'available' ? 0.72 : 1,
-					fillColor: color,
-					fillOpacity: airport.status === 'available' ? 0.28 : 0.48,
+					radius: style.radius,
+					color: style.color,
+					weight: style.weight,
+					opacity: style.opacity,
+					fillColor: style.color,
+					fillOpacity: style.fillOpacity,
+					interactive: false,
+					className: `coverage-dot ${airport.status}${airport.veryClose ? ' very-close' : ''}`
+				}).addTo(map);
+				// The transparent interaction target is intentionally larger than
+				// small non-tracked dots, preserving accurate mouse and touch input.
+				const marker = L.circleMarker(at, {
+					renderer,
+					radius: style.hitRadius,
+					color: 'transparent',
+					weight: 0,
+					opacity: 0,
+					fillColor: 'transparent',
+					fillOpacity: 0,
 					className: `coverage-marker ${airport.status}`
 				});
-				marker.bindTooltip(details(airport), { direction: 'top', offset: [0, -radius], className: 'coverage-tooltip' });
-				marker.bindPopup(popup(airport), { closeButton: true, className: 'coverage-popup', offset: [0, -radius] });
+				marker.bindTooltip(details(airport), { direction: 'top', offset: [0, -style.radius], className: 'coverage-tooltip' });
+				marker.bindPopup(popup(airport), { closeButton: true, className: 'coverage-popup', offset: [0, -style.radius] });
 				marker.on('add', () => {
 					const path = (marker as unknown as { _path?: SVGPathElement })._path;
 					if (!path) return;
 					path.dataset.code = airport.code;
 					path.dataset.status = airport.status;
+					path.dataset.radius = style.radius.toFixed(2);
+					path.dataset.hitRadius = style.hitRadius.toFixed(2);
+					path.style.pointerEvents = 'all';
 					path.setAttribute('tabindex', '0');
 					path.setAttribute('role', 'button');
 					path.setAttribute('aria-label', `${airport.code}, ${airport.name}, ${airport.status}`);
@@ -128,7 +157,7 @@
 <style>
 	.us-map { width: 100%; height: 100%; min-height: 480px; border: 0; background: var(--ground) !important; }
 	:global(.coverage-marker) { cursor: pointer; outline: none; }
-	:global(.coverage-marker:focus) { stroke-width: 4; }
+	:global(.coverage-marker:focus) { stroke: var(--ink); stroke-opacity: 1; stroke-width: 2; }
 	:global(.leaflet-tooltip.coverage-tooltip),
 	:global(.leaflet-popup.coverage-popup .leaflet-popup-content-wrapper) {
 		border: 1.5px solid var(--ink);
@@ -145,6 +174,7 @@
 	:global(.coverage-status.tracking) { color: #a82d1d; }
 	:global(.coverage-status.requested) { color: #315f82; }
 	:global(.coverage-status.available) { color: var(--ink-60); }
+	:global(.coverage-alert) { color: #a82d1d; font-weight: 750; }
 	:global(.coverage-action) { display: inline-block; align-self: flex-start; margin-top: 7px; padding: 7px 9px; border: 0; background: var(--ink); color: var(--ground) !important; font-weight: 750; }
 	@media (max-width: 760px) {
 		.us-map { min-height: 430px; }

@@ -324,6 +324,14 @@ export function totalsByAirport(fromNight: string, toNight: string): Record<stri
 	return out;
 }
 
+/** Airports with at least one very-close event inside an inclusive night range. */
+export function veryCloseAirports(fromNight: string, toNight: string): Set<string> {
+	const rows = db()
+		.prepare(`SELECT DISTINCT airport FROM incidents WHERE night >= ? AND night <= ? AND severity = 'very-close'`)
+		.all(fromNight, toNight) as { airport: string }[];
+	return new Set(rows.map((row) => row.airport));
+}
+
 /* ---------- admin reads ---------- */
 
 export interface RunRow {

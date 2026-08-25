@@ -32,6 +32,7 @@
 	</div>
 
 	<div class="stats">
+		<div class="table-header period">In the last 30 days…</div>
 		<div class="stat">
 			<div class="big-stat" class:muted={empty}>{empty ? '—' : fmt(data.totals.flights)}</div>
 			<div class="stat-label">Flights in and out with the tower closed</div>
@@ -50,7 +51,6 @@
 			<div class="big-stat" class:accent={!empty} class:muted={empty}>{empty ? '—' : fmt(data.totals.wakeIncidents)}</div>
 			<div class="stat-label">Wake-turbulence events below FAA in-trail spacing</div>
 		</div>
-		<div class="footnote period">Data from last 30 days</div>
 	</div>
 </section>
 
@@ -59,8 +59,9 @@
 		<UsMap airports={data.airports} />
 	</div>
 	<div class="legend">
-		<div class="legend-title">Airport coverage</div>
-		<div class="legend-row"><span class="swatch swatch-tracking"></span> Tracking — grows with close approaches</div>
+		<div class="legend-title">Airport activity · last 30 days</div>
+		<div class="legend-row"><span class="swatch swatch-alert"></span> Very close encounter recorded</div>
+		<div class="legend-row"><span class="swatch swatch-tracking"></span> Tracking — size reflects operations (log scale)</div>
 		<div class="legend-row"><span class="swatch swatch-requested"></span> Requested — awaiting review</div>
 		<div class="legend-row"><span class="swatch swatch-available"></span> Qualifies — available to request</div>
 		<div class="legend-help">Drag to pan · scroll, pinch, or use ± to zoom</div>
@@ -84,7 +85,7 @@
 
 	.stats {
 		display: grid;
-		grid-template-rows: 1fr 1fr 1fr 1fr auto;
+		grid-template-rows: auto 1fr 1fr 1fr 1fr;
 	}
 	.stat {
 		display: flex;
@@ -99,7 +100,7 @@
 		background: var(--ground-alt);
 		color: inherit;
 	}
-	.stat:nth-child(4) {
+	.stat:last-child {
 		border-bottom: none;
 	}
 	.stat .big-stat {
@@ -109,7 +110,8 @@
 		max-width: 26ch;
 	}
 	.period {
-		padding: 0 var(--gutter) 20px;
+		padding: 18px var(--gutter) 14px;
+		border-bottom: var(--row-rule);
 	}
 
 	.map-row {
@@ -151,16 +153,22 @@
 	.swatch-tracking {
 		width: 18px;
 		height: 18px;
+		border: 2px solid #737675;
+		background: rgba(115, 118, 117, 0.48);
+	}
+	.swatch-alert {
+		width: 18px;
+		height: 18px;
 		border: 2px solid #dc3e27;
 		background: rgba(220, 62, 39, 0.48);
 	}
 	.swatch-requested {
-		width: 14px;
-		height: 14px;
-		border: 2px solid #477ea8;
-		background: rgba(71, 126, 168, 0.48);
+		width: 8px;
+		height: 8px;
+		border: 1px solid #737675;
+		background: rgba(115, 118, 117, 0.3);
 	}
-	.swatch-available { width: 9px; height: 9px; border: 1px solid #737675; background: rgba(115, 118, 117, 0.28); }
+	.swatch-available { width: 5px; height: 5px; border: 1px solid #737675; background: rgba(115, 118, 117, 0.3); }
 	.legend-help { margin-top: 3px; font-size: 11px; color: var(--ink-60); }
 
 	.cta {
@@ -186,7 +194,7 @@
 			padding: 18px var(--gutter);
 		}
 		.period {
-			padding-bottom: 16px;
+			padding: 14px var(--gutter) 12px;
 		}
 		.map-plate {
 			height: 480px;
