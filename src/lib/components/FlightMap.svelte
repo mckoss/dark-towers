@@ -18,6 +18,7 @@
 	} from '$lib/replay-label-layout';
 	import { SEPARATION_LATERAL_NM, SEPARATION_VERTICAL_FT } from '$lib/airports';
 	import { distanceNm } from '$lib/geo';
+	import { replayTrackVisibility } from '$lib/track-visibility';
 	import type { Incident, Runway } from '$lib/types';
 	/*
 	 * Flight-path map (README "Maps → Flight-path map"). Leaflet base map from
@@ -262,6 +263,7 @@
 			return;
 		}
 		const map = base.map;
+		restyle();
 		if (!started) {
 			for (const [id, g] of glyphs) {
 				g.mark.remove();
@@ -451,6 +453,13 @@
 		return { ...base, opacity: 0.16 };
 	}
 
+	function styledForReplay(f: Flight): { options: LeafletNS.PathOptions; visibility: number } {
+		const options = style(f, focus);
+		const entry = splines.get(f.id);
+		const visibility = entry ? replayTrackVisibility(t, entry.spline.t0, entry.spline.t1, started) : 1;
+		return { options: { ...options, opacity: Number(options.opacity ?? 1) * visibility }, visibility };
+	}
+
 	function draw() {
 		if (!base || !L) return;
 		playing = false;
@@ -469,7 +478,16 @@
 		layer = L.layerGroup().addTo(base.map);
 		for (const f of flights) {
 			if (f.positions.length < 2) continue;
-			const line = L.polyline(sampled(f), { ...style(f, focus), lineCap: 'round', lineJoin: 'round' });
+			const line = L.polyline(sampled(f), { ...style(f, focus), className: 'night-track', lineCap: 'round', lineJoin: 'round' });
+			line.on('add', () => {
+				const path = line.getElement() as HTMLElement | null;
+				const entry = splines.get(f.id);
+				if (!path || !entry) return;
+				path.dataset.flight = f.id;
+				path.dataset.visibleFrom = String(entry.spline.t0);
+				path.dataset.visibleTo = String(entry.spline.t1);
+				path.dataset.trackVisibility = '1.000';
+			});
 			line.on('mouseover', (e: LeafletNS.LeafletMouseEvent) => {
 				onfocus?.(f.id);
 				const t = nearestTime(f, e.latlng);
@@ -492,7 +510,14 @@
 		for (const f of flights) {
 			const line = lines.get(f.id);
 			if (line) {
-				line.setStyle(style(f, focus));
+				const { options, visibility } = styledForReplay(f);
+				line.setStyle(options);
+				const path = line.getElement() as HTMLElement | null;
+				path?.classList.toggle('track-hidden', visibility === 0);
+				if (path) {
+					path.dataset.trackVisibility = visibility.toFixed(3);
+					path.style.pointerEvents = visibility === 0 ? 'none' : '';
+				}
 				if (f.id === focus) line.bringToFront();
 			}
 		}
@@ -549,6 +574,7 @@
 	$effect(() => {
 		void t;
 		void started;
+		void playing;
 		if (base) drawReplay();
 	});
 	onMount(() => () => {

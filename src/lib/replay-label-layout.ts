@@ -11,18 +11,18 @@ export interface ReplayLabelTarget {
 	preferred?: { x: number; y: number };
 }
 
-export interface ReplayLabelPlacement {
+export interface ReplayLabelPlacement<S extends string = string> {
 	id: string;
-	slot: LabelSlot;
+	slot: S;
 	x: number;
 	y: number;
 	width: number;
 	height: number;
 }
 
-export interface ReplayLabelMotionState {
-	placement: ReplayLabelPlacement;
-	aircraft: { x: number; y: number };
+export interface CloseApproachLabelPlacement extends ReplayLabelPlacement<string> {
+	angle: number;
+	radial: number;
 }
 
 interface Rect {
@@ -63,6 +63,12 @@ function outsideArea(rect: Rect, viewport: { width: number; height: number }, pa
 	return rect.width * rect.height - insideWidth * insideHeight;
 }
 
+function circleIntrusion(rect: Rect, target: ReplayLabelTarget, pad = 3): number {
+	const nearestX = Math.max(rect.x, Math.min(target.x, rect.x + rect.width));
+	const nearestY = Math.max(rect.y, Math.min(target.y, rect.y + rect.height));
+	return Math.max(0, target.radius + pad - Math.hypot(nearestX - target.x, nearestY - target.y));
+}
+
 function rectFor(target: ReplayLabelTarget, slot: LabelSlot): Rect {
 	const far = slot.endsWith('2');
 	const key = (far ? slot.slice(0, -1) : slot) as Exclude<LabelSlot, `${string}2`>;
@@ -87,7 +93,7 @@ export function layoutReplayLabels(
 	targets: ReplayLabelTarget[],
 	viewport: { width: number; height: number },
 	previous: ReadonlyMap<string, LabelSlot> = new Map()
-): ReplayLabelPlacement[] {
+): ReplayLabelPlacement<LabelSlot>[] {
 	const aircraftRects: Rect[] = targets.map((target) => ({
 		x: target.x - target.radius,
 		y: target.y - target.radius,
@@ -95,7 +101,7 @@ export function layoutReplayLabels(
 		height: target.radius * 2
 	}));
 	const placed: Rect[] = [];
-	const result: ReplayLabelPlacement[] = [];
+	const result: ReplayLabelPlacement<LabelSlot>[] = [];
 
 	for (const target of targets) {
 		const preferred = target.preferred;
@@ -141,52 +147,166 @@ export function replayLeaderEnd(placement: Pick<ReplayLabelPlacement, 'x' | 'y' 
 	};
 }
 
-export const REPLAY_LABEL_SPEED_RATIO = 0.5;
+export const CLOSE_APPROACH_ANGLE_STEP = 15;
+const CLOSE_APPROACH_RADIAL_STEPS = [0, 18, 44] as const;
+const ROUTE_CANDIDATES = 32;
 
-/** Whether a pinned datablock remains visible and clear of aircraft and labels. */
-export function replayLabelPlacementIsClear(
-	placement: ReplayLabelPlacement,
-	targets: ReplayLabelTarget[],
+interface PairCandidate {
+	placements: [CloseApproachLabelPlacement, CloseApproachLabelPlacement];
+	nodeCost: number;
+}
+
+function angleDistance(a: number, b: number): number {
+	const d = Math.abs(a - b) % 360;
+	return Math.min(d, 360 - d);
+}
+
+function angularPlacement(target: ReplayLabelTarget, angle: number, radial: number): CloseApproachLabelPlacement {
+	const theta = (angle * Math.PI) / 180;
+	const dx = Math.cos(theta);
+	const dy = Math.sin(theta);
+	const extent = Math.abs(dx) * target.width / 2 + Math.abs(dy) * target.height / 2;
+	const distance = target.radius + 8 + extent + radial;
+	return {
+		id: target.id,
+		slot: `a${angle}r${radial}`,
+		angle,
+		radial,
+		x: target.x + dx * distance - target.width / 2,
+		y: target.y + dy * distance - target.height / 2,
+		width: target.width,
+		height: target.height
+	};
+}
+
+function angularCandidates(target: ReplayLabelTarget): CloseApproachLabelPlacement[] {
+	const candidates: CloseApproachLabelPlacement[] = [];
+	for (const radial of CLOSE_APPROACH_RADIAL_STEPS) {
+		for (let angle = 0; angle < 360; angle += CLOSE_APPROACH_ANGLE_STEP) candidates.push(angularPlacement(target, angle, radial));
+	}
+	return candidates;
+}
+
+function pairCandidates(
+	targets: [ReplayLabelTarget, ReplayLabelTarget],
 	viewport: { width: number; height: number },
-	occupied: ReplayLabelPlacement[] = []
-): boolean {
-	if (outsideArea(placement, viewport, 6) > 0) return false;
-	const aircraft = targets.map((target) => ({
-		x: target.x - target.radius,
-		y: target.y - target.radius,
-		width: target.radius * 2,
-		height: target.radius * 2
-	}));
-	if (aircraft.some((rect) => overlapArea(placement, rect, 3) > 0)) return false;
-	return occupied.every((other) => overlapArea(placement, other, 5) === 0);
+	preferred?: ReadonlyMap<string, Pick<CloseApproachLabelPlacement, 'angle' | 'radial'>>,
+	limit?: number
+): PairCandidate[] {
+	const [a, b] = targets;
+	const candidatesA = angularCandidates(a);
+	const candidatesB = angularCandidates(b);
+	const pairs: PairCandidate[] = [];
+	for (const pa of candidatesA) {
+		for (const pb of candidatesB) {
+			const labelOverlap = overlapArea(pa, pb, 5);
+			const clipped = outsideArea(pa, viewport, 6) + outsideArea(pb, viewport, 6);
+			const aircraftIntrusion = [pa, pb].reduce((sum, placement) => sum + targets.reduce((n, target) => n + circleIntrusion(placement, target), 0), 0);
+			const proximity = [pa, pb].reduce((sum, placement, index) => {
+				const target = targets[index];
+				return sum + Math.hypot(placement.x + placement.width / 2 - target.x, placement.y + placement.height / 2 - target.y);
+			}, 0);
+			const direction = [pa, pb].reduce((sum, placement, index) => {
+				const p = targets[index].preferred;
+				if (!p) return sum;
+				const theta = (placement.angle * Math.PI) / 180;
+				return sum + (1 - (Math.cos(theta) * p.x + Math.sin(theta) * p.y)) * 2;
+			}, 0);
+			const prior = [pa, pb].reduce((sum, placement) => {
+				const p = preferred?.get(placement.id);
+				return sum + (p ? angleDistance(placement.angle, p.angle) * 0.12 + Math.abs(placement.radial - p.radial) * 0.5 : 0);
+			}, 0);
+			// Label overlap is forbidden whenever any non-overlapping pair exists.
+			// Remaining terms are ordered by large gaps: stay on-screen, avoid any
+			// aircraft, then minimize radius, distance, direction change and motion.
+			const nodeCost =
+				(labelOverlap > 0 ? 1e12 : 0) + labelOverlap * 1e9 +
+				(clipped > 0 ? 1e10 : 0) + clipped * 1e7 +
+				(aircraftIntrusion > 0 ? 1e8 : 0) + aircraftIntrusion * 1e6 +
+				(pa.radial + pb.radial) * 100 + proximity + direction + prior;
+			pairs.push({ placements: [pa, pb], nodeCost });
+		}
+	}
+	pairs.sort((x, y) => x.nodeCost - y.nodeCost);
+	return limit ? pairs.slice(0, limit) : pairs;
+}
+
+function diverseRouteCandidates(targets: [ReplayLabelTarget, ReplayLabelTarget], viewport: { width: number; height: number }): PairCandidate[] {
+	const ranked = pairCandidates(targets, viewport);
+	const selected = ranked.slice(0, ROUTE_CANDIDATES);
+	const seen = new Set(selected.map(({ placements: [a, b] }) => `${Math.floor(a.angle / 45)}:${Math.floor(b.angle / 45)}`));
+	for (const candidate of ranked) {
+		const [a, b] = candidate.placements;
+		const key = `${Math.floor(a.angle / 45)}:${Math.floor(b.angle / 45)}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		selected.push(candidate);
+	}
+	return selected;
 }
 
 /**
- * Hold a datablock at its prior screen position until it must move. When it
- * does move, limit it to half of the aircraft's screen travel since the last
- * frame so the leader can do most of the visual tracking.
+ * Continuous-angle, joint placement for the two incident aircraft. Unlike the
+ * older named-slot algorithm, both blocks are evaluated together at 15° and
+ * several radial offsets, so one label can never greedily trap the other.
  */
-export function stabilizeReplayLabelPlacement(
-	desired: ReplayLabelPlacement,
-	previous: ReplayLabelMotionState | undefined,
-	aircraft: { x: number; y: number },
-	mustMove: boolean
-): ReplayLabelPlacement {
-	if (!previous) return desired;
-	const pinned = { ...desired, slot: previous.placement.slot, x: previous.placement.x, y: previous.placement.y };
-	if (!mustMove) return pinned;
+export function layoutCloseApproachLabels(
+	targets: ReplayLabelTarget[],
+	viewport: { width: number; height: number },
+	preferred?: ReadonlyMap<string, Pick<CloseApproachLabelPlacement, 'angle' | 'radial'>>
+): CloseApproachLabelPlacement[] {
+	if (targets.length !== 2) {
+		return layoutReplayLabels(targets, viewport).map((placement) => {
+			const target = targets.find(({ id }) => id === placement.id)!;
+			const angle = (Math.atan2(placement.y + placement.height / 2 - target.y, placement.x + placement.width / 2 - target.x) * 180) / Math.PI;
+			return { ...placement, angle: (angle + 360) % 360, radial: 0 };
+		});
+	}
+	return pairCandidates(targets as [ReplayLabelTarget, ReplayLabelTarget], viewport, preferred, 1)[0].placements;
+}
 
-	const dx = desired.x - pinned.x;
-	const dy = desired.y - pinned.y;
-	const distance = Math.hypot(dx, dy);
-	const aircraftTravel = Math.hypot(aircraft.x - previous.aircraft.x, aircraft.y - previous.aircraft.y);
-	const step = Math.min(distance, aircraftTravel * REPLAY_LABEL_SPEED_RATIO);
-	if (!distance || step >= distance) return desired;
-	return {
-		...pinned,
-		x: pinned.x + (dx / distance) * step,
-		y: pinned.y + (dy / distance) * step
-	};
+/**
+ * Dynamic-programming route plan. Each sampled moment keeps its best joint
+ * collision-free configurations, then the least-moving sequence is selected
+ * across the full replay rather than committing greedily frame by frame.
+ */
+export function planCloseApproachLabelRoute(
+	frames: ReplayLabelTarget[][],
+	viewport: { width: number; height: number }
+): CloseApproachLabelPlacement[][] {
+	if (!frames.length) return [];
+	const states = frames.map((targets) => diverseRouteCandidates(targets as [ReplayLabelTarget, ReplayLabelTarget], viewport));
+	const costs: number[][] = [states[0].map((state) => state.nodeCost)];
+	const back: number[][] = [states[0].map(() => -1)];
+	for (let frame = 1; frame < states.length; frame++) {
+		costs[frame] = [];
+		back[frame] = [];
+		for (const [nextIndex, next] of states[frame].entries()) {
+			let bestCost = Infinity;
+			let bestPrevious = 0;
+			for (const [previousIndex, previous] of states[frame - 1].entries()) {
+				const movement = next.placements.reduce((sum, placement, index) => {
+					const prior = previous.placements[index];
+					const centerTravel = Math.hypot(placement.x - prior.x, placement.y - prior.y);
+					return sum + centerTravel * 4 + angleDistance(placement.angle, prior.angle) * 0.25 + Math.abs(placement.radial - prior.radial);
+				}, 0);
+				const cost = costs[frame - 1][previousIndex] + next.nodeCost + movement;
+				if (cost < bestCost) {
+					bestCost = cost;
+					bestPrevious = previousIndex;
+				}
+			}
+			costs[frame][nextIndex] = bestCost;
+			back[frame][nextIndex] = bestPrevious;
+		}
+	}
+	let index = costs.at(-1)!.reduce((best, cost, i, all) => cost < all[best] ? i : best, 0);
+	const plan: CloseApproachLabelPlacement[][] = new Array(states.length);
+	for (let frame = states.length - 1; frame >= 0; frame--) {
+		plan[frame] = states[frame][index].placements;
+		index = back[frame][index];
+	}
+	return plan;
 }
 
 export interface ReplayLabelElements {
@@ -219,7 +339,7 @@ export function applyReplayLabelPlacement(
 	aircraft: { x: number; y: number },
 	radius: number,
 	color: string,
-	screenPinned = false
+	livePlacement = false
 ): void {
 	const firstPlacement = !elements.offset.classList.contains('positioned');
 	const x = placement.x - aircraft.x;
@@ -237,8 +357,8 @@ export function applyReplayLabelPlacement(
 	elements.leader.style.width = `${Math.max(0, length - start).toFixed(1)}px`;
 	elements.leader.style.transform = `rotate(${Math.atan2(end.y, end.x)}rad)`;
 	elements.leader.style.backgroundColor = color;
-	elements.offset.classList.toggle('screen-pinned', screenPinned);
-	elements.leader.classList.toggle('screen-pinned', screenPinned);
+	elements.offset.classList.toggle('live-placement', livePlacement);
+	elements.leader.classList.toggle('live-placement', livePlacement);
 	// The first layout is immediate so newly appearing labels do not animate
 	// outward from one overlapping pile at the aircraft origins. Later slot
 	// changes use the CSS ease-in-out transition.

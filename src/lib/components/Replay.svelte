@@ -21,14 +21,11 @@
 	import {
 		applyReplayLabelPlacement,
 		cardinalDirectionAway,
-		layoutReplayLabels,
-		replayLabelPlacementIsClear,
-		stabilizeReplayLabelPlacement,
+		layoutCloseApproachLabels,
+		planCloseApproachLabelRoute,
 		updateReplayLabel,
-		type LabelSlot,
+		type CloseApproachLabelPlacement,
 		type ReplayLabelElements,
-		type ReplayLabelMotionState,
-		type ReplayLabelPlacement,
 		type ReplayLabelTarget
 	} from '$lib/replay-label-layout';
 	import { buildTrackSpline } from '$lib/separation';
@@ -84,8 +81,8 @@
 			.filter((x): x is { f: Flight; track: NonNullable<typeof x.track> } => !!x.track && x.track.spline.t0 <= end && x.track.spline.t1 >= start)
 	);
 	const otherLayers = new Map<string, { mark: Leaflet.Marker }>();
-	const labelSlots = new Map<string, LabelSlot>();
-	const labelMotion = new Map<string, ReplayLabelMotionState>();
+	const LABEL_PLAN_FRAMES = 61;
+	let labelPlan: { key: string; frames: CloseApproachLabelPlacement[][] } | null = null;
 	type LabelDraw = { target: ReplayLabelTarget; elements: ReplayLabelElements; color: string };
 
 	/** Closest moment as a fraction of the replay window (scrubber pip position). */
@@ -225,7 +222,7 @@
 			});
 			map.on('zoomend', () => {
 				mapZooming = false;
-				labelMotion.clear();
+				labelPlan = null;
 				if (drawDeferred) {
 					drawDeferred = false;
 					draw();
@@ -270,7 +267,7 @@
 			layers = { trailA, trailB, markA: mk(colorA, a), markB: mk(colorB, b), labelA: lb(colorA, a), labelB: lb(colorB, b) };
 
 			ro = new ResizeObserver(() => {
-				labelMotion.clear();
+				labelPlan = null;
 				map.invalidateSize();
 				map.fitBounds(L!.latLngBounds(seen), { padding: [40, 40] });
 				draw();
@@ -289,8 +286,7 @@
 			base?.destroy();
 			base = null;
 			layers = null;
-			labelSlots.clear();
-			labelMotion.clear();
+			labelPlan = null;
 		};
 	});
 
@@ -375,6 +371,36 @@
 		}
 	}
 
+	function routePlan(labels: LabelDraw[], viewport: { width: number; height: number }): CloseApproachLabelPlacement[][] {
+		if (!replay || !base) return [];
+		const key = `${viewport.width}:${viewport.height}:${labels.map(({ target }) => `${target.id}:${target.width}:${target.height}:${target.radius}`).join('|')}`;
+		if (labelPlan?.key === key) return labelPlan.frames;
+		const airportPoint = base.map.latLngToContainerPoint(airport.pos);
+		const frames: ReplayLabelTarget[][] = [];
+		for (let index = 0; index < LABEL_PLAN_FRAMES; index++) {
+			const at = start + (index / (LABEL_PLAN_FRAMES - 1)) * span;
+			const routeSample = replay.sampleAt(at);
+			frames.push(labels.map(({ target }, labelIndex) => {
+				const state = labelIndex === 0 ? routeSample.a : routeSample.b;
+				const point = base!.map.latLngToContainerPoint([state.lat, state.lon]);
+				return { ...target, x: point.x, y: point.y, preferred: cardinalDirectionAway(point, airportPoint) };
+			}));
+		}
+		labelPlan = { key, frames: planCloseApproachLabelRoute(frames, viewport) };
+		return labelPlan.frames;
+	}
+
+	function interpolatePlan(frames: CloseApproachLabelPlacement[][]): CloseApproachLabelPlacement[] {
+		const progress = Math.max(0, Math.min(frames.length - 1, ((t - start) / span) * (frames.length - 1)));
+		const fromIndex = Math.floor(progress);
+		const toIndex = Math.min(frames.length - 1, fromIndex + 1);
+		const mix = progress - fromIndex;
+		return frames[fromIndex].map((from, index) => {
+			const to = frames[toIndex][index];
+			return { ...from, slot: 'route', x: from.x + (to.x - from.x) * mix, y: from.y + (to.y - from.y) * mix };
+		});
+	}
+
 	function draw() {
 		if (!layers || !sample || !base) return;
 		// Leaflet transforms marker and SVG panes during pinch zoom. Defer replay
@@ -394,31 +420,24 @@
 		const size = base.map.getSize();
 		const viewport = { width: size.x, height: size.y };
 		const targets = labels.map(({ target }) => target);
-		const desiredPlacements = layoutReplayLabels(
-			targets,
-			viewport,
-			labelSlots
-		);
-		const placed: ReplayLabelPlacement[] = [];
-		for (const desired of desiredPlacements) {
-			const label = labels.find(({ target }) => target.id === desired.id)!;
-			let previous = labelMotion.get(desired.id);
-			// A chip becoming a full datablock changes its footprint; establish a
-			// fresh safe anchor instead of preserving a now-invalid small rectangle.
-			if (previous && (previous.placement.width !== desired.width || previous.placement.height !== desired.height)) previous = undefined;
-			const pinned = previous ? { ...desired, slot: previous.placement.slot, x: previous.placement.x, y: previous.placement.y } : desired;
-			const mustMove = !!previous && !replayLabelPlacementIsClear(pinned, targets, viewport, placed);
-			const placement = stabilizeReplayLabelPlacement(desired, previous, label.target, mustMove);
+		const frames = routePlan(labels, viewport);
+		const planned = interpolatePlan(frames);
+		const preferred = new Map(planned.map((placement) => [placement.id, placement]));
+		// While moving, interpolate the globally optimized route. A temporary
+		// crossing is acceptable during a fast slew. Paused and held moments use
+		// an exact joint solve so their stabilized blocks never overlap.
+		const placements = playing && !holding ? planned : layoutCloseApproachLabels(targets, viewport, preferred);
+		for (const placement of placements) {
+			const label = labels.find(({ target }) => target.id === placement.id)!;
 			applyReplayLabelPlacement(label.elements, placement, label.target, label.target.radius, label.color, true);
-			labelSlots.set(placement.id, placement.slot);
-			labelMotion.set(placement.id, { placement, aircraft: { x: label.target.x, y: label.target.y } });
-			placed.push(placement);
 		}
 	}
 
 	$effect(() => {
-		// Re-draw whenever the clock moves (reads `sample` and `ready`).
+		// Re-draw whenever the clock or label stabilization mode changes.
 		void sample;
+		void playing;
+		void holding;
 		if (ready) draw();
 	});
 

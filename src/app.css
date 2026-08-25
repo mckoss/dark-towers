@@ -704,7 +704,7 @@ p {
 		transform 220ms ease-in-out,
 		opacity 500ms ease-in-out;
 }
-.replay-label-offset.positioned.screen-pinned {
+.replay-label-offset.positioned.live-placement {
 	transition: opacity 500ms ease-in-out;
 }
 .replay-label-offset.visible {
@@ -726,7 +726,7 @@ p {
 		transform 220ms ease-in-out,
 		opacity 500ms ease-in-out;
 }
-.replay-label-leader.positioned.screen-pinned {
+.replay-label-leader.positioned.live-placement {
 	transition: opacity 500ms ease-in-out;
 }
 .replay-label-leader.visible {
