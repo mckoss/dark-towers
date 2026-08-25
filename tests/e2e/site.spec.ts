@@ -455,6 +455,11 @@ test.describe('close approach', () => {
 		const replayLabels = page.locator('.replay-label .db-id');
 		await expect(replayLabels.nth(0)).toContainText(' · ');
 		await expect(replayLabels.nth(1)).toContainText(' · ');
+		await expect(page.locator('.replay-label')).toHaveCount(2);
+		await expect(page.locator('.replay-marker-focus')).toHaveCount(2);
+		// Context traffic remains animated, but only the incident pair receives
+		// tracks and data blocks.
+		await expect(page.locator('.replay-marker-other .replay-glyph').first()).toBeVisible();
 		const aircraftLink = page.locator('.replay-label .db-identity a[href^="/aircraft/N"]').first();
 		await expect(aircraftLink).toBeVisible();
 		await expect(page.locator('.replay-label .db-plain').first()).toContainText(/ft AGL/);

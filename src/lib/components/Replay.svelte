@@ -21,7 +21,6 @@
 	import {
 		applyReplayLabelPlacement,
 		cardinalDirectionAway,
-		fadeOutReplayLabel,
 		layoutReplayLabels,
 		updateReplayLabel,
 		type LabelSlot,
@@ -54,7 +53,6 @@
 	const ACCENT = '#ec3013';
 	const INK = '#201e1d';
 	const GREY = '#8a8785';
-	const TRAIL_MS = 180_000;
 	const dataLabel = (f: Flight) => `${flightLabel(f)}${f.type ? ` · ${f.type}` : ''}`;
 
 	// The model and map are built once per mount from the initial props; the
@@ -74,36 +72,16 @@
 		};
 	});
 
-	// Other aircraft flying during the replay window: shown live in grey with
-	// their own data blocks. Traffic outside the window is not drawn at all.
+	// Other aircraft flying during the replay window: shown as animated grey
+	// glyphs only. The incident pair alone gets tracks and data blocks.
 	const concurrent = untrack(() =>
 		others
 			.map((f) => ({ f, track: buildTrackSpline(airport.pos, f) }))
 			.filter((x): x is { f: Flight; track: NonNullable<typeof x.track> } => !!x.track && x.track.spline.t0 <= end && x.track.spline.t1 >= start)
 	);
-	const otherLayers = new Map<string, { mark: Leaflet.Marker; label: Leaflet.Marker; trail: Leaflet.Polyline }>();
-	const fadingLabels = new Map<string, { label: Leaflet.Marker; timer: ReturnType<typeof setTimeout> }>();
+	const otherLayers = new Map<string, { mark: Leaflet.Marker }>();
 	const labelSlots = new Map<string, LabelSlot>();
 	type LabelDraw = { target: ReplayLabelTarget; elements: ReplayLabelElements; color: string };
-	function fadeLabel(id: string, label: Leaflet.Marker) {
-		const prior = fadingLabels.get(id);
-		if (prior) {
-			clearTimeout(prior.timer);
-			prior.label.remove();
-		}
-		const timer = fadeOutReplayLabel(label.getElement(), () => {
-			label.remove();
-			if (fadingLabels.get(id)?.label === label) fadingLabels.delete(id);
-		});
-		fadingLabels.set(id, { label, timer });
-	}
-	function clearFadingLabel(id: string) {
-		const fading = fadingLabels.get(id);
-		if (!fading) return;
-		clearTimeout(fading.timer);
-		fading.label.remove();
-		fadingLabels.delete(id);
-	}
 
 	/** Closest moment as a fraction of the replay window (scrubber pip position). */
 	const pipFrac = untrack(() => (incident.t - start) / span);
@@ -271,7 +249,7 @@
 				L!.marker([c.a.lat, c.a.lon], {
 					interactive: false,
 					zIndexOffset: 1000,
-					icon: L!.divIcon({ className: 'replay-marker', iconSize: [0, 0], iconAnchor: [0, 0], html: glyphHtml(color, silhouetteFor(f), glyph) })
+					icon: L!.divIcon({ className: 'replay-marker replay-marker-focus', iconSize: [0, 0], iconAnchor: [0, 0], html: glyphHtml(color, silhouetteFor(f), glyph) })
 				}).addTo(map);
 			const lb = (color: string, f: Flight) =>
 				L!.marker([c.a.lat, c.a.lon], {
@@ -301,11 +279,6 @@
 			base = null;
 			layers = null;
 			labelSlots.clear();
-			for (const { timer, label } of fadingLabels.values()) {
-				clearTimeout(timer);
-				label.remove();
-			}
-			fadingLabels.clear();
 		};
 	});
 
@@ -356,8 +329,8 @@
 		el.classList.toggle('parked', !s.active);
 	}
 
-	/** Other aircraft in the air at t: grey glyph, grey data block, three-minute trail. */
-	function drawOthers(labels: LabelDraw[]) {
+	/** Other aircraft in the air at t: animated grey glyph only. */
+	function drawOthers() {
 		if (!base || !L) return;
 		const map = base.map;
 		for (const { f, track } of concurrent) {
@@ -367,10 +340,7 @@
 			if (!active) {
 				if (g) {
 					g.mark.remove();
-					g.trail.remove();
-					fadeLabel(f.id, g.label);
 					otherLayers.delete(f.id);
-					labelSlots.delete(f.id);
 				}
 				continue;
 			}
@@ -378,11 +348,8 @@
 			const vel = sp.velocityAt(t);
 			const [lat, lon] = fromLocalNm(airport.pos, [v[0], v[1]]);
 			if (!g) {
-				clearFadingLabel(f.id);
 				g = {
-					mark: L.marker([lat, lon], { interactive: false, zIndexOffset: 500, icon: L.divIcon({ className: 'replay-marker', iconSize: [0, 0], iconAnchor: [0, 0], html: glyphHtml(GREY, silhouetteFor(f), Math.round(glyph * 0.85)) }) }).addTo(map),
-					label: L.marker([lat, lon], { interactive: true, zIndexOffset: -600, icon: L.divIcon({ className: 'replay-label', iconSize: [0, 0], iconAnchor: [0, 0], html: '' }) }).addTo(map),
-					trail: L.polyline([], { color: GREY, weight: 2, opacity: 0.8, interactive: false }).addTo(map)
+					mark: L.marker([lat, lon], { interactive: false, zIndexOffset: 500, icon: L.divIcon({ className: 'replay-marker replay-marker-other', iconSize: [0, 0], iconAnchor: [0, 0], html: glyphHtml(GREY, silhouetteFor(f), Math.round(glyph * 0.85)) }) }).addTo(map)
 				};
 				otherLayers.set(f.id, g);
 			}
@@ -393,14 +360,6 @@
 				const svg = el.querySelector('svg') as SVGElement | null;
 				if (svg) svg.style.transform = `translate(-50%, -50%) rotate(${hdg.toFixed(0)}deg)`;
 			}
-			const pts: [number, number][] = [];
-			for (let x = Math.max(sp.t0, t - TRAIL_MS); x < t; x += 2000) {
-				const q = sp.at(x)!;
-				pts.push(fromLocalNm(airport.pos, [q[0], q[1]]));
-			}
-			pts.push([lat, lon]);
-			g.trail.setLatLngs(pts);
-			collectLabel(labels, f.id, g.label, { lat, lon, alt: v[2], gs: v[3] ?? 0, vs: vel ? vel[2] * 1000 : 0, active: true, phase: 'active' }, GREY, f, glyph * 0.425);
 		}
 	}
 
@@ -413,7 +372,7 @@
 			return;
 		}
 		const labels: LabelDraw[] = [];
-		drawOthers(labels);
+		drawOthers();
 		layers.trailA.setLatLngs(trail('a', t));
 		layers.trailB.setLatLngs(trail('b', t));
 		placeGlyph(layers.markA, sample.a, sample.inside);
