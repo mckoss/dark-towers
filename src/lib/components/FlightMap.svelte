@@ -457,7 +457,7 @@
 		const options = style(f, focus);
 		const entry = splines.get(f.id);
 		const visibility = entry ? replayTrackVisibility(t, entry.spline.t0, entry.spline.t1, started) : 1;
-		return { options: { ...options, opacity: Number(options.opacity ?? 1) * visibility }, visibility };
+		return { options, visibility };
 	}
 
 	function draw() {
@@ -515,6 +515,10 @@
 				const path = line.getElement() as HTMLElement | null;
 				path?.classList.toggle('track-hidden', visibility === 0);
 				if (path) {
+					// Keep replay visibility separate from Leaflet's stroke opacity so
+					// every change—including the initial overview-to-replay change—can
+					// transition in real time instead of at the accelerated replay rate.
+					path.style.opacity = String(visibility);
 					path.dataset.trackVisibility = visibility.toFixed(3);
 					path.style.pointerEvents = visibility === 0 ? 'none' : '';
 				}
@@ -636,5 +640,8 @@
 	.flight-map {
 		width: 100%;
 		background: var(--ground-alt);
+	}
+	:global(.night-track) {
+		transition: opacity 1s ease-in-out;
 	}
 </style>

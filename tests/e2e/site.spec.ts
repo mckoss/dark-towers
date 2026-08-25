@@ -285,6 +285,23 @@ test.describe('airport detail', () => {
 		expect(await page.getByTestId('night-pip').count()).toBeGreaterThan(0);
 		const before = await page.getByTestId('night-time').getAttribute('data-t');
 		await play.click();
+		// Starting replay hides nearly every overview track at once. Those paths
+		// retain visible opacity while their zero-opacity target begins a 1 s fade.
+		const initialTrackFade = await nightTracks.evaluateAll(async (tracks) => {
+			await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+			const fading = tracks.find((track) => (track as HTMLElement).style.opacity === '0');
+			if (!fading) return null;
+			const computed = getComputedStyle(fading);
+			return {
+				opacity: Number(computed.opacity),
+				property: computed.transitionProperty,
+				duration: computed.transitionDuration
+			};
+		});
+		expect(initialTrackFade).not.toBeNull();
+		expect(initialTrackFade?.opacity).toBeGreaterThan(0);
+		expect(initialTrackFade?.property).toContain('opacity');
+		expect(initialTrackFade?.duration).toBe('1s');
 		// The replay can pause for 2.5 s on an event almost immediately after
 		// the first report; wait for the shared clock to continue past that hold.
 		await expect.poll(() => page.getByTestId('night-time').getAttribute('data-t'), { timeout: 6000 }).not.toBe(before);
