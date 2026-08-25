@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { cardinalDirectionAway, layoutReplayLabels, replayLeaderEnd, REPLAY_LABEL_FADE_MS, type LabelSlot } from '../../src/lib/replay-label-layout';
+import {
+	cardinalDirectionAway,
+	layoutReplayLabels,
+	replayLabelPlacementIsClear,
+	replayLeaderEnd,
+	REPLAY_LABEL_FADE_MS,
+	REPLAY_LABEL_SPEED_RATIO,
+	stabilizeReplayLabelPlacement,
+	type LabelSlot,
+	type ReplayLabelPlacement
+} from '../../src/lib/replay-label-layout';
 
 describe('layoutReplayLabels', () => {
 	it('uses a half-second datablock fade', () => {
@@ -55,5 +65,36 @@ describe('layoutReplayLabels', () => {
 	it('points the leader to the nearest edge of the datablock', () => {
 		expect(replayLeaderEnd({ x: 130, y: 80, width: 100, height: 50 }, { x: 100, y: 100 })).toEqual({ x: 30, y: 0 });
 		expect(replayLeaderEnd({ x: 20, y: 140, width: 100, height: 50 }, { x: 100, y: 100 })).toEqual({ x: 0, y: 40 });
+	});
+
+	it('keeps a clear datablock pinned while its aircraft moves', () => {
+		const desired: ReplayLabelPlacement = { id: 'a', slot: 'e', x: 180, y: 100, width: 100, height: 48 };
+		const previous = {
+			placement: { ...desired, x: 120 },
+			aircraft: { x: 90, y: 124 }
+		};
+		expect(stabilizeReplayLabelPlacement(desired, previous, { x: 110, y: 124 }, false)).toEqual(previous.placement);
+	});
+
+	it('caps necessary datablock motion at half the aircraft travel', () => {
+		expect(REPLAY_LABEL_SPEED_RATIO).toBe(0.5);
+		const desired: ReplayLabelPlacement = { id: 'a', slot: 'e', x: 200, y: 100, width: 100, height: 48 };
+		const previous = {
+			placement: { ...desired, x: 100, slot: 'w' as const },
+			aircraft: { x: 90, y: 124 }
+		};
+		const moved = stabilizeReplayLabelPlacement(desired, previous, { x: 110, y: 124 }, true);
+		expect(moved.x).toBe(110);
+		expect(moved.y).toBe(100);
+		expect(moved.slot).toBe('w');
+	});
+
+	it('only relocates pinned datablocks that clip, overlap an aircraft, or overlap another block', () => {
+		const placement: ReplayLabelPlacement = { id: 'a', slot: 'e', x: 120, y: 80, width: 100, height: 48 };
+		const targets = [{ id: 'a', x: 80, y: 104, width: 100, height: 48, radius: 18 }];
+		expect(replayLabelPlacementIsClear(placement, targets, { width: 400, height: 300 })).toBe(true);
+		expect(replayLabelPlacementIsClear({ ...placement, x: 2 }, targets, { width: 400, height: 300 })).toBe(false);
+		expect(replayLabelPlacementIsClear({ ...placement, x: 75 }, targets, { width: 400, height: 300 })).toBe(false);
+		expect(replayLabelPlacementIsClear(placement, targets, { width: 400, height: 300 }, [{ ...placement, id: 'b' }])).toBe(false);
 	});
 });

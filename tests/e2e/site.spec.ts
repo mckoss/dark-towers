@@ -457,6 +457,14 @@ test.describe('close approach', () => {
 		await expect(replayLabels.nth(1)).toContainText(' · ');
 		await expect(page.locator('.replay-label')).toHaveCount(2);
 		await expect(page.locator('.replay-marker-focus')).toHaveCount(2);
+		const paneOrder = await page.locator('.leaflet-container').evaluate((map) => {
+			const z = (selector: string) => Number(getComputedStyle(map.querySelector<HTMLElement>(selector)!).zIndex);
+			return [z('.leaflet-overlay-pane'), z('.leaflet-replay-labels-pane'), z('.leaflet-replay-aircraft-pane')];
+		});
+		expect(paneOrder[0]).toBeLessThan(paneOrder[1]);
+		expect(paneOrder[1]).toBeLessThan(paneOrder[2]);
+		await expect(page.locator('.leaflet-overlay-pane .replay-whole-path')).toHaveCount(2);
+		await expect(page.locator('.leaflet-replay-aircraft-pane .replay-snake')).toHaveCount(2);
 		// Context traffic remains animated, but only the incident pair receives
 		// tracks and data blocks.
 		await expect(page.locator('.replay-marker-other .replay-glyph').first()).toBeVisible();
