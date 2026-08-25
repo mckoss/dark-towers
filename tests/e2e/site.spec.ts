@@ -29,10 +29,14 @@ test.describe('home', () => {
 	test('renders headline, 30-night figures and the US map, naming no airport in copy', async ({ page }) => {
 		await page.goto('/');
 		await expect(page.getByRole('heading', { level: 1 })).toContainText('Airliners are landing at airports');
-		await expect(page.getByText('Data from last 30 days')).toBeVisible();
+		const period = page.getByText('In the last 30 days…');
+		await expect(period).toBeVisible();
+		const stats = page.locator('.stats');
+		expect(await stats.locator(':scope > *').first().evaluate((node) => node.textContent)).toContain('In the last 30 days');
 		// Tracked airport marker opens details and links to its record.
 		const marker = page.locator('.coverage-marker[data-code="PAE"]');
 		await expect(marker).toHaveAttribute('data-status', 'tracking');
+		await expect(marker).toHaveAttribute('data-radius', /\d/);
 		await marker.focus();
 		await marker.press('Enter');
 		await expect(page.getByRole('link', { name: 'View airport' })).toHaveAttribute('href', '/airport/PAE');
@@ -49,6 +53,7 @@ test.describe('home', () => {
 		expect(await page.locator('.coverage-marker').count()).toBeGreaterThan(7);
 		await expect(page.getByText('Requested — awaiting review', { exact: true })).toBeVisible();
 		const available = page.locator('.coverage-marker[data-code="STS"]');
+		expect(Number(await available.getAttribute('data-radius'))).toBeLessThan(Number(await available.getAttribute('data-hit-radius')));
 		await available.click();
 		await expect(page.getByRole('link', { name: 'Request to add' })).toHaveAttribute('href', '/airports?request=STS#request-airport');
 		const before = Number(await map.getAttribute('data-zoom'));

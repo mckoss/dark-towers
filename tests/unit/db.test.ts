@@ -6,7 +6,7 @@ freshDataDir('db');
 const dbm = await import('$lib/server/db');
 const {
 	openMemoryDb, upsertFlight, replaceIncidents, upsertNight, totalsForAirport, latestNight, flightById, flightsForNight,
-	incidentsForNight, incidentById, incidentsForAirport, separationIncidents, nightSummary, nightsForAirport, totalsAll, totalsByAirport,
+	incidentsForNight, incidentById, incidentsForAirport, separationIncidents, nightSummary, nightsForAirport, totalsAll, totalsByAirport, veryCloseAirports,
 	recordRunStart, recordRunEnd, insertRequest, listRequests, requestExists, requestedAirportCodes
 } = dbm;
 
@@ -103,6 +103,13 @@ describe('replaceIncidents', () => {
 		]);
 		expect(separationIncidents('2026-08-14', '2026-08-14').map((i) => i.id)).toEqual(['separation']);
 		expect(separationIncidents('2026-08-15', '2026-08-16')).toEqual([]);
+	});
+	it('finds airports with very-close events only inside the requested range', () => {
+		upsertFlight(flight('x', { airport: 'KBLI', night: '2026-08-15' }));
+		replaceIncidents('KPAE', '2026-08-14', [incident('close', 'a', 'b')]);
+		replaceIncidents('KBLI', '2026-08-15', [incident('ordinary', 'x', 'c', { airport: 'KBLI', night: '2026-08-15', severity: 'closer-than-allowed' })]);
+		expect([...veryCloseAirports('2026-08-14', '2026-08-14')]).toEqual(['KPAE']);
+		expect(veryCloseAirports('2026-08-15', '2026-08-15').size).toBe(0);
 	});
 	it('is wrapped in a transaction: a failing insert rolls back the delete', () => {
 		replaceIncidents('KPAE', '2026-08-14', [incident('i1', 'a', 'b')]);

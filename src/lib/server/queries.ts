@@ -83,7 +83,10 @@ export interface CoverageAirport {
 	pos: [number, number];
 	towerLabel: string;
 	status: CoverageStatus;
-	incidents: number;
+	/** Recorded arrivals and departures in the current 30-day window. */
+	operations: number;
+	/** Whether the current 30-day window contains at least one very-close event. */
+	veryClose: boolean;
 }
 
 export function airportsWithStats(period = currentPeriod()): AirportWithStats[] {
@@ -100,6 +103,7 @@ export function homeData() {
 /** All FAA-qualifying fields, overlaid with provisional requests and tracked application rows. */
 export function airportCoverage(period = currentPeriod()): CoverageAirport[] {
 	const configured = airportsWithStats(period);
+	const veryClose = db.veryCloseAirports(period.from, period.to);
 	const configuredByCode = new Map(configured.map((airport) => [airport.code, airport]));
 	const requested = new Set(db.requestedAirportCodes());
 	const data = nasrData();
@@ -111,7 +115,8 @@ export function airportCoverage(period = currentPeriod()): CoverageAirport[] {
 			coverage.set(airport.id, {
 				code: airport.id, name: airport.name, city: airport.city, state: airport.state,
 				pos: [airport.lat, airport.lon], towerLabel: towerHoursText(airport), status,
-				incidents: stored?.stats?.incidents ?? 0
+				operations: stored?.stats?.flights ?? 0,
+				veryClose: stored ? veryClose.has(stored.icao) : false
 			});
 		}
 	}
@@ -120,7 +125,8 @@ export function airportCoverage(period = currentPeriod()): CoverageAirport[] {
 		coverage.set(airport.code, {
 			code: airport.code, name: airport.name, city: airport.city, state: airport.state, pos: airport.pos,
 			towerLabel: towerHoursLabel(airport), status: airport.tracked ? 'tracking' : 'requested',
-			incidents: airport.stats?.incidents ?? 0
+			operations: airport.stats?.flights ?? 0,
+			veryClose: veryClose.has(airport.icao)
 		});
 	}
 	return [...coverage.values()].sort((a, b) => a.state.localeCompare(b.state) || a.city.localeCompare(b.city) || a.code.localeCompare(b.code));
