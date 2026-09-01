@@ -69,8 +69,10 @@ sw.addEventListener('fetch', (event) => {
 	if (request.method !== 'GET') return;
 	const url = new URL(request.url);
 
-	// Basemap tiles: never cache, just pass through.
+	// Basemap tiles: never cache in the SW, just pass through. They carry long
+	// HTTP cache headers of their own, whether served by CARTO or by /tiles.
 	if (url.hostname.endsWith('cartocdn.com')) return;
+	if (url.pathname.startsWith('/tiles/')) return;
 	// Other cross-origin requests (fonts etc.) are left to the browser.
 	if (url.origin !== sw.location.origin) return;
 

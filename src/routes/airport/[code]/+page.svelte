@@ -132,7 +132,10 @@
 			<div class="night-left" id="night-replay">
 				<div class="night-head">
 					<div class="table-header">Flight paths within {AIRSPACE_RADIUS_NM} nautical miles, tower closed</div>
-					<h2 class="night-title">Night of {nightLabel(data.selectedNight)}</h2>
+					<div class="night-title-row">
+						<h2 class="night-title">Night of {nightLabel(data.selectedNight)}</h2>
+						<a class="btn btn-ghost pdf-link" href="/airport/{airport.code}/export?night={data.selectedNight}" data-testid="pdf-download">Download PDF</a>
+					</div>
 					<div class="night-hours" data-testid="night-hours">{nightHours(data.selectedNight)}</div>
 				</div>
 				{#if hasTracks}
@@ -331,11 +334,22 @@
 		font-size: 13px;
 		color: var(--ink-45);
 	}
+	.night-title-row {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 12px 20px;
+		flex-wrap: wrap;
+	}
 	.night-title {
 		margin-top: 6px;
 		font-size: 24px;
 		font-weight: 800;
 		letter-spacing: -0.02em;
+	}
+	.pdf-link {
+		padding: 8px 14px;
+		font-size: 12px;
 	}
 	.no-tracks {
 		display: flex;

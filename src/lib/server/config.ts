@@ -36,6 +36,16 @@ export interface Config {
 	 * capability is probed once and cached (see server/capability.ts).
 	 */
 	aeroapi_history?: boolean;
+	/**
+	 * Base-map tile template, including the provider's API key. CARTO stamps
+	 * "API KEY REQUIRED" across tiles served without one, so this is what keeps
+	 * the map clean, e.g.
+	 * "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png?api_key=KEY".
+	 * The key stays server-side: the browser asks /tiles/{z}/{x}/{y}.png and we
+	 * serve from the cache in server/tile-cache.ts. Unset, maps draw on plain
+	 * ground.
+	 */
+	tile_url?: string;
 }
 
 let cached: Config | undefined;
@@ -71,7 +81,8 @@ export function config(): Config {
 		db_path: process.env.DB_PATH ?? s.db_path ?? path.join(dataDir, 'db', 'darktowers.sqlite'),
 		scheduler: process.env.SCHEDULER ? process.env.SCHEDULER !== 'off' : (s.scheduler ?? true),
 		history_days: Number(process.env.HISTORY_DAYS ?? s.history_days ?? 9),
-		aeroapi_history: typeof s.aeroapi_history === 'boolean' ? s.aeroapi_history : undefined
+		aeroapi_history: typeof s.aeroapi_history === 'boolean' ? s.aeroapi_history : undefined,
+		tile_url: process.env.TILE_URL?.trim() || s.tile_url?.trim() || undefined
 	};
 	if (process.env.NODE_ENV !== 'test') {
 		console.log(`[config] loaded from ${source}; data_dir=${cached.data_dir}; ${cached.admins.length} admin(s); google sign-in ${cached.google ? 'configured' : 'NOT configured'}; scheduler ${cached.scheduler ? 'on' : 'off'}`);

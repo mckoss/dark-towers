@@ -117,6 +117,11 @@ export function nightLabel(night: string): string {
 	return `${WEEKDAYS[wd]}, ${MONTHS[m - 1]} ${d}`;
 }
 
+/** "Monday, August 18, 2026" — for print and anywhere the year has to stand on its own. */
+export function nightLabelLong(night: string): string {
+	return `${nightLabel(night)}, ${parseDateKey(night)[0]}`;
+}
+
 
 export function weekdayShort(night: string): string {
 	const [y, m, d] = parseDateKey(night);
