@@ -58,6 +58,8 @@ const COL_W = (CONTENT_W - COL_GAP) / 2;
 const CARD_GAP = 8;
 /** Runway dimensions are published in feet; charts work in nautical miles. */
 const FEET_PER_NM = 6076.12;
+/** Runways are drawn half again their true width so they read at chart scale. */
+const RUNWAY_EXAGGERATION = 1.5;
 
 /** src/app.css tokens. */
 const INK = rgb(0x20 / 255, 0x1e / 255, 0x1d / 255);
@@ -70,7 +72,12 @@ const ACCENT = rgb(0xec / 255, 0x30 / 255, 0x13 / 255);
 const ACCENT_TEXT = rgb(0xae / 255, 0x18 / 255, 0x00 / 255);
 const ACCENT_TINT = rgb(1, 0xf2 / 255, 0xef / 255);
 const MILITARY = rgb(0x1f / 255, 0x5f / 255, 0xbf / 255);
-const RUNWAY_FILL = rgb(0xa8 / 255, 0xc7 / 255, 0xda / 255);
+/**
+ * The runway blue taken darker for print. leaflet.ts's TOKENS.runway is tuned
+ * to sit under an interactive map; on paper it prints too pale to find against
+ * the basemap's greys. Same hue, enough contrast to read.
+ */
+const RUNWAY = rgb(0x35 / 255, 0x68 / 255, 0x8c / 255);
 
 interface Fonts {
 	regular: PDFFont;
@@ -310,27 +317,20 @@ function drawMap(page: PDFPage, fonts: Fonts, o: MapOptions) {
 	}
 
 	for (const runway of airport.runways ?? []) {
-		// Outlined in ink: the fill alone is a pale blue on a pale basemap, and at
-		// the close-up scale the true surface is only a point or two across.
-		page.drawSvgPath(pathFromPoints(runwayOutline(runway).map(toSvg), true), {
-			x: cx,
-			y: cy,
-			color: RUNWAY_FILL,
-			borderColor: INK,
-			borderWidth: 0.4,
-			opacity: 0.9,
-			borderOpacity: 0.85
-		});
-		// Below about two points the surface stops reading as a shape at all, so
-		// stand it in with a centreline the way the live map does.
-		const widthPt = (runway.widthFt / FEET_PER_NM) * pxPerNm;
-		if (widthPt < 2) {
+		// Drawn half again its true width, in the solid runway blue: at these
+		// scales the real surface is a sliver, and the job is to locate the field
+		// rather than to measure it.
+		const widened = { ...runway, widthFt: runway.widthFt * RUNWAY_EXAGGERATION };
+		page.drawSvgPath(pathFromPoints(runwayOutline(widened).map(toSvg), true), { x: cx, y: cy, color: RUNWAY, opacity: 0.95 });
+		// Below about two points even the widened surface stops reading as a
+		// shape, so stand it in with a centreline the way the live map does.
+		if ((widened.widthFt / FEET_PER_NM) * pxPerNm < 2) {
 			page.drawSvgPath(pathFromPoints(runway.ends.map((end) => toSvg(end.pos)), false), {
 				x: cx,
 				y: cy,
-				borderColor: INK,
+				borderColor: RUNWAY,
 				borderWidth: 2,
-				borderOpacity: 0.6
+				borderOpacity: 0.95
 			});
 		}
 	}
@@ -381,7 +381,7 @@ function drawLegend(page: PDFPage, fonts: Fonts, airport: AirportConfig, flights
 	if (airport.runways?.length) {
 		items.push({
 			label: 'FAA runway layout',
-			swatch: (p, sx, sy) => p.drawRectangle({ x: sx, y: sy - 2, width: 14, height: 4, color: RUNWAY_FILL, borderColor: INK, borderWidth: 0.4, opacity: 0.9, borderOpacity: 0.85 })
+			swatch: (p, sx, sy) => p.drawRectangle({ x: sx, y: sy - 2, width: 14, height: 4, color: RUNWAY, opacity: 0.95 })
 		});
 	}
 	items.push({
