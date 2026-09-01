@@ -221,13 +221,6 @@ function drawHeader(doc: PDFDocument, page: PDFPage, fonts: Fonts, airport: Airp
 	text(page, `${airport.city}, ${airport.state} · ${airport.icao}`, { x: MARGIN, y, size: 9, font: fonts.regular, color: INK60 });
 	y -= 20;
 	text(page, `Night of ${nightLabelLong(night)}`, { x: MARGIN, y, size: 13, font: fonts.bold, color: INK });
-	if (liveUrl) {
-		// Sits on the header's own baselines — the label on the city line, the
-		// address on the night line. The scheme is dropped so the address stays
-		// short enough to retype; the annotation still carries the whole thing.
-		textRight(page, 'REPLAY THIS NIGHT ONLINE', { right: PAGE_W - MARGIN, y: y + 20, size: 6, font: fonts.bold, color: INK45 });
-		drawLinkRight(doc, page, liveUrl.replace(/^https?:\/\//, ''), liveUrl, PAGE_W - MARGIN, y, 10, fonts.bold);
-	}
 	y -= 12;
 	const tower = towerHoursOn(airport, night);
 	text(page, tower ? `Tower closed ${hourLabel(tower.close)} to ${hourLabel(tower.open)}` : 'No tower at any hour', {
@@ -237,6 +230,14 @@ function drawHeader(doc: PDFDocument, page: PDFPage, fonts: Fonts, airport: Airp
 		font: fonts.regular,
 		color: INK45
 	});
+	if (liveUrl) {
+		// Closes the header block: the address sits on its last baseline, opposite
+		// the tower hours, with its label a line above. The scheme is dropped so
+		// the address stays short enough to retype; the annotation still carries
+		// the whole thing.
+		textRight(page, 'REPLAY THIS NIGHT ONLINE', { right: PAGE_W - MARGIN, y: y + 9, size: 6, font: fonts.bold, color: INK45 });
+		drawLinkRight(doc, page, liveUrl.replace(/^https?:\/\//, ''), liveUrl, PAGE_W - MARGIN, y, 10, fonts.bold);
+	}
 	y -= 11;
 	page.drawLine({ start: { x: MARGIN, y }, end: { x: PAGE_W - MARGIN, y }, thickness: 2, color: INK });
 	return y - 16;
