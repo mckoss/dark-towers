@@ -81,11 +81,13 @@ function detail(over: Partial<AirportDetail> = {}): AirportDetail {
 		period: { from: '2026-08-01', to: '2026-08-30', label: 'Last 30 days', month: null },
 		nav: { firstMonth: '2026-08', lastMonth: '2026-08', prev: null, next: null, isDefault: true },
 		hasAnyData: true,
-		totals: { flights: 2, airline: 1, private: 1, incidents: 1, wakeIncidents: 0, nights: 1 },
+		totals: { flights: 2, airline: 1, private: 1, incidents: 1, wakeIncidents: 0, nights: 1, airlineIncidents: 1, airlineWakeIncidents: 0 },
 		calendar: [],
 		selectedNight: '2026-08-17',
 		flights: [flight('A1'), flight('B1', { category: 'airline', ident: 'Horizon 2189', direction: 'departure' })],
 		incidents: [incident('i1')],
+		cardIncidents: [incident('i1')],
+		nightAirlineIncidents: 1,
 		nightSummary: null,
 		...over
 	};

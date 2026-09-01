@@ -61,6 +61,12 @@ the same version and there is no way to tell which one is live.
 
 Runtime data lives in the gitignored `data/` directory. When work in a sibling feature worktree needs the existing local dataset, symlink `data/` from the primary checkout after verifying both paths. Keep the symlink, its target data, `config.json`, and all secrets out of commits.
 
+**`npm run test:e2e` writes to whatever `data/` points at** — it submits airport requests and other
+rows. Through a symlink that means the primary checkout's database. Run it against an isolated copy
+instead: `DATA_DIR=.e2e-data npm run db:seed && DATA_DIR=.e2e-data npm run test:e2e`. The request
+tests also refuse a code that already has a pending request, so a second run against the same
+database fails on pollution from the first — another reason to keep e2e off the shared one.
+
 ## Production deployment
 
 GitHub is the deployment control plane. Successful CI on `main` triggers the Railway production deployment configured by `railway.json`; do not deploy with the Railway CLI. After a push or merge to `main`, monitor the GitHub checks, the Railway deployment record for the exact commit, and `https://dark-towers.org/api/health` before reporting that production is ready.

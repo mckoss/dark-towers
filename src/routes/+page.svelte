@@ -1,6 +1,7 @@
 <script lang="ts">
 	/* Home — "map-first" layout (README §1). Copy here must never name a specific airport. */
 	import UsMap from '$lib/components/UsMap.svelte';
+	import { airlineShareLabel } from '$lib/close-approach-sort';
 
 	let { data } = $props();
 
@@ -46,10 +47,16 @@
 				{empty ? '—' : fmt(data.totals.incidents)}
 			</div>
 			<div class="stat-label">Close approaches below the separation standard</div>
+			{#if !empty && data.totals.airlineIncidents}
+				<div class="stat-aside" data-testid="home-airline-incidents">{airlineShareLabel(data.totals.airlineIncidents)}</div>
+			{/if}
 		</a>
 		<div class="stat">
 			<div class="big-stat" class:accent={!empty} class:muted={empty}>{empty ? '—' : fmt(data.totals.wakeIncidents)}</div>
 			<div class="stat-label">Wake-turbulence events below FAA in-trail spacing</div>
+			{#if !empty && data.totals.airlineWakeIncidents}
+				<div class="stat-aside">{airlineShareLabel(data.totals.airlineWakeIncidents)}</div>
+			{/if}
 		</div>
 	</div>
 </section>
@@ -105,6 +112,14 @@
 	}
 	.stat .big-stat {
 		min-width: 100px;
+	}
+	.stat .stat-aside {
+		margin-top: 6px;
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--accent-text);
 	}
 	.stat .stat-label {
 		max-width: 26ch;

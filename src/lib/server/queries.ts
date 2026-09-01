@@ -12,7 +12,7 @@ import * as db from './db';
 import { nasrData } from './nasr';
 import { qualifyingAirports, towerHoursText } from '$lib/nasr';
 import { airportHoursLabel, isReference } from '$lib/airports';
-import { sortCloseApproaches, type CloseApproachSort } from '$lib/close-approach-sort';
+import { DEFAULT_CLOSE_APPROACH_SORT, isCloseApproachSort, sortCloseApproaches, sortNightIncidents, type CloseApproachSort } from '$lib/close-approach-sort';
 import { lookupTail } from './registry';
 import { registryKey, type RegistryEntry } from '$lib/registry';
 import { aircraftIdentity, type AircraftIdentityData } from '$lib/aircraft';
@@ -181,7 +181,12 @@ export interface AirportDetail {
 	calendar: { night: string; summary: NightSummary | null }[];
 	selectedNight: string | null;
 	flights: Flight[];
+	/** The night's events in time order, for the map and the flight log. */
 	incidents: Incident[];
+	/** The same events with airliner-involved ones first, for the card list. */
+	cardIncidents: Incident[];
+	/** Of the night's close approaches, how many involved a passenger airline. */
+	nightAirlineIncidents: number;
 	nightSummary: NightSummary | null;
 }
 
@@ -229,7 +234,13 @@ export function airportDetail(code: string, night?: string | null, month?: strin
 	const selectedNight = night && byNight.has(night) ? night : latestInWindow;
 	const flights = selectedNight ? decorate(db.flightsForNight(airport.icao, selectedNight)) : [];
 	const incidents = selectedNight ? db.incidentsForNight(airport.icao, selectedNight) : [];
-	return { airport, period, nav, hasAnyData: !!range.first, totals, calendar, selectedNight, flights, incidents, nightSummary: selectedNight ? (byNight.get(selectedNight) ?? null) : null };
+	// The map and flight log want the night in time order; the cards lead with the airliner events.
+	const cardIncidents = sortNightIncidents(incidents);
+	const nightAirlineIncidents = incidents.filter((i) => i.airlineInvolved && i.kind !== 'wake-turbulence').length;
+	return {
+		airport, period, nav, hasAnyData: !!range.first, totals, calendar, selectedNight, flights, incidents, cardIncidents, nightAirlineIncidents,
+		nightSummary: selectedNight ? (byNight.get(selectedNight) ?? null) : null
+	};
 }
 
 export interface IncidentDetail {
@@ -378,6 +389,7 @@ export function closeApproachesData(airportCode?: string | null, night?: string 
 			? [{ ...incident, airportCode: found.code, airportName: found.name, tz: found.tz, identA: identities[incident.flightA]?.label ?? '?', identB: identities[incident.flightB]?.label ?? '?', identityA: identities[incident.flightA], identityB: identities[incident.flightB] }]
 			: [];
 	});
-	const sort: CloseApproachSort = requestedSort === 'airport' || requestedSort === 'date' ? requestedSort : 'closest';
-	return { airport, period, night: validNight, sort, rows: sortCloseApproaches(rows, sort) };
+	const sort: CloseApproachSort = isCloseApproachSort(requestedSort) ? requestedSort : DEFAULT_CLOSE_APPROACH_SORT;
+	const airlineRows = rows.filter((row) => row.airlineInvolved).length;
+	return { airport, period, night: validNight, sort, airlineRows, rows: sortCloseApproaches(rows, sort) };
 }

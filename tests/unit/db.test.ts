@@ -94,7 +94,46 @@ describe('replaceIncidents', () => {
 		const late = incident('late', 'a', 'b', { t: 200 });
 		const early = incident('early', 'a', 'c', { t: 100, severity: 'closer-than-allowed' });
 		replaceIncidents('KPAE', '2026-08-14', [late, early]);
-		expect(incidentsForNight('KPAE', '2026-08-14')).toEqual([early, late]);
+		// airlineInvolved is derived on read, so it is added to every row that comes back.
+		expect(incidentsForNight('KPAE', '2026-08-14')).toEqual([
+			{ ...early, airlineInvolved: false },
+			{ ...late, airlineInvolved: false }
+		]);
+	});
+
+	it('marks an incident as airline-involved when either aircraft is a passenger airline', () => {
+		upsertFlight(flight('jet', { category: 'airline', ident: 'ASA1712', tail: 'N123AS' }));
+		replaceIncidents('KPAE', '2026-08-14', [
+			incident('private-pair', 'a', 'b'),
+			incident('airline-first', 'jet', 'b'),
+			incident('airline-second', 'a', 'jet')
+		]);
+		const byId = new Map(incidentsForNight('KPAE', '2026-08-14').map((i) => [i.id, i.airlineInvolved]));
+		expect(byId.get('private-pair')).toBe(false);
+		expect(byId.get('airline-first')).toBe(true);
+		expect(byId.get('airline-second')).toBe(true);
+		// Every read path carries the flag, not just the per-night one.
+		expect(incidentById('airline-first')?.airlineInvolved).toBe(true);
+		expect(separationIncidents('2026-08-01', '2026-08-31').find((i) => i.id === 'private-pair')?.airlineInvolved).toBe(false);
+		expect(incidentsForAirport('KPAE', '2026-08-01').find((i) => i.id === 'airline-second')?.airlineInvolved).toBe(true);
+	});
+
+	it('counts airline-involved close approaches and wake events separately', () => {
+		upsertFlight(flight('jet', { category: 'airline', ident: 'ASA1712' }));
+		replaceIncidents('KPAE', '2026-08-14', [
+			incident('sep-private', 'a', 'b'),
+			incident('sep-airline', 'jet', 'b'),
+			incident('wake-airline', 'jet', 'a', { kind: 'wake-turbulence' }),
+			incident('wake-private', 'a', 'b', { kind: 'wake-turbulence' })
+		]);
+		upsertNight(night('2026-08-14', { incidents: 2, wakeIncidents: 2 }));
+		const totals = totalsForAirport('KPAE', '2026-08-01', '2026-08-31');
+		expect(totals.airlineIncidents).toBe(1);
+		expect(totals.airlineWakeIncidents).toBe(1);
+		expect(totalsAll('2026-08-01', '2026-08-31')).toMatchObject({ airlineIncidents: 1, airlineWakeIncidents: 1 });
+		// A reference airport excluded from the headline totals takes its airline counts with it.
+		expect(totalsAll('2026-08-01', '2026-08-31', ['KPAE'])).toMatchObject({ airlineIncidents: 0, airlineWakeIncidents: 0 });
+		expect(totalsByAirport('2026-08-01', '2026-08-31').KPAE).toMatchObject({ airlineIncidents: 1, airlineWakeIncidents: 1 });
 	});
 	it('lists only separation events inside the requested range', () => {
 		replaceIncidents('KPAE', '2026-08-14', [
@@ -140,10 +179,11 @@ describe('nights', () => {
 		upsertNight(night('2026-08-12', { flights: 4, airline: 2, private: 2, incidents: 2 }));
 		upsertNight(night('2026-08-13', { flights: 8, airline: 0, private: 8, incidents: 0 }));
 		upsertNight(night('2026-08-12', { airport: 'KBLI', flights: 100, airline: 50, private: 50, incidents: 9 }));
-		expect(totalsForAirport('KPAE', '2026-08-11', '2026-08-12')).toEqual({ flights: 6, airline: 3, private: 3, incidents: 3, wakeIncidents: 0, nights: 2 });
-		expect(totalsForAirport('KPAE', '2026-08-10', '2026-08-13')).toEqual({ flights: 15, airline: 4, private: 11, incidents: 3, wakeIncidents: 0, nights: 4 });
-		expect(totalsForAirport('KPAE', '2026-09-01', '2026-09-30')).toEqual({ flights: 0, airline: 0, private: 0, incidents: 0, wakeIncidents: 0, nights: 0 });
-		expect(totalsAll('2026-08-12', '2026-08-12')).toEqual({ flights: 104, airline: 52, private: 52, incidents: 11, wakeIncidents: 0, nights: 1 });
+		const none = { airlineIncidents: 0, airlineWakeIncidents: 0 };
+		expect(totalsForAirport('KPAE', '2026-08-11', '2026-08-12')).toEqual({ flights: 6, airline: 3, private: 3, incidents: 3, wakeIncidents: 0, nights: 2, ...none });
+		expect(totalsForAirport('KPAE', '2026-08-10', '2026-08-13')).toEqual({ flights: 15, airline: 4, private: 11, incidents: 3, wakeIncidents: 0, nights: 4, ...none });
+		expect(totalsForAirport('KPAE', '2026-09-01', '2026-09-30')).toEqual({ flights: 0, airline: 0, private: 0, incidents: 0, wakeIncidents: 0, nights: 0, ...none });
+		expect(totalsAll('2026-08-12', '2026-08-12')).toEqual({ flights: 104, airline: 52, private: 52, incidents: 11, wakeIncidents: 0, nights: 1, ...none });
 		const by = totalsByAirport('2026-08-01', '2026-08-31');
 		expect(by.KBLI.flights).toBe(100);
 		expect(by.KPAE.nights).toBe(4);

@@ -13,7 +13,9 @@
 	const pillLabel = (a: AirportListRow) => (isReference(a) ? 'Reference' : statusLabel[a.status]);
 	const pillClass = (a: AirportListRow) => (isReference(a) ? 'pill-ghost' : statusClass[a.status]);
 
-	const incidents = (a: AirportListRow) => (a.stats ? String(a.stats.incidents) : '—');
+	// "7 (3)" — the parenthetical counts the close approaches involving a passenger airline.
+	const incidents = (a: AirportListRow) =>
+		a.stats ? (a.stats.airlineIncidents ? `${a.stats.incidents} (${a.stats.airlineIncidents})` : String(a.stats.incidents)) : '—';
 	const flights = (a: AirportListRow) => (a.stats ? String(a.stats.flights) : '—');
 	const hasIncidents = (a: AirportListRow) => (a.stats?.incidents ?? 0) > 0;
 	const candidate = $derived(form?.candidate ?? data.candidate);
@@ -64,7 +66,7 @@
 <section class="section" id="airport-list">
 	<div class="table-head">
 		<h2 class="section-heading">All airports</h2>
-		<div class="footnote">Counts from last 30 days</div>
+		<div class="footnote">Counts from last 30 days · (n) = with a passenger airline</div>
 	</div>
 	<div class="table-wrap">
 		<div class="table">
