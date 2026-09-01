@@ -40,6 +40,8 @@ import {
 	SEPARATION_VERTICAL_FT,
 	towerHoursLabel,
 	towerHoursOn,
+	quietHoursLabel,
+	isReference,
 	hoursClosed,
 	hourLabel
 } from '$lib/airports';
@@ -223,7 +225,12 @@ function drawHeader(doc: PDFDocument, page: PDFPage, fonts: Fonts, airport: Airp
 	text(page, `Night of ${nightLabelLong(night)}`, { x: MARGIN, y, size: 13, font: fonts.bold, color: INK });
 	y -= 12;
 	const tower = towerHoursOn(airport, night);
-	text(page, tower ? `Tower closed ${hourLabel(tower.close)} to ${hourLabel(tower.open)}` : 'No tower at any hour', {
+	const window = !tower
+		? 'No tower at any hour'
+		: isReference(airport)
+			? `Quiet hours ${hourLabel(tower.close)} to ${hourLabel(tower.open)}`
+			: `Tower closed ${hourLabel(tower.close)} to ${hourLabel(tower.open)}`;
+	text(page, window, {
 		x: MARGIN,
 		y,
 		size: 8.5,
@@ -245,7 +252,14 @@ function drawHeader(doc: PDFDocument, page: PDFPage, fonts: Fonts, airport: Airp
 
 /** The airport's standing facts, as one strip across the page. */
 function drawFacts(page: PDFPage, fonts: Fonts, airport: AirportConfig, top: number): number {
-	const facts: [string, string][] = [
+	const facts: [string, string][] = isReference(airport)
+		? [
+				['Tower hours', 'Staffed 24 hours'],
+				['Quiet hours', quietHoursLabel(airport)],
+				['Airlines serving', airport.carriers.join(', ') || 'None observed yet'],
+				['Field elevation', `${fmt(airport.elevationFt)} ft`]
+			]
+		: [
 		['Tower hours', towerHoursLabel(airport)],
 		['Hours closed', `${hoursClosed(airport)} of 24`],
 		['Airlines serving', airport.carriers.join(', ') || 'None observed yet'],

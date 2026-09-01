@@ -6,7 +6,7 @@ airport and each night, it publishes the flights that operated with no tower on 
 of aircraft that came closer than controller separation minima ("close approaches"), with an animated
 replay of each one.
 
-Live site: https://dark-towers.org · Paine Field (KPAE, Everett WA) is the reference airport. Prototype (design mockups):
+Live site: https://dark-towers.org · Paine Field (KPAE, Everett WA) is the worked example. Prototype (design mockups):
 https://mckoss.com/dark-towers/ · Design spec: [DESIGN.md](DESIGN.md) · Open questions:
 [QUESTIONS.md](QUESTIONS.md) · Backlog: [GitHub issues](https://github.com/mckoss/dark-towers/issues)
 
@@ -63,6 +63,13 @@ FlightAware responses; `data/db/darktowers.sqlite` is derived from it.
   or "re-check" on `/admin`); `"aeroapi_history": true|false` in config forces it if needed.
 - **Tower hours:** FAA Chart Supplement (entered by hand, effective-dated, editable in
   `/admin/airports`; seeded from `airports.json`).
+- **Quiet hours (reference airports):** a few airports with a 24-hour tower are tracked over their
+  own published *voluntary quiet period* — hours the airlines have agreed not to schedule flights —
+  purely for comparison with the dark airports; they are excluded from the site's totals. No national
+  dataset exists (a voluntary curfew is published per airport, and mandatory ones are airport-specific
+  under 14 CFR Part 161), so the window is entered by hand with its source cited in the schedule note.
+  Hollywood Burbank (BUR) is the first: 10 pm – 7 am, per the Burbank-Glendale-Pasadena Airport
+  Authority.
 - **Tower record check:** the [FAA NASR 28-day subscription](https://www.faa.gov/air_traffic/flight_info/aeronav/aero_data/NASR_Subscription/)
   (`APT_BASE.csv` + `ATC_BASE.csv`) says which airports have a tower and its staffed hours.
   Downloaded once per cycle by the scheduler (or `npm run nasr:update`), reduced to

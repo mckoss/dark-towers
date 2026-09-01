@@ -7,7 +7,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import type { AirportConfig, AirportStatus, TowerSchedule } from '$lib/types';
+import type { AirportConfig, AirportKind, AirportStatus, TowerSchedule } from '$lib/types';
 import { towerHoursOn } from '$lib/airports';
 import { todayKey } from '$lib/time';
 import { db } from './db';
@@ -27,6 +27,8 @@ export interface AirportJson {
 	carriers: string[];
 	status: AirportStatus;
 	tracked: boolean;
+	/** Omitted in older seed files; missing means 'dark'. */
+	kind?: AirportKind;
 	schedules: TowerSchedule[];
 }
 export interface SeedFile {
@@ -81,6 +83,9 @@ export function migrateAirports() {
 		deleted_by TEXT
 	);
 	`);
+	// Additive migration for databases created before reference airports existed.
+	const cols = (db().prepare(`PRAGMA table_info(airports)`).all() as { name: string }[]).map((c) => c.name);
+	if (!cols.includes('kind')) db().exec(`ALTER TABLE airports ADD COLUMN kind TEXT NOT NULL DEFAULT 'dark';`);
 }
 
 /* ---------- seed (insert-only) ---------- */
@@ -94,8 +99,8 @@ export function seedFromJson(seed: SeedFile = readSeedFile()): SeedResult {
 	migrateAirports();
 	const d = db();
 	const insA = d.prepare(
-		`INSERT OR IGNORE INTO airports (id, code, icao, name, city, state, tz, lat, lon, elevation_ft, carriers, status, tracked)
-		 VALUES (@id, @code, @icao, @name, @city, @state, @tz, @lat, @lon, @elevation_ft, @carriers, @status, @tracked)`
+		`INSERT OR IGNORE INTO airports (id, code, icao, name, city, state, tz, lat, lon, elevation_ft, carriers, status, tracked, kind)
+		 VALUES (@id, @code, @icao, @name, @city, @state, @tz, @lat, @lon, @elevation_ft, @carriers, @status, @tracked, @kind)`
 	);
 	const insS = d.prepare(
 		`INSERT OR IGNORE INTO tower_schedules (id, airport_id, effective_from, effective_to, open, close, note)
@@ -106,7 +111,7 @@ export function seedFromJson(seed: SeedFile = readSeedFile()): SeedResult {
 		schedulesInserted = 0;
 	d.transaction(() => {
 		for (const a of seed.airports) {
-			const r = insA.run({ ...a, carriers: JSON.stringify(a.carriers), tracked: a.tracked ? 1 : 0 });
+			const r = insA.run({ ...a, carriers: JSON.stringify(a.carriers), tracked: a.tracked ? 1 : 0, kind: a.kind ?? 'dark' });
 			airportsInserted += r.changes;
 			for (const s of a.schedules) {
 				schedulesInserted += insS.run({ ...s, airport_id: a.id }).changes;
@@ -134,7 +139,7 @@ export function ensureAirports() {
 
 interface ARow {
 	id: string; code: string; icao: string; name: string; city: string; state: string; tz: string; lat: number; lon: number;
-	elevation_ft: number; carriers: string; status: string; tracked: number; updated_at: number | null; updated_by: string | null;
+	elevation_ft: number; carriers: string; status: string; tracked: number; kind: string | null; updated_at: number | null; updated_by: string | null;
 }
 interface SRow {
 	id: string; airport_id: string; effective_from: string; effective_to: string | null; open: number | null; close: number | null; note: string;
@@ -176,7 +181,8 @@ function toRecord(r: ARow, schedules: TowerSchedule[], observed: Map<string, str
 	const base: AirportRecord = {
 		id: r.id, code: r.code, icao: r.icao, name: r.name, city: r.city, state: r.state, tz: r.tz, pos: [r.lat, r.lon], elevationFt: r.elevation_ft,
 		carriers: seen.length ? seen : configuredCarriers, configuredCarriers, carriersObserved: seen.length > 0,
-		status: r.status as AirportStatus, tracked: !!r.tracked, schedules, towerHours: null, updatedAt: r.updated_at, updatedBy: r.updated_by
+		status: r.status as AirportStatus, tracked: !!r.tracked, kind: (r.kind as AirportKind) ?? 'dark', schedules, towerHours: null,
+		updatedAt: r.updated_at, updatedBy: r.updated_by
 	};
 	base.towerHours = towerHoursOn(base, todayKey(r.tz));
 	return base;
@@ -212,22 +218,22 @@ export function trackedAirports(): AirportRecord[] {
 /* ---------- writes (online editing) ---------- */
 
 export interface AirportEdit {
-	name: string; city: string; state: string; tz: string; lat: number; lon: number; elevation_ft: number; carriers: string[]; status: AirportStatus; tracked: boolean;
+	name: string; city: string; state: string; tz: string; lat: number; lon: number; elevation_ft: number; carriers: string[]; status: AirportStatus; tracked: boolean; kind: AirportKind;
 }
 
 export function updateAirport(id: string, e: AirportEdit, by: string) {
 	ensureAirports();
 	db()
-		.prepare(`UPDATE airports SET name=@name, city=@city, state=@state, tz=@tz, lat=@lat, lon=@lon, elevation_ft=@elevation_ft, carriers=@carriers, status=@status, tracked=@tracked, updated_at=@now, updated_by=@by WHERE id=@id`)
+		.prepare(`UPDATE airports SET name=@name, city=@city, state=@state, tz=@tz, lat=@lat, lon=@lon, elevation_ft=@elevation_ft, carriers=@carriers, status=@status, tracked=@tracked, kind=@kind, updated_at=@now, updated_by=@by WHERE id=@id`)
 		.run({ ...e, id, carriers: JSON.stringify(e.carriers), tracked: e.tracked ? 1 : 0, now: Date.now(), by });
 }
 
 export function createAirport(a: Omit<AirportJson, 'schedules'>, by: string) {
 	ensureAirports();
 	db()
-		.prepare(`INSERT INTO airports (id, code, icao, name, city, state, tz, lat, lon, elevation_ft, carriers, status, tracked, updated_at, updated_by)
-		 VALUES (@id, @code, @icao, @name, @city, @state, @tz, @lat, @lon, @elevation_ft, @carriers, @status, @tracked, @now, @by)`)
-		.run({ ...a, carriers: JSON.stringify(a.carriers), tracked: a.tracked ? 1 : 0, now: Date.now(), by });
+		.prepare(`INSERT INTO airports (id, code, icao, name, city, state, tz, lat, lon, elevation_ft, carriers, status, tracked, kind, updated_at, updated_by)
+		 VALUES (@id, @code, @icao, @name, @city, @state, @tz, @lat, @lon, @elevation_ft, @carriers, @status, @tracked, @kind, @now, @by)`)
+		.run({ ...a, carriers: JSON.stringify(a.carriers), tracked: a.tracked ? 1 : 0, kind: a.kind ?? 'dark', now: Date.now(), by });
 }
 
 export function upsertSchedule(airportId: string, s: TowerSchedule, by: string) {
@@ -278,7 +284,7 @@ export function exportJson(): SeedFile {
 		$comment: comment,
 		airports: listAirports().map((a) => ({
 			id: a.id, code: a.code, icao: a.icao, name: a.name, city: a.city, state: a.state, tz: a.tz, lat: a.pos[0], lon: a.pos[1], elevation_ft: a.elevationFt,
-			carriers: a.configuredCarriers, status: a.status, tracked: a.tracked, schedules: a.schedules
+			carriers: a.configuredCarriers, status: a.status, tracked: a.tracked, kind: a.kind, schedules: a.schedules
 		}))
 	};
 }
@@ -304,7 +310,9 @@ export function drift(seed: SeedFile = readSeedFile()): Drift[] {
 	const out: Drift[] = [];
 	const liveA = new Map(live.airports.map((a) => [a.id, a]));
 	const jsonA = new Map(seed.airports.map((a) => [a.id, a]));
-	const fields: (keyof Omit<AirportJson, 'schedules' | 'id'>)[] = ['code', 'icao', 'name', 'city', 'state', 'tz', 'lat', 'lon', 'elevation_ft', 'carriers', 'status', 'tracked'];
+	const fields: (keyof Omit<AirportJson, 'schedules' | 'id'>)[] = ['code', 'icao', 'name', 'city', 'state', 'tz', 'lat', 'lon', 'elevation_ft', 'carriers', 'status', 'tracked', 'kind'];
+	/** A seed row written before reference airports existed means 'dark'. */
+	const seedValue = (a: AirportJson, f: (typeof fields)[number]) => (f === 'kind' ? (a.kind ?? 'dark') : a[f]);
 	for (const [id, j] of jsonA) {
 		const l = liveA.get(id);
 		if (!l) {
@@ -312,7 +320,7 @@ export function drift(seed: SeedFile = readSeedFile()): Drift[] {
 			continue;
 		}
 		const diffs: Drift['diffs'] = {};
-		for (const f of fields) if (JSON.stringify(j[f]) !== JSON.stringify(l[f])) diffs[f] = [j[f], l[f]];
+		for (const f of fields) if (JSON.stringify(seedValue(j, f)) !== JSON.stringify(l[f])) diffs[f] = [seedValue(j, f), l[f]];
 		if (Object.keys(diffs).length) out.push({ key: `airport:${id}`, airport: id, diffs });
 		const liveS = new Map(l.schedules.map((s) => [s.id, s]));
 		for (const s of j.schedules) {
@@ -337,7 +345,7 @@ export function applyJsonRow(key: string, by: string, seed: SeedFile = readSeedF
 	if (kind === 'airport') {
 		const j = seed.airports.find((a) => a.id === id);
 		if (!j) throw new Error('not in JSON');
-		if (getAirportById(id)) updateAirport(id, { name: j.name, city: j.city, state: j.state, tz: j.tz, lat: j.lat, lon: j.lon, elevation_ft: j.elevation_ft, carriers: j.carriers, status: j.status, tracked: j.tracked }, by);
+		if (getAirportById(id)) updateAirport(id, { name: j.name, city: j.city, state: j.state, tz: j.tz, lat: j.lat, lon: j.lon, elevation_ft: j.elevation_ft, carriers: j.carriers, status: j.status, tracked: j.tracked, kind: j.kind ?? 'dark' }, by);
 		else {
 			createAirport(j, by);
 			for (const s of j.schedules) upsertSchedule(id, s, by);

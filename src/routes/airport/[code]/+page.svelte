@@ -2,7 +2,7 @@
 	/* Airport detail (README "Screens / Views → 3. Airport detail"). Every
 	   string comes from the airport record; nothing is hard-coded. */
 	import { goto } from '$app/navigation';
-	import { towerHoursLabel, hoursClosed, hourLabel, towerHoursOn, AIRSPACE_RADIUS_NM } from '$lib/airports';
+	import { towerHoursLabel, quietHoursLabel, isReference, hoursClosed, hourLabel, towerHoursOn, AIRSPACE_RADIUS_NM } from '$lib/airports';
 	import { nightLabel } from '$lib/time';
 	import { monthLabel } from '$lib/monthLabel';
 	import FlightMap from '$lib/components/FlightMap.svelte';
@@ -17,10 +17,13 @@
 	let { data } = $props();
 
 	const airport = $derived(data.airport);
+	/** A 24-hour tower watched during its own quiet hours, for comparison. */
+	const reference = $derived(isReference(airport));
 	/** "Tower closed 9:00 pm to 7:00 am" for the selected night, or "No tower at any hour". */
 	function nightHours(night: string): string {
 		const h = towerHoursOn(airport, night);
-		return h ? `Tower closed ${hourLabel(h.close)} to ${hourLabel(h.open)}` : 'No tower at any hour';
+		if (!h) return 'No tower at any hour';
+		return reference ? `Quiet hours ${hourLabel(h.close)} to ${hourLabel(h.open)}` : `Tower closed ${hourLabel(h.close)} to ${hourLabel(h.open)}`;
 	}
 	// One pressure correction for the whole map, evaluated at the middle of the night's traffic.
 	const altCtx = $derived(altContextFor(data.nightSummary, airport.elevationFt, median(data.flights.map((f) => f.eventTime)) ?? 0));
@@ -74,11 +77,11 @@
 	<div class="facts">
 		<div class="fact">
 			<div class="fact-label">Tower hours</div>
-			<div class="fact-value">{towerHoursLabel(airport)}</div>
+			<div class="fact-value">{reference ? 'Staffed 24 hours' : towerHoursLabel(airport)}</div>
 		</div>
 		<div class="fact">
-			<div class="fact-label">Hours closed</div>
-			<div class="fact-value">{hoursClosed(airport)} of 24</div>
+			<div class="fact-label">{reference ? 'Quiet hours' : 'Hours closed'}</div>
+			<div class="fact-value">{reference ? quietHoursLabel(airport) : `${hoursClosed(airport)} of 24`}</div>
 		</div>
 		<div class="fact">
 			<div class="fact-label">Airlines serving</div>
@@ -91,7 +94,18 @@
 	</div>
 </section>
 
-<div class="stats-kicker table-header">Over {periodPhrase} · when the tower was closed</div>
+{#if reference}
+	<section class="section reference-note" data-testid="reference-note">
+		<p>
+			<strong>Reference airport.</strong> The tower here is staffed 24 hours. The hours above are the airport's own
+			published quiet hours, when the passenger airlines have agreed not to schedule flights — a voluntary agreement,
+			not a federal rule. We watch these nights so they can be compared with airports whose tower is closed; they are
+			not counted in the site's totals. <a href="/airports">See all airports</a>
+		</p>
+	</section>
+{/if}
+
+<div class="stats-kicker table-header">Over {periodPhrase} · {reference ? "during the airport's quiet hours" : 'when the tower was closed'}</div>
 <section class="section stats">
 	<div class="stat"><div class="stat-n">{fmt(data.totals.flights)}</div><div class="stat-label">Flights in and out</div></div>
 	<div class="stat"><div class="stat-n">{fmt(data.totals.airline)}</div><div class="stat-label">Passenger airline</div></div>
@@ -174,6 +188,15 @@
 {/if}
 
 <style>
+	.reference-note {
+		padding: 20px var(--gutter);
+		border-top: var(--row-rule);
+		max-width: 78ch;
+		font-size: 13px;
+		line-height: 1.55;
+		color: var(--ink-60);
+	}
+
 	.hero {
 		grid-template-columns: 1fr 1.2fr;
 	}

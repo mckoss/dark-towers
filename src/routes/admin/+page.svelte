@@ -183,7 +183,7 @@
 	<div class="grid requests">
 		<div class="table-header">When</div><div class="table-header">Request</div><div class="table-header">FAA tower record</div><div class="table-header">Requester</div><div class="table-header">Comment</div><div></div>
 		{#each data.requests as r (r.id)}
-			<div class="tabular">{when(r.created_at)}</div><div>{r.value}{#if r.code && r.code !== r.value} <span class="muted-text">→ {r.code}</span>{/if}</div><div class="tabular">{r.assessment ?? '—'}</div><div>{r.name ?? '—'}<br /><span class="muted-text">{r.email ?? '—'}</span></div><div>{r.comment ?? '—'}</div>
+			<div class="tabular">{when(r.created_at)}</div><div>{r.value}{#if r.code && r.code !== r.value} <span class="muted-text">→ {r.code}</span>{/if}{#if r.kind === 'reference'}<br /><span class="muted-text">reference · quiet {r.quiet_start}:00–{r.quiet_end}:00</span>{/if}</div><div class="tabular">{r.assessment ?? '—'}</div><div>{r.name ?? '—'}<br /><span class="muted-text">{r.email ?? '—'}</span></div><div>{r.comment ?? '—'}</div>
 			<div class="request-actions">
 				<form method="POST" action="?/acceptRequest" use:enhance><input type="hidden" name="id" value={r.id} /><button class="link-btn" type="submit">review &amp; accept</button></form>
 				<form method="POST" action="?/deleteRequest" use:enhance><input type="hidden" name="id" value={r.id} /><button class="link-btn muted-text" type="submit">delete</button></form>
@@ -191,10 +191,22 @@
 			{#if form?.candidate && form?.requestId === r.id}
 				<div class="request-candidate" data-testid="request-candidate">
 					<div><strong>{form.candidate.code} · {form.candidate.name}</strong><br />{form.candidate.city}, {form.candidate.state} · {form.candidate.icao}</div>
-					<div><strong>FAA:</strong> {form.candidate.tower === 'none' ? 'no control tower' : `tower ${form.candidate.towerHours}`}<br /><strong>Polling:</strong> {form.candidate.schedule.open == null ? 'all day' : `${form.candidate.schedule.open}:00–${form.candidate.schedule.close}:00 tower staffed`} · {form.candidate.tz}</div>
+					<div>
+						<strong>FAA:</strong> {form.candidate.tower === 'none' ? 'no control tower' : `tower ${form.candidate.towerHours}`}<br />
+						<strong>Kind:</strong> {form.candidate.kind}<br />
+						<strong>Nightly window:</strong>
+						{#if !form.candidate.schedule}
+							needs quiet hours — add it from <a href="/admin/airports">Airports</a>
+						{:else if form.candidate.schedule.open == null}
+							all night
+						{:else}
+							{form.candidate.schedule.close}:00–{form.candidate.schedule.open}:00
+						{/if}
+						· {form.candidate.tz}
+					</div>
 					<form method="POST" action="?/confirmRequest" use:enhance>
 						<input type="hidden" name="id" value={r.id} />
-						<button class="btn btn-ink" type="submit">Confirm and start tracking</button>
+						<button class="btn btn-ink" type="submit" disabled={!form.candidate.schedule}>Confirm and start tracking</button>
 					</form>
 				</div>
 			{/if}

@@ -63,7 +63,7 @@ describe('airports store', () => {
 	it('the database wins: seeding never overwrites an edited row, and drift reports the difference', async () => {
 		const st = await store();
 		st.seedFromJson(seed());
-		st.updateAirport('PAE', { name: 'Paine Field (edited)', city: 'Everett', state: 'WA', tz: 'America/Los_Angeles', lat: 47.9, lon: -122.3, elevation_ft: 606, carriers: ['Alaska', 'Horizon'], status: 'tracking', tracked: true }, 'admin@example.com');
+		st.updateAirport('PAE', { name: 'Paine Field (edited)', city: 'Everett', state: 'WA', tz: 'America/Los_Angeles', lat: 47.9, lon: -122.3, elevation_ft: 606, carriers: ['Alaska', 'Horizon'], status: 'tracking', tracked: true, kind: 'dark' }, 'admin@example.com');
 		st.upsertSchedule('PAE', { id: 'PAE-2024-01-01', from: '2024-01-01', to: '2026-09-30', open: 7, close: 22, note: 'old' }, 'admin@example.com');
 		st.seedFromJson(seed());
 		const a = st.getAirport('PAE')!;
@@ -100,8 +100,26 @@ describe('airports store', () => {
 		const st = await store();
 		st.seedFromJson(seed());
 		const out = st.exportJson();
-		expect(out.airports).toEqual(seed().airports);
+		// A seed row written before reference airports existed reads back as 'dark'.
+		expect(out.airports).toEqual(seed().airports.map((a) => ({ ...a, kind: 'dark' })));
 		expect(st.drift(out)).toEqual([]);
+		// …and the older file, with no kind at all, is not reported as drift.
+		expect(st.drift(seed())).toEqual([]);
+	});
+
+	it('stores a reference airport and round-trips its kind', async () => {
+		const st = await store();
+		st.seedFromJson(seed());
+		st.createAirport(
+			{
+				id: 'BUR', code: 'BUR', icao: 'KBUR', name: 'Hollywood Burbank', city: 'Burbank', state: 'CA', tz: 'America/Los_Angeles',
+				lat: 34.2, lon: -118.36, elevation_ft: 778, carriers: [], status: 'tracking', tracked: true, kind: 'reference'
+			},
+			'admin@example.com'
+		);
+		st.upsertSchedule('BUR', { id: 'BUR-2026-08-06', from: '2026-08-06', to: null, open: 7, close: 22, note: 'quiet hours' }, 'admin@example.com');
+		expect(st.getAirport('BUR')!.kind).toBe('reference');
+		expect(st.exportJson().airports.find((a) => a.id === 'BUR')!.kind).toBe('reference');
 	});
 
 	it('derives carriers from stored airline flights while retaining the seed fallback for export', async () => {

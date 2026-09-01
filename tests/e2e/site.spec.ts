@@ -183,8 +183,24 @@ test.describe('airports', () => {
 		const pae = page.locator('a[title="Open the PAE record"]');
 		await expect(pae).toBeVisible();
 		await expect(page.getByText('Bellingham International')).toBeVisible();
+
+		// A reference airport is listed and marked, but kept out of the headline counts.
+		const bur = page.locator('a[title="Open the BUR record"]');
+		await expect(bur).toContainText('24 hours · quiet 10:00 pm – 7:00 am');
+		await expect(bur).toContainText('Reference');
+		await expect(page.getByTestId('reference-note')).toContainText('not counted in the totals above');
+
 		await pae.click();
 		await expect(page).toHaveURL(/\/airport\/PAE/);
+	});
+
+	test('a reference airport record is framed as a comparison, not a dark tower', async ({ page }) => {
+		await page.goto('/airport/BUR');
+		const facts = page.locator('.fact-value');
+		await expect(facts.filter({ hasText: 'Staffed 24 hours' })).toBeVisible();
+		await expect(facts.filter({ hasText: '10:00 pm – 7:00 am' })).toBeVisible();
+		await expect(page.getByTestId('reference-note')).toContainText('voluntary agreement, not a federal rule');
+		await expect(page.locator('.stats-kicker')).toContainText("during the airport's quiet hours");
 	});
 
 	test('finds qualifying airports by state code, state name, or city', async ({ page }) => {
@@ -203,11 +219,33 @@ test.describe('airports', () => {
 		await expect(page.getByTestId('request-candidate')).toContainText('RDM');
 	});
 
+	test('a 24-hour tower is offered as a reference airport, and needs quiet hours and a reason', async ({ page, isMobile }) => {
+		// Desktop and mobile must request different airports; a code can only be pending once.
+		const code = isMobile ? 'GEG' : 'SEA';
+		await page.goto('/airports');
+		await page.getByPlaceholder(/Airport code/).fill(code);
+		await page.getByRole('button', { name: 'Look up airport' }).click();
+		const candidate = page.getByTestId('request-candidate');
+		await expect(candidate).toContainText(code);
+		await expect(candidate).toContainText('staffed 24 hours');
+		await expect(candidate).toContainText('reference airport');
+		// The quiet-hours window and the reason are both required for this class of request.
+		await expect(candidate.getByTestId('quiet-start')).toHaveValue('22');
+		await expect(candidate.getByTestId('quiet-end')).toHaveValue('7');
+		const reason = candidate.getByLabel(/Why this airport/);
+		await expect(reason).toHaveAttribute('required', '');
+		await expect(candidate.getByLabel('Comment (optional)')).toHaveCount(0);
+
+		await candidate.getByLabel('Your name').fill('Reference Reader');
+		await reason.fill('The airport publishes a voluntary late-night curfew, so these hours are comparable.');
+		await candidate.getByRole('button', { name: 'Submit airport request' }).click();
+		await expect(page.getByTestId('request-ok')).toContainText(`request for ${code}`);
+		await page.goto('/admin');
+		await expect(page.getByText('reference · quiet 22:00–7:00').first()).toBeVisible();
+	});
+
 	test('request lookup qualifies a new airport before collecting verified contact details', async ({ page, isMobile }) => {
 		await page.goto('/airports');
-		await page.getByPlaceholder(/Airport code/).fill('SEA');
-		await page.getByRole('button', { name: 'Look up airport' }).click();
-		await expect(page.getByRole('alert')).toContainText(/staffed 24 hours/);
 		await page.getByPlaceholder(/Airport code/).fill('PAE');
 		await page.getByRole('button', { name: 'Look up airport' }).click();
 		await expect(page.getByRole('alert')).toContainText(/already on the Dark Towers airport list/);

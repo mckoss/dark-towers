@@ -28,10 +28,26 @@ describe('airport onboarding', () => {
 		expect(candidateFromNasr(fixture, 'MMH').schedule).toMatchObject({ open: null, close: null });
 	});
 
-	it('rejects invalid codes and airports with a 24-hour tower', () => {
+	it('rejects invalid codes', () => {
 		expect(() => candidateFromNasr(fixture, 'KSEA')).toThrow(/three-letter/);
-		expect(() => candidateFromNasr(fixture, 'SEA')).toThrow(/staffed 24 hours/);
 	});
+
+	it('holds a 24-hour tower as a reference candidate until quiet hours arrive', () => {
+		const pending = candidateFromNasr(fixture, 'SEA');
+		expect(pending).toMatchObject({ kind: 'reference', needsQuietHours: true, schedule: null });
+
+		// Quiet hours 10 pm – 7 am become the gap between close and the next open.
+		const ready = candidateFromNasr(fixture, 'SEA', { start: 22, end: 7 });
+		expect(ready).toMatchObject({ kind: 'reference', needsQuietHours: false, schedule: { open: 7, close: 22 } });
+		expect(ready.schedule!.note).toMatch(/10:00 pm to 7:00 am/);
+	});
+
+	it('insists that quiet hours run overnight, and only for a 24-hour tower', () => {
+		expect(() => candidateFromNasr(fixture, 'SEA', { start: 7, end: 22 })).toThrow(/overnight/);
+		expect(() => candidateFromNasr(fixture, 'SEA', { start: 22, end: 25 })).toThrow(/whole hours/);
+		expect(() => candidateFromNasr(fixture, 'STS', { start: 22, end: 7 })).toThrow(/tower that closes/);
+	});
+
 
 	it('confirms an airport and schedule as tracked, removing an accepted request atomically', () => {
 		openMemoryDb();
@@ -48,6 +64,26 @@ describe('airport onboarding', () => {
 			schedules: [{ open: 7, close: 20 }]
 		});
 		expect(listRequests()).toEqual([]);
+		delete process.env.NASR_JSON;
+	});
+
+	// These continue on the database the test above opened.
+	it('refuses to add a reference airport with no quiet hours', () => {
+		process.env.NASR_JSON = path.join(__dirname, '../fixtures/nasr.json');
+		expect(() => confirmAirport('SEA', 'admin@example.com')).toThrow(/quiet hours/);
+		expect(getAirport('SEA')).toBeUndefined();
+		delete process.env.NASR_JSON;
+	});
+
+	it('adds a reference airport with its quiet-hours schedule', () => {
+		process.env.NASR_JSON = path.join(__dirname, '../fixtures/nasr.json');
+		confirmAirport('SEA', 'admin@example.com', undefined, { start: 22, end: 7 });
+		expect(getAirport('SEA')).toMatchObject({
+			code: 'SEA',
+			kind: 'reference',
+			tracked: true,
+			schedules: [{ open: 7, close: 22 }]
+		});
 		delete process.env.NASR_JSON;
 	});
 });

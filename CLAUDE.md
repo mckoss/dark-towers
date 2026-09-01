@@ -31,3 +31,8 @@ Idempotent at every layer: cache hit ⇒ zero API calls; DB writes are upserts k
 
 ## Airports
 `airports.json` is the insert-only seed; the `airports` / `tower_schedules` tables are the source of truth once they exist. Edit at `/admin/airports`, then Export JSON and commit it. Tower hours are effective-dated (`towerHoursOn(airport, night)`), so always pass the night's schedule, never a static one.
+Airports have a `kind`: `dark` (tower closed or absent) or `reference` (24-hour tower watched over its
+published voluntary quiet hours, for comparison — excluded from every headline total). `open`/`close`
+always bound the hours we do *not* collect, so a reference airport stores the complement of its quiet
+window and the pipeline needs no special case. Quiet hours are hand-entered with the source cited in the
+schedule note; there is no national dataset.

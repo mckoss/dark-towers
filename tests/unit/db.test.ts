@@ -148,6 +148,12 @@ describe('nights', () => {
 		expect(by.KBLI.flights).toBe(100);
 		expect(by.KPAE.nights).toBe(4);
 	});
+	it('totalsAll can exclude airports that must not count, such as reference airports', () => {
+		upsertNight(night('2026-08-12', { flights: 4, airline: 2, private: 2, incidents: 2 }));
+		upsertNight(night('2026-08-12', { airport: 'KBUR', flights: 100, airline: 50, private: 50, incidents: 9 }));
+		expect(totalsAll('2026-08-12', '2026-08-12')).toMatchObject({ flights: 104, incidents: 11 });
+		expect(totalsAll('2026-08-12', '2026-08-12', ['KBUR'])).toMatchObject({ flights: 4, incidents: 2, nights: 1 });
+	});
 	it('latestNight only counts complete nights', () => {
 		expect(latestNight('KPAE')).toBeNull();
 		upsertNight(night('2026-08-14', { complete: true }));

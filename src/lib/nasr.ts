@@ -5,7 +5,7 @@
  * $lib/server/nasr.
  */
 import { parseCsv } from './zip';
-import type { Runway } from './types';
+import type { AirportKind, Runway } from './types';
 
 export type TowerKind = 'none' | 'part-time' | 'full-time';
 
@@ -179,8 +179,10 @@ export function qualifyingAirports(data: NasrData): NasrAirport[] {
 }
 
 export interface Assessment {
-	/** Whether the request qualifies (part-time or no tower). */
+	/** Whether the request qualifies — a part-time/no tower, or a 24-hour tower with quiet hours. */
 	ok: boolean;
+	/** How it would be tracked: 'dark' (tower closed or absent) or 'reference' (quiet hours only). */
+	track: AirportKind;
 	/** 'unknown' = not in the FAA record; 'unverified' = no data available to check. */
 	kind: TowerKind | 'unknown' | 'unverified' | 'ambiguous';
 	airport: NasrAirport | null;
@@ -196,19 +198,28 @@ export function towerHoursText(a: NasrAirport): string {
 
 /** Decide whether a requested airport belongs on the site. */
 export function assessRequest(data: NasrData | null, value: string): Assessment {
-	if (!data) return { ok: true, kind: 'unverified', airport: null, message: 'We could not check this against FAA records right now; it has been added to the request list.' };
+	if (!data) return { ok: true, track: 'dark', kind: 'unverified', airport: null, message: 'We could not check this against FAA records right now; it has been added to the request list.' };
 	const v = value.trim();
 	let a: NasrAirport | null = null;
 	if (/^[A-Za-z0-9]{3,4}$/.test(v)) a = findByCode(data, v);
 	if (!a) {
 		const byCity = findByCity(data, v);
 		if (byCity.length > 1) {
-			return { ok: false, kind: 'ambiguous', airport: null, message: `Several airports match "${v}": ${byCity.map((x) => `${x.id} (${x.name})`).join(', ')}. Please request one by its code.` };
+			return { ok: false, track: 'dark', kind: 'ambiguous', airport: null, message: `Several airports match "${v}": ${byCity.map((x) => `${x.id} (${x.name})`).join(', ')}. Please request one by its code.` };
 		}
 		a = byCity[0] ?? null;
 	}
-	if (!a) return { ok: false, kind: 'unknown', airport: null, message: `We could not find "${v}" in the FAA airport record. Try the three-letter airport code (for example PAE).` };
+	if (!a) return { ok: false, track: 'dark', kind: 'unknown', airport: null, message: `We could not find "${v}" in the FAA airport record. Try the three-letter airport code (for example PAE).` };
 	const label = `${a.id} (${a.name}, ${a.city}, ${a.state})`;
-	if (a.tower === 'full-time') return { ok: false, kind: a.tower, airport: a, message: `${label} has ${towerHoursText(a)}, so it is outside what this site tracks — we only follow airports whose tower closes for part of the day, or that have no tower.` };
-	return { ok: true, kind: a.tower, airport: a, message: `${label} has ${towerHoursText(a)} — it qualifies, and has been added to the request list.` };
+	// A 24-hour tower is not a dark airport, but it can be listed for comparison if the
+	// airport publishes quiet hours — hours the airlines have agreed not to fly.
+	if (a.tower === 'full-time')
+		return {
+			ok: true,
+			track: 'reference',
+			kind: a.tower,
+			airport: a,
+			message: `${label} has ${towerHoursText(a)}, so it is not a dark airport. It can be listed as a reference airport — watched during the hours passenger airlines have agreed not to fly, for comparison with airports whose tower is closed. Tell us those hours and why this airport is worth comparing.`
+		};
+	return { ok: true, track: 'dark', kind: a.tower, airport: a, message: `${label} has ${towerHoursText(a)} — it qualifies, and has been added to the request list.` };
 }

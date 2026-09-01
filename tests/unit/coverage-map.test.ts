@@ -16,6 +16,15 @@ describe('coverage map marker sizing', () => {
 		expect(coverageMarkerStyle('available', 0, false).color).toBe(COVERAGE_GREY);
 	});
 
+	it('draws a reference airport hollow and dashed, at full tracked size', () => {
+		const dark = coverageMarkerStyle('tracking', 100, false);
+		const reference = coverageMarkerStyle('tracking', 100, false, 'reference');
+		expect(reference.radius).toBe(dark.radius);
+		expect(reference.dashArray).toBe('3 3');
+		expect(dark.dashArray).toBeUndefined();
+		expect(reference.fillOpacity).toBeLessThan(dark.fillOpacity);
+	});
+
 	it('shrinks non-tracked dots without shrinking their interaction target', () => {
 		const requested = coverageMarkerStyle('requested', 0, false);
 		const available = coverageMarkerStyle('available', 0, false);

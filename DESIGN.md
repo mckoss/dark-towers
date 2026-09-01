@@ -130,8 +130,10 @@ stakeholder can toggle — implement map-first first, and treat ledger as option
 
 ### 2. Airports
 - Header row `7fr 5fr`: kicker "Coverage", headline "Airports tracked", and a paragraph defining
-  the inclusion rule (regular passenger service **and** part-time or no-time tower service).
-  Right cell: 2×2 stat grid — airports tracked, close approaches (accent), requested, nights covered.
+  the inclusion rule (regular passenger service **and** part-time or no-time tower service), plus a
+  sentence naming reference airports. Right cell: 2×2 stat grid — airports tracked, close approaches
+  (accent), requested, nights covered. When any reference airport is tracked, a small
+  "+N reference" line sits under the "Airports tracked" figure rather than taking a fifth tile.
 - Table, `grid-template-columns: 80px 1.5fr 1fr 1fr 100px 120px 128px 36px`:
   Code / Airport / City / Tower hours / Flights / Close approaches / Status / arrow.
   Header row has a 2px top rule; each data row a 1px bottom rule and 14px vertical padding.
@@ -141,12 +143,32 @@ stakeholder can toggle — implement map-first first, and treat ledger as option
   - Non-tracked rows: opacity 0.6, `cursor:default`, no arrow, inert.
   - Close-approach cell: 20px/800; accent when > 0, `#bab6b6` when 0 or unknown.
   - Status pill: 11px/700 uppercase, 4px 9px padding — accent fill + white text for "Tracking",
-    `#d7d3d3` for "Queued", transparent for "Requested".
+    `#d7d3d3` for "Queued", transparent for "Requested" and for "Reference".
+  - Reference rows: the hours cell reads "24 hours · quiet 10:00 pm – 7:00 am" and carries an accent
+    `†`; a note under the table explains what a reference airport is and that it is not in the totals.
 - Request block: accent field (`#ec3013`, white text) split `7fr 5fr`. Left: 40px/900 headline
   *"If your airport has passenger flights and part-time or no-time tower service, put it on the map."*
   Right: two white inputs (airport code or city+state; email) and an ink button "Send request".
   On submit, show a translucent confirmation panel: "Thanks — &lt;value&gt; has been added to the request list."
   **Make no promise** about review, verification, or turnaround time.
+
+#### Reference airports
+Some airports keep a **voluntary quiet period** — hours the passenger airlines have agreed not to
+schedule flights — even though the tower is staffed 24 hours. These are listed as *reference*
+airports and watched over exactly those hours, so a night at a dark airport can be compared with the
+same clock hours somewhere a controller was on duty. They are marked in the list, framed as a
+comparison on their own record, and **excluded from every headline total** — flights, close
+approaches, nights and the airports-tracked count.
+
+There is no national dataset of quiet hours. The FAA record (NASR) carries tower staffing only
+("24", "0700-2100"); a voluntary curfew is published by the individual airport authority, and under
+ANCA / 14 CFR Part 161 each restriction is airport-specific. So quiet hours are entered by hand:
+the requester proposes the window and says where it comes from, an admin confirms it, and the source
+is cited in the schedule note — the same discipline as tower hours from the Chart Supplement.
+
+Storage reuses `tower_schedules`: `open`/`close` always bound the hours we do *not* collect, so a
+reference airport stores `open` = the morning end and `close` = the evening start of the quiet
+window (BUR: `open 7, close 22` → watched 10 pm – 7 am). The pipeline needs no special case.
 
 ### 3. Airport detail
 Driven by an airport code; every string comes from the airport record, nothing hard-coded.

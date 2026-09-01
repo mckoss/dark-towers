@@ -35,7 +35,14 @@
 		tower.textContent = airport.towerLabel;
 		const status = document.createElement('span');
 		status.className = `coverage-status ${airport.status}`;
-		status.textContent = airport.status === 'tracking' ? 'Tracking' : airport.status === 'requested' ? 'Requested — awaiting review' : 'Qualifies for tracking';
+		status.textContent =
+			airport.kind === 'reference'
+				? 'Reference airport — watched during its quiet hours, for comparison'
+				: airport.status === 'tracking'
+					? 'Tracking'
+					: airport.status === 'requested'
+						? 'Requested — awaiting review'
+						: 'Qualifies for tracking';
 		card.append(title, location, tower, status);
 		if (airport.status === 'tracking') {
 			const activity = document.createElement('span');
@@ -90,7 +97,7 @@
 			for (const airport of [...airports].sort((a, b) => rank[a.status] - rank[b.status])) {
 				const point = projection([airport.pos[1], airport.pos[0]]);
 				if (!point) continue;
-				const style = coverageMarkerStyle(airport.status, airport.operations, airport.veryClose);
+				const style = coverageMarkerStyle(airport.status, airport.operations, airport.veryClose, airport.kind);
 				const at: [number, number] = [H - point[1], point[0]];
 				L.circleMarker(at, {
 					renderer,
@@ -100,8 +107,9 @@
 					opacity: style.opacity,
 					fillColor: style.color,
 					fillOpacity: style.fillOpacity,
+					dashArray: style.dashArray,
 					interactive: false,
-					className: `coverage-dot ${airport.status}${airport.veryClose ? ' very-close' : ''}`
+					className: `coverage-dot ${airport.status}${airport.kind === 'reference' ? ' reference' : ''}${airport.veryClose ? ' very-close' : ''}`
 				}).addTo(map);
 				// The transparent interaction target is intentionally larger than
 				// small non-tracked dots, preserving accurate mouse and touch input.
