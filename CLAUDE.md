@@ -1,42 +1,8 @@
-# Dark Towers — project conventions
+# Dark Towers
 
-**ALWAYS read `AGENTS.md` first.** It holds the working agreements for this repo — branching and merge
-workflow, worktree naming and data, and how production deploys — and they are binding. Read it at the
-start of every session here, before any branch, commit, merge, or deploy step.
+**Read [`AGENTS.md`](AGENTS.md) — it is the whole of the instructions for this repo.** Project
+conventions (stack, editorial rules, design system, commands, pipeline invariants, airports) and the
+working agreements (branching, versioning, worktrees, deployment) all live there, and they are binding.
 
-Data-driven advocacy site: flights and close approaches at airports where airliners operate with no
-tower on duty. Read `DESIGN.md` for the design spec and editorial rules; `QUESTIONS.md` for open decisions;
-GitHub issues for the backlog. `README.md` is the public front door (purpose, install, deploy).
-
-## Stack
-- SvelteKit 2, Svelte 5 **runes mode** (`$props/$state/$derived/$effect`, `onclick` not `on:click`), TypeScript strict.
-- `adapter-node` → `npm run build && npm start` (Railway). Config: `config.json` locally / `CONFIG_JSON` env on Railway (same JSON: api_key, admins, google, session_secret, public_origin, data_dir, scheduler, history_days). `PORT` comes from the platform.
-- `/admin` is unlinked and Google-sign-in gated; `DTW_NO_AUTH=1` opens it locally.
-- Data: raw FlightAware responses cached forever under `data/raw/<ICAO>/…`; SQLite at `data/db/darktowers.sqlite`. All of `data/` is gitignored; `npm run db:seed` loads the fixture in `tests/fixtures/raw`, `npm run db:rebuild` reprocesses whatever is cached.
-- FAA NASR facility data (`src/lib/nasr.ts`, `src/lib/server/nasr.ts`): cached per 28-day cycle at `data/nasr/`; `NASR_JSON` env points tests at `tests/fixtures/nasr.json`. Airport requests are accepted only for part-time or no-tower airports.
-- Maps: Leaflet via `src/lib/leaflet.ts` (CARTO tiles — never tile.openstreetmap.org); US map is d3-geo SVG.
-- Tracks are drawn/replayed through `src/lib/spline.ts` (time-parameterised Catmull-Rom → cubic Bézier).
-
-## Editorial rules (hard)
-1. Plain language in all user-facing copy: "close approach" not "loss of separation"; "passenger airline" and "private and training aircraft", never "air carrier"/"general aviation".
-2. Never claim what is or is not in an FAA record.
-3. The home page never names a specific airport.
-
-## Design system
-Tokens and typography roles live in `src/app.css` (spec in `DESIGN.md`) — use the classes/vars, don't invent colors. Zero border radius, 2px ink section rules, 1px hairline row rules, everything flush left (including button labels). Single accent `#ec3013`.
-
-## Commands
-- `npm run dev` / `npm run check` / `npm test` (vitest, `tests/unit`) / `npm run test:e2e` (Playwright, `tests/e2e`, builds + previews on :4173)
-- `npm run ingest -- PAE 2026-08-18 [--nights N] [--offline] [--force]`, `npm run ingest -- --catch-up`
-- `npm run import:colab -- <flights.json> [tracks.json]`
-
-## Pipeline invariants
-Idempotent at every layer: cache hit ⇒ zero API calls; DB writes are upserts keyed by `fa_flight_id` / `(airport, night)` / stable incident id. Personal-tier AeroAPI: 10 queries/min, no tracks older than 10 days (cached as misses). Extended-history capability is probed per key and cached at `data/aeroapi-capability.json` (`src/lib/server/capability.ts`); `aeroapi_history` in config only overrides.
-
-## Airports
-`airports.json` is the insert-only seed; the `airports` / `tower_schedules` tables are the source of truth once they exist. Edit at `/admin/airports`, then Export JSON and commit it. Tower hours are effective-dated (`towerHoursOn(airport, night)`), so always pass the night's schedule, never a static one.
-Airports have a `kind`: `dark` (tower closed or absent) or `reference` (24-hour tower watched over its
-published voluntary quiet hours, for comparison — excluded from every headline total). `open`/`close`
-always bound the hours we do *not* collect, so a reference airport stores the complement of its quiet
-window and the pipeline needs no special case. Quiet hours are hand-entered with the source cited in the
-schedule note; there is no national dataset.
+Nothing else belongs in this file. Anything an agent needs to know goes in `AGENTS.md`, so every agent
+reads the same thing.
