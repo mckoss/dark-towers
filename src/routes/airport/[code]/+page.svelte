@@ -4,6 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { towerHoursLabel, quietHoursLabel, isReference, hoursClosed, hourLabel, towerHoursOn, AIRSPACE_RADIUS_NM } from '$lib/airports';
 	import { nightLabel } from '$lib/time';
+	import { airlineShareLabel } from '$lib/close-approach-sort';
 	import { monthLabel } from '$lib/monthLabel';
 	import FlightMap from '$lib/components/FlightMap.svelte';
 	import MapLegend from '$lib/components/MapLegend.svelte';
@@ -110,8 +111,16 @@
 	<div class="stat"><div class="stat-n">{fmt(data.totals.flights)}</div><div class="stat-label">Flights in and out</div></div>
 	<div class="stat"><div class="stat-n">{fmt(data.totals.airline)}</div><div class="stat-label">Passenger airline</div></div>
 	<div class="stat"><div class="stat-n">{fmt(data.totals.private)}</div><div class="stat-label">Private and training aircraft</div></div>
-	<a class="stat stat-link" href={approachesHref()}><div class="stat-n accent">{fmt(data.totals.incidents)}</div><div class="stat-label">Close approaches</div></a>
-	<div class="stat"><div class="stat-n accent">{fmt(data.totals.wakeIncidents)}</div><div class="stat-label">Wake turbulence</div></div>
+	<a class="stat stat-link" href={approachesHref()}>
+		<div class="stat-n accent">{fmt(data.totals.incidents)}</div>
+		<div class="stat-label">Close approaches</div>
+		{#if data.totals.airlineIncidents}<div class="stat-aside">{airlineShareLabel(data.totals.airlineIncidents)}</div>{/if}
+	</a>
+	<div class="stat">
+		<div class="stat-n accent">{fmt(data.totals.wakeIncidents)}</div>
+		<div class="stat-label">Wake turbulence</div>
+		{#if data.totals.airlineWakeIncidents}<div class="stat-aside">{airlineShareLabel(data.totals.airlineWakeIncidents)}</div>{/if}
+	</div>
 </section>
 
 {#if !hasDetail}
@@ -161,8 +170,8 @@
 			</div>
 			<div class="night-right">
 				<div class="night-head"><div class="table-header">Flagged events this night</div></div>
-				{#if data.incidents.length}
-					{#each data.incidents as inc (inc.id)}
+				{#if data.cardIncidents.length}
+					{#each data.cardIncidents as inc (inc.id)}
 						<CloseApproachCard incident={inc} identA={data.idents[inc.flightA] ?? '?'} identB={data.idents[inc.flightB] ?? '?'} tz={airport.tz} />
 					{/each}
 				{:else}
@@ -174,7 +183,10 @@
 						<div><div class="tot-n">{nightFlights}</div><div class="tot-label">Flights</div></div>
 						<div><div class="tot-n">{nightAirline}</div><div class="tot-label">Passenger airline</div></div>
 						<div><div class="tot-n">{nightPrivate}</div><div class="tot-label">Private and training</div></div>
-						<a class="total-link" href={approachesHref(data.selectedNight)}><div class="tot-n accent">{data.nightSummary?.incidents ?? 0}</div><div class="tot-label">Close approaches</div></a>
+						<a class="total-link" href={approachesHref(data.selectedNight)}>
+							<div class="tot-n accent">{data.nightSummary?.incidents ?? 0}</div>
+							<div class="tot-label">Close approaches{#if data.nightAirlineIncidents}<span class="tot-aside"> · {airlineShareLabel(data.nightAirlineIncidents)}</span>{/if}</div>
+						</a>
 					</div>
 				</div>
 			</div>
@@ -188,6 +200,17 @@
 {/if}
 
 <style>
+	.stat-aside {
+		margin-top: 6px;
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--accent-text);
+	}
+	.tot-aside {
+		color: var(--accent-text);
+	}
 	.reference-note {
 		padding: 20px var(--gutter);
 		border-top: var(--row-rule);

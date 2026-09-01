@@ -598,21 +598,26 @@ export async function renderNightlyReportPdf({ detail, idents, tiles = [], origi
 
 	const nightFlights = nightSummary?.flights ?? flights.length;
 	const wakeEvents = nightSummary?.wakeIncidents ?? incidents.filter((i) => i.kind === 'wake-turbulence').length;
+	// "3 (1)" — the parenthetical counts events with a passenger airline on at least one side.
+	const withAirline = (rows: Incident[]) => rows.filter((i) => i.airlineInvolved).length;
+	const airlineApproaches = withAirline(incidents.filter((i) => i.kind !== 'wake-turbulence'));
+	const airlineWake = withAirline(incidents.filter((i) => i.kind === 'wake-turbulence'));
+	const withCount = (total: number, airline: number) => (airline ? `${fmt(total)} (${fmt(airline)})` : fmt(total));
 	const stats: StatCell[] = [
 		{ value: fmt(nightFlights), label: 'Flights' },
 		{ value: fmt(nightSummary?.arrivals ?? flights.filter((f) => f.direction === 'arrival').length), label: 'Arrivals' },
 		{ value: fmt(nightSummary?.departures ?? flights.filter((f) => f.direction === 'departure').length), label: 'Departures' },
 		{ value: fmt(nightSummary?.airline ?? flights.filter((f) => f.category === 'airline').length), label: 'Passenger airline' },
 		{ value: fmt(nightSummary?.private ?? flights.filter((f) => f.category === 'private').length), label: 'Private and training' },
-		{ value: fmt(nightSummary?.incidents ?? incidents.filter((i) => i.kind !== 'wake-turbulence').length), label: 'Close approaches', accent: true }
+		{ value: withCount(nightSummary?.incidents ?? incidents.filter((i) => i.kind !== 'wake-turbulence').length, airlineApproaches), label: 'Close approaches', accent: true }
 	];
-	if (wakeEvents) stats.push({ value: fmt(wakeEvents), label: 'Wake turbulence', accent: true });
+	if (wakeEvents) stats.push({ value: withCount(wakeEvents, airlineWake), label: 'Wake turbulence', accent: true });
 	y = drawStats(page1, fonts, stats, y);
 
 	for (const line of wrap(
 		fonts.regular,
 		7.5,
-		`Close approach: two aircraft within ${SEPARATION_LATERAL_NM} nautical miles and less than ${fmt(SEPARATION_VERTICAL_FT)} feet apart at the same moment, tower closed. Wake turbulence: an aircraft following a heavier one closer than the in-trail spacing a controller would apply.`,
+		`Close approach: two aircraft within ${SEPARATION_LATERAL_NM} nautical miles and less than ${fmt(SEPARATION_VERTICAL_FT)} feet apart at the same moment, tower closed. Wake turbulence: an aircraft following a heavier one closer than the in-trail spacing a controller would apply. A count in parentheses is how many of those events had a passenger airline on at least one side.`,
 		CONTENT_W
 	)) {
 		text(page1, line, { x: MARGIN, y, size: 7.5, font: fonts.regular, color: INK60 });

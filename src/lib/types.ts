@@ -149,6 +149,8 @@ export interface Incident {
 	/** Interpolated positions at the closest moment. */
 	posA: [number, number];
 	posB: [number, number];
+	/** At least one of the two aircraft was a passenger airline. Derived on read, never stored. */
+	airlineInvolved?: boolean;
 	/** Wake-only fields; flightA is the leader and flightB the follower. */
 	requiredNm?: number | null;
 	leaderCategory?: WakeCategory | null;

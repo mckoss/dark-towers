@@ -13,9 +13,10 @@
 	const severity = $derived(wake ? 'Wake turbulence' : incident.severity === 'very-close' ? 'Very close' : 'Close approach');
 </script>
 
-<a class="card" href="/close-approach/{incident.id}">
+<a class="card" href="/close-approach/{incident.id}" data-airline={incident.airlineInvolved ? 'yes' : 'no'}>
 	<div class="top">
 		<span class="sev">{severity}</span>
+		{#if incident.airlineInvolved}<span class="airline-tag">Passenger airline</span>{/if}
 		<span class="time tabular">{localTime(tz, incident.t)}</span>
 	</div>
 	<div class="pair">{identA} × {identB}</div>
@@ -55,6 +56,16 @@
 		display: flex;
 		align-items: baseline;
 		justify-content: space-between;
+		gap: 10px;
+	}
+	/* Explains why these cards lead the night's list. */
+	.airline-tag {
+		margin-right: auto;
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--ink-45);
 	}
 	.sev {
 		font-size: 11px;

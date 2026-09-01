@@ -239,12 +239,24 @@ export function flightsForTail(tail: string): Flight[] {
 	return (db().prepare(`SELECT * FROM flights WHERE tail = ? COLLATE NOCASE ORDER BY event_time DESC`).all(tail) as FlightRow[]).map(rowToFlight);
 }
 
+/**
+ * Whether a passenger airline was involved is derived from the two flights rather than stored, so
+ * every night already in the database is correct without a rebuild. The foreign keys cascade, so
+ * both flights always exist and an inner join drops nothing.
+ */
+const AIRLINE_INVOLVED = `(fa.category = 'airline' OR fb.category = 'airline')`;
+const INCIDENT_FROM = `FROM incidents i
+	 JOIN flights fa ON fa.id = i.flight_a
+	 JOIN flights fb ON fb.id = i.flight_b`;
+const INCIDENT_SELECT = `SELECT i.*, ${AIRLINE_INVOLVED} AS airline_involved ${INCIDENT_FROM}`;
+/** Rows written before `kind` existed are separation events. */
+const SEPARATION_KIND = `(i.kind IS NULL OR i.kind = 'separation')`;
+
 export function incidentsForTail(tail: string): Incident[] {
 	const rows = db().prepare(
-		`SELECT DISTINCT i.* FROM incidents i
-		 JOIN flights f ON f.id = i.flight_a OR f.id = i.flight_b
-		 WHERE f.tail = ? COLLATE NOCASE ORDER BY i.t DESC`
-	).all(tail) as IncidentRow[];
+		`${INCIDENT_SELECT}
+		 WHERE (fa.tail = ? COLLATE NOCASE OR fb.tail = ? COLLATE NOCASE) ORDER BY i.t DESC`
+	).all(tail, tail) as IncidentRow[];
 	return rows.map(rowToIncident);
 }
 
@@ -257,31 +269,34 @@ interface IncidentRow {
 	id: string; kind: string; airport: string; night: string; t: number; lateral_nm: number; vertical_ft: number; dist_nm: number; severity: string;
 	flight_a: string; flight_b: string; alt_a: number; alt_b: number; gs_a: number; gs_b: number; pos_a: string; pos_b: string;
 	required_nm: number | null; leader_category: string | null; follower_category: string | null; trail_seconds: number | null;
+	/** 1 when either aircraft is a passenger airline; derived by the join below, never stored. */
+	airline_involved: number;
 }
+
 function rowToIncident(r: IncidentRow): Incident {
 	const incident: Incident = {
 		id: r.id, kind: r.kind as Incident['kind'], airport: r.airport, night: r.night, t: r.t, lateralNm: r.lateral_nm, verticalFt: r.vertical_ft, distNm: r.dist_nm,
 		severity: r.severity as Incident['severity'], flightA: r.flight_a, flightB: r.flight_b, altA: r.alt_a, altB: r.alt_b, gsA: r.gs_a ?? 0, gsB: r.gs_b ?? 0,
-		posA: JSON.parse(r.pos_a), posB: JSON.parse(r.pos_b)
+		posA: JSON.parse(r.pos_a), posB: JSON.parse(r.pos_b), airlineInvolved: !!r.airline_involved
 	};
 	if (r.kind === 'wake-turbulence') Object.assign(incident, { requiredNm: r.required_nm, leaderCategory: r.leader_category, followerCategory: r.follower_category, trailSeconds: r.trail_seconds });
 	return incident;
 }
 
 export function incidentsForNight(airport: string, night: string): Incident[] {
-	return (db().prepare(`SELECT * FROM incidents WHERE airport = ? AND night = ? ORDER BY t`).all(airport, night) as IncidentRow[]).map(rowToIncident);
+	return (db().prepare(`${INCIDENT_SELECT} WHERE i.airport = ? AND i.night = ? ORDER BY i.t`).all(airport, night) as IncidentRow[]).map(rowToIncident);
 }
 export function incidentsForAirport(airport: string, fromNight: string): Incident[] {
-	return (db().prepare(`SELECT * FROM incidents WHERE airport = ? AND night >= ? ORDER BY night DESC, t`).all(airport, fromNight) as IncidentRow[]).map(rowToIncident);
+	return (db().prepare(`${INCIDENT_SELECT} WHERE i.airport = ? AND i.night >= ? ORDER BY i.night DESC, i.t`).all(airport, fromNight) as IncidentRow[]).map(rowToIncident);
 }
 export function separationIncidents(fromNight: string, toNight: string, airport?: string): Incident[] {
 	const rows = airport
-		? db().prepare(`SELECT * FROM incidents WHERE airport = ? AND night >= ? AND night <= ? AND (kind IS NULL OR kind = 'separation') ORDER BY night DESC, t DESC`).all(airport, fromNight, toNight)
-		: db().prepare(`SELECT * FROM incidents WHERE night >= ? AND night <= ? AND (kind IS NULL OR kind = 'separation') ORDER BY night DESC, t DESC`).all(fromNight, toNight);
+		? db().prepare(`${INCIDENT_SELECT} WHERE i.airport = ? AND i.night >= ? AND i.night <= ? AND ${SEPARATION_KIND} ORDER BY i.night DESC, i.t DESC`).all(airport, fromNight, toNight)
+		: db().prepare(`${INCIDENT_SELECT} WHERE i.night >= ? AND i.night <= ? AND ${SEPARATION_KIND} ORDER BY i.night DESC, i.t DESC`).all(fromNight, toNight);
 	return (rows as IncidentRow[]).map(rowToIncident);
 }
 export function incidentById(id: string): Incident | null {
-	const r = db().prepare(`SELECT * FROM incidents WHERE id = ?`).get(id) as IncidentRow | undefined;
+	const r = db().prepare(`${INCIDENT_SELECT} WHERE i.id = ?`).get(id) as IncidentRow | undefined;
 	return r ? rowToIncident(r) : null;
 }
 
@@ -316,26 +331,70 @@ export function latestNight(airport: string): string | null {
 
 export interface Totals {
 	flights: number; airline: number; private: number; incidents: number; wakeIncidents: number; nights: number;
+	/** Of `incidents`, how many had a passenger airline on at least one side. */
+	airlineIncidents: number;
+	/** Of `wakeIncidents`, how many had a passenger airline on at least one side. */
+	airlineWakeIncidents: number;
+}
+
+interface AirlineCounts {
+	airlineIncidents: number;
+	airlineWakeIncidents: number;
+}
+const NO_AIRLINE_COUNTS: AirlineCounts = { airlineIncidents: 0, airlineWakeIncidents: 0 };
+
+/**
+ * Close approaches and wake events involving a passenger airline, per airport, over an inclusive
+ * night range. Separate from the `nights` rollup so historical nights need no rebuild.
+ */
+export function airlineIncidentsByAirport(fromNight: string, toNight: string): Record<string, AirlineCounts> {
+	const rows = db()
+		.prepare(
+			`SELECT i.airport,
+			   SUM(CASE WHEN ${SEPARATION_KIND} THEN 1 ELSE 0 END) airlineIncidents,
+			   SUM(CASE WHEN i.kind = 'wake-turbulence' THEN 1 ELSE 0 END) airlineWakeIncidents
+			 ${INCIDENT_FROM}
+			 WHERE i.night >= ? AND i.night <= ? AND ${AIRLINE_INVOLVED}
+			 GROUP BY i.airport`
+		)
+		.all(fromNight, toNight) as (AirlineCounts & { airport: string })[];
+	const out: Record<string, AirlineCounts> = {};
+	for (const r of rows) out[r.airport] = { airlineIncidents: r.airlineIncidents, airlineWakeIncidents: r.airlineWakeIncidents };
+	return out;
+}
+
+/** Sum the per-airport airline counts, optionally dropping airports that must not count. */
+function sumAirlineCounts(byAirport: Record<string, AirlineCounts>, exclude: string[] = []): AirlineCounts {
+	const skip = new Set(exclude);
+	return Object.entries(byAirport).reduce<AirlineCounts>(
+		(acc, [airport, c]) =>
+			skip.has(airport)
+				? acc
+				: { airlineIncidents: acc.airlineIncidents + c.airlineIncidents, airlineWakeIncidents: acc.airlineWakeIncidents + c.airlineWakeIncidents },
+		{ ...NO_AIRLINE_COUNTS }
+	);
 }
 export function totalsForAirport(airport: string, fromNight: string, toNight: string): Totals {
 	const r = db()
 		.prepare(`SELECT COALESCE(SUM(flights),0) flights, COALESCE(SUM(airline),0) airline, COALESCE(SUM(private),0) private, COALESCE(SUM(incidents),0) incidents, COALESCE(SUM(wake_incidents),0) wakeIncidents, COUNT(*) nights FROM nights WHERE airport = ? AND night >= ? AND night <= ?`)
 		.get(airport, fromNight, toNight) as Totals;
-	return r;
+	return { ...r, ...(airlineIncidentsByAirport(fromNight, toNight)[airport] ?? NO_AIRLINE_COUNTS) };
 }
 /** Site-wide totals. `exclude` drops airports (by ICAO) that must not count — reference airports. */
 export function totalsAll(fromNight: string, toNight: string, exclude: string[] = []): Totals {
 	const holes = exclude.map(() => '?').join(',');
-	return db()
+	const r = db()
 		.prepare(`SELECT COALESCE(SUM(flights),0) flights, COALESCE(SUM(airline),0) airline, COALESCE(SUM(private),0) private, COALESCE(SUM(incidents),0) incidents, COALESCE(SUM(wake_incidents),0) wakeIncidents, COUNT(DISTINCT night) nights FROM nights WHERE night >= ? AND night <= ?${exclude.length ? ` AND airport NOT IN (${holes})` : ''}`)
 		.get(fromNight, toNight, ...exclude) as Totals;
+	return { ...r, ...sumAirlineCounts(airlineIncidentsByAirport(fromNight, toNight), exclude) };
 }
 export function totalsByAirport(fromNight: string, toNight: string): Record<string, Totals> {
 	const rows = db()
 		.prepare(`SELECT airport, COALESCE(SUM(flights),0) flights, COALESCE(SUM(airline),0) airline, COALESCE(SUM(private),0) private, COALESCE(SUM(incidents),0) incidents, COALESCE(SUM(wake_incidents),0) wakeIncidents, COUNT(*) nights FROM nights WHERE night >= ? AND night <= ? GROUP BY airport`)
 		.all(fromNight, toNight) as (Totals & { airport: string })[];
+	const airline = airlineIncidentsByAirport(fromNight, toNight);
 	const out: Record<string, Totals> = {};
-	for (const r of rows) out[r.airport] = r;
+	for (const r of rows) out[r.airport] = { ...r, ...(airline[r.airport] ?? NO_AIRLINE_COUNTS) };
 	return out;
 }
 

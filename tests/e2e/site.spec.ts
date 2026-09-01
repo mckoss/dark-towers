@@ -117,22 +117,34 @@ test.describe('home', () => {
 		await expect(page).toHaveURL(/\/close-approaches$/);
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Close approaches');
 		const replay = page.getByRole('link', { name: /Watch replay/ }).first();
-		await expect(replay).toHaveAttribute('href', /\/close-approach\/PAE-/);
+		await expect(replay).toHaveAttribute('href', /\/close-approach\/[A-Z]{3}-/);
 	});
 
-	test('close approaches default to closest and can be grouped by date or airport', async ({ page }) => {
+	test('close approaches lead with airliner events and can be grouped by date or airport', async ({ page }) => {
 		const rows = page.getByTestId('approach-row');
 		const values = () => rows.evaluateAll((nodes) => nodes.map((node) => ({
 			airport: node.getAttribute('data-airport')!,
 			night: node.getAttribute('data-night')!,
+			airline: node.getAttribute('data-airline') === 'yes',
 			score: Math.hypot(Number(node.getAttribute('data-lateral')), Number(node.getAttribute('data-vertical')) / 6076.12)
 		})));
 		const expectClosestWithin = (items: { score: number }[]) => {
 			for (let i = 1; i < items.length; i++) expect(items[i].score).toBeGreaterThanOrEqual(items[i - 1].score);
 		};
 
+		// The default groups every passenger-airline event ahead of the rest, closest within each group.
 		await page.goto('/close-approaches');
-		await expect(page.getByRole('link', { name: 'Closest', exact: true })).toHaveAttribute('aria-current', 'page');
+		await expect(page.getByRole('link', { name: 'Airliner first', exact: true })).toHaveAttribute('aria-current', 'page');
+		const byAirliner = await values();
+		const lastAirline = byAirliner.findLastIndex((r) => r.airline);
+		const firstPrivate = byAirliner.findIndex((r) => !r.airline);
+		if (lastAirline >= 0 && firstPrivate >= 0) expect(lastAirline).toBeLessThan(firstPrivate);
+		expectClosestWithin(byAirliner.filter((r) => r.airline));
+		expectClosestWithin(byAirliner.filter((r) => !r.airline));
+
+		// Choosing Closest must still mean closest, airline involvement ignored.
+		await page.getByRole('link', { name: 'Closest', exact: true }).click();
+		await expect(page).toHaveURL(/sort=closest/);
 		expectClosestWithin(await values());
 
 		await page.getByRole('link', { name: 'Date', exact: true }).click();
@@ -151,8 +163,20 @@ test.describe('home', () => {
 			if (byAirport[i].airport === byAirport[i - 1].airport) expect(byAirport[i].score).toBeGreaterThanOrEqual(byAirport[i - 1].score);
 		}
 
-		await page.getByRole('link', { name: 'Closest', exact: true }).click();
+		await page.getByRole('link', { name: 'Airliner first', exact: true }).click();
 		await expect(page).toHaveURL(/\/close-approaches$/);
+	});
+
+	test('counts say how many close approaches involved a passenger airline', async ({ page }) => {
+		await page.goto('/close-approaches');
+		const heading = page.locator('.head p');
+		await expect(heading).toContainText(/\(\d+ with a passenger airline\)/);
+
+		await page.goto('/');
+		await expect(page.getByTestId('home-airline-incidents')).toContainText(/\d+ with a passenger airline/);
+
+		await page.goto('/airport/PAE');
+		await expect(page.locator('.facts, .stats').getByText(/with a passenger airline/).first()).toBeVisible();
 	});
 });
 

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { localTime, nightLabel } from '$lib/time';
 	import AircraftIdentity from '$lib/components/AircraftIdentity.svelte';
+	import { DEFAULT_CLOSE_APPROACH_SORT, airlineShareLabel, type CloseApproachSort } from '$lib/close-approach-sort';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -9,16 +10,17 @@
 	const heading = $derived(data.airport ? `Close approaches at ${data.airport.name}` : 'Close approaches');
 	const periodLabel = $derived(data.night ? `Night of ${nightLabel(data.night)}` : data.period.label);
 	const sortOptions = [
+		{ value: 'airliner', label: 'Airliner first' },
 		{ value: 'closest', label: 'Closest' },
 		{ value: 'airport', label: 'Airport' },
 		{ value: 'date', label: 'Date' }
 	] as const;
-	function sortHref(sort: 'closest' | 'airport' | 'date'): string {
+	function sortHref(sort: CloseApproachSort): string {
 		const q = new URLSearchParams();
 		if (data.airport) q.set('airport', data.airport.code);
 		if (data.night) q.set('night', data.night);
 		else if (data.period.month) q.set('month', data.period.month);
-		if (sort !== 'closest') q.set('sort', sort);
+		if (sort !== DEFAULT_CLOSE_APPROACH_SORT) q.set('sort', sort);
 		const query = q.toString();
 		return `/close-approaches${query ? `?${query}` : ''}`;
 	}
@@ -31,14 +33,17 @@
 <section class="section head">
 	<div class="table-header">Below the controller separation standard</div>
 	<h1>{heading}</h1>
-	<p>{periodLabel} · {data.rows.length.toLocaleString('en-US')} {data.rows.length === 1 ? 'event' : 'events'}</p>
+	<p>
+		{periodLabel} · {data.rows.length.toLocaleString('en-US')} {data.rows.length === 1 ? 'event' : 'events'}
+		{#if data.airlineRows}<span class="airline-count">({airlineShareLabel(data.airlineRows)})</span>{/if}
+	</p>
 </section>
 
 <section class="section listing" aria-label="Close approaches">
 	<div class="sort-bar">
 		<div>
 			<div class="table-header">Sort by</div>
-			<div class="sort-note">Closest uses straight-line proximity; airport and date groups rank their closest approaches first.</div>
+			<div class="sort-note">Airliner first lists every event involving a passenger airline before the rest, closest within each group. Closest uses straight-line proximity alone; airport and date groups rank their closest approaches first.</div>
 		</div>
 		<nav class="sort-options" aria-label="Sort close approaches">
 			{#each sortOptions as option (option.value)}
@@ -55,10 +60,10 @@
 		<div></div>
 	</div>
 	{#each data.rows as incident (incident.id)}
-		<div class="row item" data-testid="approach-row" data-airport={incident.airportCode} data-night={incident.night} data-lateral={incident.lateralNm} data-vertical={incident.verticalFt}>
+		<div class="row item" data-testid="approach-row" data-airport={incident.airportCode} data-night={incident.night} data-lateral={incident.lateralNm} data-vertical={incident.verticalFt} data-airline={incident.airlineInvolved ? 'yes' : 'no'}>
 			<a class="row-link" href="/close-approach/{incident.id}" aria-label="Watch replay of {incident.identA} and {incident.identB}"></a>
 			<div class="when tabular"><strong>{nightLabel(incident.night)}</strong><span>{localTime(incident.tz, incident.t, true)}</span></div>
-			<div><strong>{incident.airportCode}</strong><span>{incident.airportName}</span></div>
+			<div><strong>{incident.airportCode}</strong><span>{incident.airportName}</span>{#if incident.airlineInvolved}<span class="airline-tag">Passenger airline</span>{/if}</div>
 			<div class="pair"><AircraftIdentity identity={incident.identityA} /><span>×</span><AircraftIdentity identity={incident.identityB} /></div>
 			<div class="tabular">{nm(incident.lateralNm)}</div>
 			<div class="tabular">{ft(incident.verticalFt)}</div>
@@ -93,6 +98,19 @@
 		gap: 20px;
 		padding: 12px 0;
 		border-top: var(--rule);
+	}
+	.airline-count {
+		color: var(--accent-text);
+		font-weight: 700;
+	}
+	.airline-tag {
+		display: block;
+		margin-top: 3px;
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--ink-45);
 	}
 	.sort-note {
 		margin-top: 4px;
