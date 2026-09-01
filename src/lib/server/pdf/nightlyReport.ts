@@ -20,6 +20,9 @@ import {
 	rectangle,
 	clip,
 	endPath,
+	PDFArray,
+	PDFName,
+	PDFString,
 	type Color,
 	type PDFFont,
 	type PDFImage,
@@ -177,7 +180,32 @@ function localDateKey(tz: string, utcMs: number): string {
 	return new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(utcMs);
 }
 
-function drawHeader(page: PDFPage, fonts: Fonts, airport: AirportConfig, night: string, generatedAt: number): number {
+/**
+ * Right-aligned text that viewers open as a link. pdf-lib has no drawing API
+ * for this, so the URI annotation goes on by hand over the text's own box.
+ */
+function drawLinkRight(doc: PDFDocument, page: PDFPage, label: string, url: string, right: number, y: number, size: number, font: PDFFont) {
+	const shown = safe(label);
+	const x = right - font.widthOfTextAtSize(shown, size);
+	text(page, shown, { x, y, size, font, color: ACCENT });
+
+	const ref = doc.context.register(
+		doc.context.obj({
+			Type: 'Annot',
+			Subtype: 'Link',
+			Rect: [x, y - 2, right, y + size],
+			// No visible frame: the accent colour already says it is a link.
+			Border: [0, 0, 0],
+			A: { Type: 'Action', S: 'URI', URI: PDFString.of(url) }
+		})
+	);
+	const key = PDFName.of('Annots');
+	const existing = page.node.lookupMaybe(key, PDFArray);
+	if (existing) existing.push(ref);
+	else page.node.set(key, doc.context.obj([ref]));
+}
+
+function drawHeader(doc: PDFDocument, page: PDFPage, fonts: Fonts, airport: AirportConfig, night: string, generatedAt: number, liveUrl: string | null): number {
 	let y = PAGE_H - MARGIN;
 	text(page, 'DARK TOWERS · NIGHTLY REPORT', { x: MARGIN, y, size: 8, font: fonts.bold, color: INK45 });
 	textRight(page, `Report made ${nightLabelLong(localDateKey(airport.tz, generatedAt))}, ${localTimeZoned(airport.tz, generatedAt)}`, {
@@ -193,6 +221,12 @@ function drawHeader(page: PDFPage, fonts: Fonts, airport: AirportConfig, night: 
 	text(page, `${airport.city}, ${airport.state} · ${airport.icao}`, { x: MARGIN, y, size: 9, font: fonts.regular, color: INK60 });
 	y -= 20;
 	text(page, `Night of ${nightLabelLong(night)}`, { x: MARGIN, y, size: 13, font: fonts.bold, color: INK });
+	if (liveUrl) {
+		// The scheme is dropped so the address stays short enough to retype; the
+		// annotation underneath still carries the whole thing.
+		textRight(page, 'REPLAY THIS NIGHT ONLINE', { right: PAGE_W - MARGIN, y: y + 11, size: 6, font: fonts.bold, color: INK45 });
+		drawLinkRight(doc, page, liveUrl.replace(/^https?:\/\//, ''), liveUrl, PAGE_W - MARGIN, y, 10, fonts.bold);
+	}
 	y -= 12;
 	const tower = towerHoursOn(airport, night);
 	text(page, tower ? `Tower closed ${hourLabel(tower.close)} to ${hourLabel(tower.open)}` : 'No tower at any hour', {
@@ -542,7 +576,8 @@ export async function renderNightlyReportPdf({ detail, idents, tiles = [], origi
 	}
 
 	const page1 = addPage(doc);
-	let y = drawHeader(page1, fonts, airport, night, generatedAt);
+	const liveUrl = origin ? `${origin}/airport/${airport.code}?night=${night}` : null;
+	let y = drawHeader(doc, page1, fonts, airport, night, generatedAt, liveUrl);
 	y = drawFacts(page1, fonts, airport, y);
 
 	const nightFlights = nightSummary?.flights ?? flights.length;
@@ -646,7 +681,7 @@ export async function renderNightlyReportPdf({ detail, idents, tiles = [], origi
 	}
 
 	const pages = doc.getPages();
-	const source = origin ? `${origin}/airport/${airport.code}?night=${night}` : `${airport.code} · Night of ${nightLabelLong(night)}`;
+	const source = `${airport.code} · Night of ${nightLabelLong(night)}`;
 	pages.forEach((p, i) => {
 		p.drawLine({ start: { x: MARGIN, y: MARGIN + 13 }, end: { x: PAGE_W - MARGIN, y: MARGIN + 13 }, thickness: 1, color: HAIRLINE });
 		text(p, source, { x: MARGIN, y: MARGIN + 3, size: 7, font: fonts.regular, color: INK45 });

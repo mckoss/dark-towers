@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PDFDocument } from 'pdf-lib';
+import { PDFArray, PDFDict, PDFDocument, PDFName } from 'pdf-lib';
 import { renderNightlyReportPdf } from '../../src/lib/server/pdf/nightlyReport';
 import { tilesForView, mapBounds, MAP_VIEWS } from '../../src/lib/report-maps';
 import type { AirportConfig, Flight, Incident } from '../../src/lib/types';
@@ -128,6 +128,18 @@ describe('nightly report PDF', () => {
 		const odd = { ...airport, name: 'Snohomish 〜 Paine — Field', city: 'Everett™' };
 		const pdf = await renderNightlyReportPdf({ detail: detail({ airport: odd }), idents });
 		expect(Buffer.from(pdf.slice(0, 5)).toString()).toBe('%PDF-');
+	});
+
+	it('links the header URL back to the live night', async () => {
+		const pdf = await renderNightlyReportPdf({ detail: detail(), idents, origin: 'https://darktowers.org' });
+		const [first] = (await PDFDocument.load(pdf)).getPages();
+		const annots = first.node.lookupMaybe(PDFName.of('Annots'), PDFArray);
+
+		// A viewer that auto-detects URL-shaped text is not enough: the address is
+		// shown without its scheme, so the annotation has to carry the real link.
+		expect(annots?.size()).toBe(1);
+		const action = annots!.lookup(0, PDFDict).get(PDFName.of('A')) as PDFDict;
+		expect(String(action.get(PDFName.of('URI')))).toContain('https://darktowers.org/airport/PAE?night=2026-08-17');
 	});
 
 	it('needs a night to report on', async () => {
