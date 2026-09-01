@@ -235,7 +235,7 @@ function drawHeader(doc: PDFDocument, page: PDFPage, fonts: Fonts, airport: Airp
 		// the tower hours, with its label a line above. The scheme is dropped so
 		// the address stays short enough to retype; the annotation still carries
 		// the whole thing.
-		textRight(page, 'REPLAY THIS NIGHT ONLINE', { right: PAGE_W - MARGIN, y: y + 9, size: 6, font: fonts.bold, color: INK45 });
+		textRight(page, 'REPLAY THIS NIGHT ONLINE', { right: PAGE_W - MARGIN, y: y + 11, size: 6, font: fonts.bold, color: INK45 });
 		drawLinkRight(doc, page, liveUrl.replace(/^https?:\/\//, ''), liveUrl, PAGE_W - MARGIN, y, 10, fonts.bold);
 	}
 	y -= 11;
