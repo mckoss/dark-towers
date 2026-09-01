@@ -7,11 +7,11 @@ import { getAirport, listAirports } from './airports-store';
 import { operatorMap } from './operators-store';
 import { flightLabel } from '$lib/flights';
 import { addDays, todayKey } from '$lib/time';
-import type { AirportConfig, Flight, Incident, NightSummary } from '$lib/types';
+import type { AirportConfig, AirportKind, Flight, Incident, NightSummary } from '$lib/types';
 import * as db from './db';
 import { nasrData } from './nasr';
 import { qualifyingAirports, towerHoursText } from '$lib/nasr';
-import { towerHoursLabel } from '$lib/airports';
+import { airportHoursLabel, isReference } from '$lib/airports';
 import { sortCloseApproaches, type CloseApproachSort } from '$lib/close-approach-sort';
 import { lookupTail } from './registry';
 import { registryKey, type RegistryEntry } from '$lib/registry';
@@ -83,6 +83,7 @@ export interface CoverageAirport {
 	pos: [number, number];
 	towerLabel: string;
 	status: CoverageStatus;
+	kind: AirportKind;
 	/** Recorded arrivals and departures in the current 30-day window. */
 	operations: number;
 	/** Whether the current 30-day window contains at least one very-close event. */
@@ -96,7 +97,9 @@ export function airportsWithStats(period = currentPeriod()): AirportWithStats[] 
 
 export function homeData() {
 	const period = currentPeriod();
-	const totals = db.totalsAll(period.from, period.to);
+	// Reference airports are watched for comparison only; they never swell the site's totals.
+	const reference = listAirports().filter(isReference).map((a) => a.icao);
+	const totals = db.totalsAll(period.from, period.to, reference);
 	return { period, totals, airports: airportCoverage(period) };
 }
 
@@ -114,7 +117,7 @@ export function airportCoverage(period = currentPeriod()): CoverageAirport[] {
 			const status: CoverageStatus = stored?.tracked ? 'tracking' : stored || requested.has(airport.id) ? 'requested' : 'available';
 			coverage.set(airport.id, {
 				code: airport.id, name: airport.name, city: airport.city, state: airport.state,
-				pos: [airport.lat, airport.lon], towerLabel: towerHoursText(airport), status,
+				pos: [airport.lat, airport.lon], towerLabel: towerHoursText(airport), status, kind: stored?.kind ?? 'dark',
 				operations: stored?.stats?.flights ?? 0,
 				veryClose: stored ? veryClose.has(stored.icao) : false
 			});
@@ -124,7 +127,7 @@ export function airportCoverage(period = currentPeriod()): CoverageAirport[] {
 	for (const airport of configured) {
 		coverage.set(airport.code, {
 			code: airport.code, name: airport.name, city: airport.city, state: airport.state, pos: airport.pos,
-			towerLabel: towerHoursLabel(airport), status: airport.tracked ? 'tracking' : 'requested',
+			towerLabel: airportHoursLabel(airport), status: airport.tracked ? 'tracking' : 'requested', kind: airport.kind,
 			operations: airport.stats?.flights ?? 0,
 			veryClose: veryClose.has(airport.icao)
 		});
@@ -135,7 +138,7 @@ export function airportCoverage(period = currentPeriod()): CoverageAirport[] {
 export function airportsPageData() {
 	const period = currentPeriod();
 	const configured = airportsWithStats(period);
-	const airportsByCode = new Map<string, AirportListRow>(configured.map((airport) => [airport.code, { ...airport, towerLabel: towerHoursLabel(airport) }]));
+	const airportsByCode = new Map<string, AirportListRow>(configured.map((airport) => [airport.code, { ...airport, towerLabel: airportHoursLabel(airport) }]));
 	const data = nasrData();
 	if (data) {
 		for (const code of db.requestedAirportCodes()) {
@@ -145,17 +148,20 @@ export function airportsPageData() {
 			airportsByCode.set(code, {
 				code: airport.id, icao: airport.icao ?? airport.id, name: airport.name, city: airport.city, state: airport.state,
 				tz: '', pos: [airport.lat, airport.lon], elevationFt: airport.elevFt, towerHours: null, schedules: [], carriers: [],
-				status: 'requested', tracked: false, stats: null, towerLabel: towerHoursText(airport)
+				status: 'requested', tracked: false, kind: airport.tower === 'full-time' ? 'reference' : 'dark', stats: null, towerLabel: towerHoursText(airport)
 			});
 		}
 	}
 	const airports = [...airportsByCode.values()].sort((a, b) => a.code.localeCompare(b.code));
-	const tracked = airports.filter((a) => a.tracked);
+	// Reference airports are listed but kept out of every headline number.
+	const tracked = airports.filter((a) => a.tracked && !isReference(a));
+	const reference = airports.filter((a) => a.tracked && isReference(a));
 	return {
 		period,
 		airports,
 		stats: {
 			tracked: tracked.length,
+			reference: reference.length,
 			incidents: tracked.reduce((n, a) => n + (a.stats?.incidents ?? 0), 0),
 			wakeIncidents: tracked.reduce((n, a) => n + (a.stats?.wakeIncidents ?? 0), 0),
 			requested: airports.filter((a) => !a.tracked).length,

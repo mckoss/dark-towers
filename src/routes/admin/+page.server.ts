@@ -1,6 +1,6 @@
 import { listAirports } from '$lib/server/airports-store';
 import { altimeterCheck, deleteRequest, getRequest, incompleteNights, listRequests, nightCounts, recentProblems, runActivity } from '$lib/server/db';
-import { airportCandidate, confirmAirport } from '$lib/server/airport-onboarding';
+import { airportCandidate, confirmAirport, type QuietHours } from '$lib/server/airport-onboarding';
 import { pressureOffsetFt } from '$lib/altimeter';
 import { cachedCapability, extendedHistoryAllowed, probeCapability } from '$lib/server/capability';
 import { BOOTED, currentJob, startBackfill, startCatchUp, startIngest } from '$lib/server/jobs';
@@ -98,6 +98,11 @@ export const load: PageServerLoad = ({ locals }) => {
 	};
 };
 
+/** The quiet-hours window the requester proposed, for a reference-airport request. */
+function quietOf(row: { kind: string | null; quiet_start: number | null; quiet_end: number | null }): QuietHours | null {
+	return row.kind === 'reference' && row.quiet_start != null && row.quiet_end != null ? { start: row.quiet_start, end: row.quiet_end } : null;
+}
+
 export const actions: Actions = {
 	probe: async () => {
 		const cap = await probeCapability({ log: console.log });
@@ -141,7 +146,7 @@ export const actions: Actions = {
 		if (!row) return fail(404, { error: 'Request not found.' });
 		const code = row.code || row.value;
 		try {
-			return { candidate: airportCandidate(code), requestId: id };
+			return { candidate: airportCandidate(code, quietOf(row)), requestId: id };
 		} catch (e) {
 			return fail(400, { error: e instanceof Error ? e.message : String(e) });
 		}
@@ -153,7 +158,7 @@ export const actions: Actions = {
 		const row = getRequest(id);
 		if (!row) return fail(404, { error: 'Request not found.' });
 		try {
-			const added = confirmAirport(row.code || row.value, locals.user!.email, id);
+			const added = confirmAirport(row.code || row.value, locals.user!.email, id, quietOf(row));
 			return { accepted: added.code };
 		} catch (e) {
 			return fail(400, { error: e instanceof Error ? e.message : String(e) });

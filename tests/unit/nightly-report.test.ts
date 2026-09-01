@@ -18,6 +18,7 @@ const airport: AirportConfig = {
 	schedules: [{ id: 's1', from: '2020-01-01', to: null, open: 7, close: 21, note: '' }],
 	carriers: ['Alaska'],
 	status: 'tracking',
+	kind: 'dark',
 	tracked: true
 };
 

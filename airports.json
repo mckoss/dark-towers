@@ -18,6 +18,7 @@
       ],
       "status": "tracking",
       "tracked": true,
+      "kind": "dark",
       "schedules": [
         {
           "id": "BLI-2024-01-01",
@@ -26,6 +27,32 @@
           "open": 7,
           "close": 22,
           "note": "Hours from the FAA Chart Supplement (AirNav), Aug 2026. Tower 0700–2230; rounded to 22:00 (the half hour is counted as closed)."
+        }
+      ]
+    },
+    {
+      "id": "BUR",
+      "code": "BUR",
+      "icao": "KBUR",
+      "name": "Hollywood Burbank (Bob Hope)",
+      "city": "Burbank",
+      "state": "CA",
+      "tz": "America/Los_Angeles",
+      "lat": 34.2006944,
+      "lon": -118.3586667,
+      "elevation_ft": 778,
+      "carriers": [],
+      "status": "tracking",
+      "tracked": true,
+      "kind": "reference",
+      "schedules": [
+        {
+          "id": "BUR-2024-01-01",
+          "from": "2024-01-01",
+          "to": null,
+          "open": 7,
+          "close": 22,
+          "note": "Reference airport, not a dark tower. The tower is staffed 24 hours; these hours mark the Burbank-Glendale-Pasadena Airport Authority's voluntary curfew, 10:00 pm to 7:00 am local, when takeoffs and landings by noisy aircraft are to stop. The Authority reports over 99% compliance and allows exceptions for emergencies, weather alternates and air traffic control delays. The curfew is a voluntary agreement, not a federal rule: the Authority's Part 161 request for a mandatory curfew was denied in November 2009. Sources: hollywoodburbankairport.com/noise/voluntary-curfew and /noise/noise-issues, checked September 2026."
         }
       ]
     },
@@ -48,6 +75,7 @@
       ],
       "status": "tracking",
       "tracked": true,
+      "kind": "dark",
       "schedules": [
         {
           "id": "LGB-2024-01-01",
@@ -78,6 +106,7 @@
       ],
       "status": "tracking",
       "tracked": true,
+      "kind": "dark",
       "schedules": [
         {
           "id": "MRY-2024-01-01",
@@ -107,6 +136,7 @@
       ],
       "status": "tracking",
       "tracked": true,
+      "kind": "dark",
       "schedules": [
         {
           "id": "PAE-2024-01-01",
@@ -132,6 +162,7 @@
       "carriers": [],
       "status": "tracking",
       "tracked": true,
+      "kind": "dark",
       "schedules": [
         {
           "id": "RNT-2024-01-01",
@@ -251,6 +282,7 @@
       ],
       "status": "tracking",
       "tracked": true,
+      "kind": "dark",
       "schedules": [
         {
           "id": "SBA-2024-01-01",
@@ -284,6 +316,7 @@
       ],
       "status": "tracking",
       "tracked": true,
+      "kind": "dark",
       "schedules": [
         {
           "id": "SNA-2024-01-01",

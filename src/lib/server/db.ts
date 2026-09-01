@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import { DB_PATH, ensureDirs } from './config';
-import type { Flight, Incident, NightSummary, Position } from '$lib/types';
+import type { AirportKind, Flight, Incident, NightSummary, Position } from '$lib/types';
 import type { AltimeterReading, OnFieldPoint } from '$lib/altimeter';
 
 let _db: Database.Database | null = null;
@@ -115,6 +115,8 @@ function migrate(d: Database.Database) {
 	if (!rcols.includes('code')) d.exec(`ALTER TABLE requests ADD COLUMN code TEXT; ALTER TABLE requests ADD COLUMN assessment TEXT;`);
 	if (!rcols.includes('name')) d.exec(`ALTER TABLE requests ADD COLUMN name TEXT;`);
 	if (!rcols.includes('comment')) d.exec(`ALTER TABLE requests ADD COLUMN comment TEXT;`);
+	// Reference-airport requests carry the quiet-hours window the requester proposed.
+	if (!rcols.includes('kind')) d.exec(`ALTER TABLE requests ADD COLUMN kind TEXT; ALTER TABLE requests ADD COLUMN quiet_start INTEGER; ALTER TABLE requests ADD COLUMN quiet_end INTEGER;`);
 }
 
 /* ---------- writes (all upserts → idempotent) ---------- */
@@ -184,8 +186,19 @@ export function recordRunEnd(id: number, ok: boolean, message: string) {
 	db().prepare(`UPDATE runs SET finished_at = ?, ok = ?, message = ? WHERE id = ?`).run(Date.now(), ok ? 1 : 0, message, id);
 }
 
-export function insertRequest(value: string, email: string | null, code: string | null = null, assessment: string | null = null, name: string | null = null, comment: string | null = null) {
-	db().prepare(`INSERT INTO requests (value, email, code, assessment, name, comment, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`).run(value, email, code, assessment, name, comment, Date.now());
+export function insertRequest(
+	value: string,
+	email: string | null,
+	code: string | null = null,
+	assessment: string | null = null,
+	name: string | null = null,
+	comment: string | null = null,
+	kind: AirportKind = 'dark',
+	quiet: { start: number; end: number } | null = null
+) {
+	db()
+		.prepare(`INSERT INTO requests (value, email, code, assessment, name, comment, kind, quiet_start, quiet_end, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+		.run(value, email, code, assessment, name, comment, kind, quiet?.start ?? null, quiet?.end ?? null, Date.now());
 }
 
 export function requestExists(code: string): boolean {
@@ -310,10 +323,12 @@ export function totalsForAirport(airport: string, fromNight: string, toNight: st
 		.get(airport, fromNight, toNight) as Totals;
 	return r;
 }
-export function totalsAll(fromNight: string, toNight: string): Totals {
+/** Site-wide totals. `exclude` drops airports (by ICAO) that must not count — reference airports. */
+export function totalsAll(fromNight: string, toNight: string, exclude: string[] = []): Totals {
+	const holes = exclude.map(() => '?').join(',');
 	return db()
-		.prepare(`SELECT COALESCE(SUM(flights),0) flights, COALESCE(SUM(airline),0) airline, COALESCE(SUM(private),0) private, COALESCE(SUM(incidents),0) incidents, COALESCE(SUM(wake_incidents),0) wakeIncidents, COUNT(DISTINCT night) nights FROM nights WHERE night >= ? AND night <= ?`)
-		.get(fromNight, toNight) as Totals;
+		.prepare(`SELECT COALESCE(SUM(flights),0) flights, COALESCE(SUM(airline),0) airline, COALESCE(SUM(private),0) private, COALESCE(SUM(incidents),0) incidents, COALESCE(SUM(wake_incidents),0) wakeIncidents, COUNT(DISTINCT night) nights FROM nights WHERE night >= ? AND night <= ?${exclude.length ? ` AND airport NOT IN (${holes})` : ''}`)
+		.get(fromNight, toNight, ...exclude) as Totals;
 }
 export function totalsByAirport(fromNight: string, toNight: string): Record<string, Totals> {
 	const rows = db()
@@ -363,7 +378,8 @@ export function recentProblems(sinceMs: number): { airport: string; night: strin
 }
 
 export interface RequestRow {
-	id: number; value: string; email: string | null; name: string | null; comment: string | null; code: string | null; assessment: string | null; created_at: number;
+	id: number; value: string; email: string | null; name: string | null; comment: string | null; code: string | null; assessment: string | null;
+	kind: AirportKind | null; quiet_start: number | null; quiet_end: number | null; created_at: number;
 }
 export function listRequests(limit = 200): RequestRow[] {
 	return db().prepare(`SELECT * FROM requests ORDER BY id DESC LIMIT ?`).all(limit) as RequestRow[];

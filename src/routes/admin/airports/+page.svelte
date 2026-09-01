@@ -9,6 +9,9 @@
 	const toggle = (id: string) => (open[id] = !open[id]);
 	const when = (ms: number | null) => (ms ? new Date(ms).toLocaleString('en-US', { hour12: false }) : '—');
 	const hoursText = (o: number | null, c: number | null) => (o == null || c == null ? 'No tower' : `${hourLabel(o)} – ${hourLabel(c)}`);
+	/** The nightly window we collect: from close to the next day's open. */
+	const watchText = (o: number | null, c: number | null) => (o == null || c == null ? 'all night' : `${hourLabel(c)} – ${hourLabel(o)}`);
+	const hourOptions = Array.from({ length: 25 }, (_, h) => h);
 </script>
 
 <svelte:head>
@@ -78,7 +81,7 @@
 					<span class="code">{a.code}</span>
 					<span class="name">{a.name} <span class="dim">· {a.city}, {a.state} · {a.icao}</span></span>
 					<span class="pill {a.status === 'tracking' ? 'pill-accent' : 'pill-ghost'}">{a.status}</span>
-					<span class="dim">{a.tracked ? 'tracked' : 'not tracked'} · today {hoursText(a.towerHours?.open ?? null, a.towerHours?.close ?? null)}</span>
+					<span class="dim">{a.kind === 'reference' ? 'reference' : 'dark'} · {a.tracked ? 'tracked' : 'not tracked'} · watched {watchText(a.towerHours?.open ?? null, a.towerHours?.close ?? null)}</span>
 					<span class="caret">{open[a.id] ? '▾' : '▸'}</span>
 				</button>
 				{#if open[a.id]}
@@ -101,12 +104,18 @@
 									<option value="tracking">tracking</option><option value="requested">requested</option>
 								</select>
 							</label>
+							<label>Kind
+								<select name="kind" value={a.kind}>
+									<option value="dark">dark — tower closed or absent</option><option value="reference">reference — 24-hour tower, quiet hours</option>
+								</select>
+								<span class="field-note">Reference airports are watched during their quiet hours and kept out of the site totals.</span>
+							</label>
 							<label class="check"><input type="checkbox" name="tracked" checked={a.tracked} /> Collect nightly (costs API calls)</label>
 							<div class="actions"><button class="btn btn-ink" type="submit">Save airport</button><span class="dim">last edit {when(a.updatedAt)}{a.updatedBy ? ` by ${a.updatedBy}` : ''}</span></div>
 						</form>
 
 						<h3 class="sub">Tower hours</h3>
-						<p class="hint">Effective-dated rows; the latest "from" wins on overlap. Leave open/close blank for a period with no tower. Cite the FAA Chart Supplement (and its effective date) in the note.</p>
+						<p class="hint">Effective-dated rows; the latest "from" wins on overlap. Leave open/close blank for a period with no tower. Open/close bound the hours we do <em>not</em> collect, so the night runs from close to the next open — at a reference airport that means open = the morning end of the quiet hours and close = the evening start. Cite the FAA Chart Supplement (and its effective date) in the note.</p>
 						<div class="sched">
 							<div class="table-header">From</div><div class="table-header">To</div><div class="table-header">Open</div><div class="table-header">Close</div><div class="table-header">Note</div><div></div>
 							{#each a.schedules as s (s.id)}
@@ -136,7 +145,7 @@
 
 <section class="section cell">
 	<h2 class="section-heading">Add an airport</h2>
-	<p class="hint">Enter the three-letter code. The FAA record supplies the airport details and tower hours; nothing is saved until you confirm.</p>
+	<p class="hint">Enter the three-letter code. The FAA record supplies the airport details and tower hours; nothing is saved until you confirm. An airport whose tower is staffed 24 hours can only be added as a reference airport, and needs its published quiet hours.</p>
 	<form method="POST" action="?/lookupAirport" use:enhance class="lookup-form">
 		<label>Airport code <input name="code" placeholder="BLI" value={form?.code ?? ''} required minlength="3" maxlength="3" autocomplete="off" /></label>
 		<button class="btn btn-ink" type="submit">Look up airport</button>
@@ -152,10 +161,26 @@
 				<dt>Location</dt><dd>{form.candidate.lat.toFixed(4)}, {form.candidate.lon.toFixed(4)} · {form.candidate.elevationFt.toLocaleString()} ft</dd>
 				<dt>Time zone</dt><dd>{form.candidate.tz}</dd>
 				<dt>FAA tower record</dt><dd>{form.candidate.tower === 'none' ? 'No control tower' : form.candidate.towerHours}</dd>
-				<dt>Polling schedule</dt><dd>{hoursText(form.candidate.schedule.open, form.candidate.schedule.close)} local · effective {form.candidate.schedule.from}</dd>
+				<dt>Kind</dt><dd>{form.candidate.kind === 'reference' ? 'reference — 24-hour tower, watched during quiet hours' : 'dark — tower closed or absent'}</dd>
+				{#if form.candidate.schedule}
+					<dt>Nightly window</dt><dd>{watchText(form.candidate.schedule.open, form.candidate.schedule.close)} local · effective {form.candidate.schedule.from}</dd>
+				{/if}
 			</dl>
-			<form method="POST" action="?/confirmAirport" use:enhance>
+			<form method="POST" action="?/confirmAirport" use:enhance class="confirm-form">
 				<input type="hidden" name="code" value={form.candidate.code} />
+				{#if form.candidate.needsQuietHours}
+					<p class="hint">This airport's tower is staffed 24 hours. Give the quiet hours the airport publishes — the evening start and the morning end — and note the source in the schedule after adding it.</p>
+					<label>Quiet from
+						<select name="quiet_start" required data-testid="quiet-start">
+							{#each hourOptions as h (h)}<option value={h} selected={h === 22}>{hourLabel(h)}</option>{/each}
+						</select>
+					</label>
+					<label>Quiet to
+						<select name="quiet_end" required data-testid="quiet-end">
+							{#each hourOptions as h (h)}<option value={h} selected={h === 7}>{hourLabel(h)}</option>{/each}
+						</select>
+					</label>
+				{/if}
 				<button class="btn btn-ink" type="submit">Confirm and start tracking</button>
 			</form>
 		</div>
@@ -197,6 +222,9 @@
 	.candidate dl { display: grid; grid-template-columns: max-content 1fr; gap: 5px 14px; margin: 0; font-size: 13px; }
 	.candidate dt { color: var(--ink-60); }
 	.candidate dd { margin: 0; font-weight: 600; }
+	.confirm-form { display: flex; flex-direction: column; gap: 10px; }
+	.confirm-form label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-60); }
+	.confirm-form select { padding: 8px 10px; border: 2px solid var(--hairline); background: #fff; font: inherit; font-size: 14px; }
 	.sub { margin-top: 28px; font-size: 16px; font-weight: 800; }
 	.sched { display: grid; grid-template-columns: 120px 120px 64px 64px 1fr 110px; gap: 6px 10px; align-items: center; margin-top: 10px; }
 	.contents { display: contents; }

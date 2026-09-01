@@ -11,7 +11,7 @@ const { eventTimeOf, categoryOf, normalizeFlight, clipTrack } = pipeline;
 
 const PAE: AirportConfig = {
 	code: 'PAE', icao: 'KPAE', name: 'Snohomish County (Paine Field)', city: 'Everett', state: 'WA', tz: 'America/Los_Angeles',
-	pos: [47.9079, -122.2816], elevationFt: 606, towerHours: { open: 7, close: 21 }, carriers: [], status: 'tracking', tracked: true,
+	pos: [47.9079, -122.2816], elevationFt: 606, towerHours: { open: 7, close: 21 }, carriers: [], status: 'tracking', tracked: true, kind: 'dark',
 	schedules: [{ id: 'PAE-2024-01-01', from: '2024-01-01', to: null, open: 7, close: 21, note: '' }]
 };
 const NIGHT = '2026-08-14';

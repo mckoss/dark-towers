@@ -5,6 +5,15 @@ import type { Airframe, RegistryEntry } from './registry';
 
 export type AirportStatus = 'tracking' | 'requested';
 
+/**
+ * What kind of airport this is, and therefore what the nightly window means.
+ * 'dark'      — no tower, or a tower that closes while passenger flights are still
+ *               arriving and leaving. The window is the hours the tower is closed.
+ * 'reference' — a tower staffed 24 hours, tracked during the airport's own published
+ *               quiet hours for comparison. Not counted in the site's totals.
+ */
+export type AirportKind = 'dark' | 'reference';
+
 export interface TowerHours {
 	/** Local hour the tower opens (0–23). */
 	open: number;
@@ -12,7 +21,12 @@ export interface TowerHours {
 	close: number;
 }
 
-/** An effective-dated tower-hours row. open/close null = no tower during this period. */
+/**
+ * An effective-dated tower-hours row. open/close null = no tower during this period.
+ * open/close always bound the hours we do NOT collect: for a 'dark' airport those are the
+ * staffed hours; for a 'reference' airport they are the hours outside the quiet window.
+ * Either way the night runs from `close` to the next day's `open`.
+ */
 export interface TowerSchedule {
 	id: string;
 	/** YYYY-MM-DD inclusive. */
@@ -41,6 +55,8 @@ export interface AirportConfig {
 	name: string;
 	city: string;
 	state: string;
+	/** Dark (tower closed or absent) or reference (24-hour tower, tracked during quiet hours). */
+	kind: AirportKind;
 	/** IANA time zone. */
 	tz: string;
 	/** [lat, lon] of the field reference point. */

@@ -96,15 +96,22 @@ describe('lookups', () => {
 });
 
 describe('assessRequest', () => {
-	it('accepts part-time and no-tower airports, rejects 24-hour towers and unknowns', () => {
-		expect(assessRequest(fixture, 'STS')).toMatchObject({ ok: true, kind: 'part-time' });
+	it('accepts part-time and no-tower airports as dark, and unknowns not at all', () => {
+		expect(assessRequest(fixture, 'STS')).toMatchObject({ ok: true, kind: 'part-time', track: 'dark' });
 		expect(assessRequest(fixture, 'STS').message).toMatch(/0700-2000/);
-		expect(assessRequest(fixture, 'MMH')).toMatchObject({ ok: true, kind: 'none' });
-		expect(assessRequest(fixture, 'KSEA')).toMatchObject({ ok: false, kind: 'full-time' });
-		expect(assessRequest(fixture, 'SEA').message).toMatch(/24 hours/);
+		expect(assessRequest(fixture, 'MMH')).toMatchObject({ ok: true, kind: 'none', track: 'dark' });
 		expect(assessRequest(fixture, 'ZZZZ')).toMatchObject({ ok: false, kind: 'unknown' });
 		expect(assessRequest(fixture, 'Redmond, OR')).toMatchObject({ ok: true, airport: { id: 'RDM' } });
 		expect(assessRequest(null, 'STS')).toMatchObject({ ok: true, kind: 'unverified' });
+	});
+
+	it('offers a 24-hour tower as a reference airport rather than turning it away', () => {
+		expect(assessRequest(fixture, 'SEA')).toMatchObject({ ok: true, kind: 'full-time', track: 'reference' });
+		expect(assessRequest(fixture, 'KSEA')).toMatchObject({ ok: true, kind: 'full-time', track: 'reference' });
+		expect(assessRequest(fixture, 'SEA').message).toMatch(/24 hours/);
+		expect(assessRequest(fixture, 'SEA').message).toMatch(/reference airport/);
+		// A full-time tower must never leak into the map or the city/state search.
+		expect(qualifyingAirports(fixture).map((a) => a.id)).not.toContain('SEA');
 	});
 });
 

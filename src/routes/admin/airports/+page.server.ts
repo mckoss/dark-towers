@@ -2,8 +2,8 @@ import { applyJsonRow, deleteSchedule, drift, getAirport, listAirports, nightsAf
 import { startReingest } from '$lib/server/jobs';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import type { AirportStatus, TowerSchedule } from '$lib/types';
-import { airportCandidate, confirmAirport } from '$lib/server/airport-onboarding';
+import type { AirportKind, AirportStatus, TowerSchedule } from '$lib/types';
+import { airportCandidate, confirmAirport, type QuietHours } from '$lib/server/airport-onboarding';
 
 export const load: PageServerLoad = ({ locals }) => {
 	let driftRows: ReturnType<typeof drift> = [];
@@ -40,13 +40,15 @@ export const actions: Actions = {
 		if (!Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(elev)) return fail(400, { error: 'Latitude, longitude and elevation must be numbers.' });
 		const status = String(f.get('status')) as AirportStatus;
 		if (!['tracking', 'requested'].includes(status)) return fail(400, { error: 'Bad status.' });
+		const kind = String(f.get('kind') ?? a.kind) as AirportKind;
+		if (!['dark', 'reference'].includes(kind)) return fail(400, { error: 'Bad airport kind.' });
 		updateAirport(
 			a.id,
 			{
 				name: String(f.get('name') ?? '').trim(), city: String(f.get('city') ?? '').trim(), state: String(f.get('state') ?? '').trim().toUpperCase(),
 				tz: String(f.get('tz') ?? '').trim(), lat, lon, elevation_ft: elev,
 				carriers: a.configuredCarriers,
-				status, tracked: f.get('tracked') === 'on'
+				status, tracked: f.get('tracked') === 'on', kind
 			},
 			locals.user!.email
 		);
@@ -57,6 +59,7 @@ export const actions: Actions = {
 		const f = await request.formData();
 		const code = String(f.get('code') ?? '').trim().toUpperCase();
 		try {
+			// A 24-hour tower comes back needing quiet hours; the card collects them before confirming.
 			return { candidate: airportCandidate(code) };
 		} catch (e) {
 			return fail(400, { error: e instanceof Error ? e.message : String(e), code });
@@ -66,9 +69,13 @@ export const actions: Actions = {
 	confirmAirport: async ({ request, locals }) => {
 		const f = await request.formData();
 		const code = String(f.get('code') ?? '').trim().toUpperCase();
+		const start = hour(f.get('quiet_start')),
+			end = hour(f.get('quiet_end'));
+		if (Number.isNaN(start) || Number.isNaN(end)) return fail(400, { error: 'Quiet hours must be whole numbers 0–24.', code });
+		const quiet: QuietHours | null = start != null && end != null ? { start, end } : null;
 		try {
-			const added = confirmAirport(code, locals.user!.email);
-			return { saved: `${added.code} and its polling schedule`, added: added.code };
+			const added = confirmAirport(code, locals.user!.email, undefined, quiet);
+			return { saved: `${added.code} and its ${added.kind === 'reference' ? 'quiet-hours' : 'polling'} schedule`, added: added.code };
 		} catch (e) {
 			return fail(400, { error: e instanceof Error ? e.message : String(e), code });
 		}

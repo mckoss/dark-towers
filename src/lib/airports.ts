@@ -1,4 +1,4 @@
-import type { AirportConfig, TowerHours, TowerSchedule } from './types';
+import type { AirportConfig, AirportKind, TowerHours, TowerSchedule } from './types';
 
 /**
  * Airports the site knows about. Only `tracked: true` airports are collected
@@ -48,6 +48,22 @@ export function towerHoursLabel(a: AirportConfig): string {
 	return `${hourLabel(a.towerHours.open)} – ${hourLabel(a.towerHours.close)}`;
 }
 
+/** A reference airport has a tower on duty all night; we watch its published quiet hours instead. */
+export function isReference(a: { kind?: AirportKind }): boolean {
+	return a.kind === 'reference';
+}
+
+/** The hours we watch, e.g. "10:00 pm – 7:00 am" — the gap between close and the next open. */
+export function quietHoursLabel(a: AirportConfig): string {
+	if (!a.towerHours) return 'All hours';
+	return `${hourLabel(a.towerHours.close)} – ${hourLabel(a.towerHours.open)}`;
+}
+
+/** The hours line shown in lists and on the map: tower hours, or "24 hours · quiet …". */
+export function airportHoursLabel(a: AirportConfig): string {
+	return isReference(a) ? `24 hours · quiet ${quietHoursLabel(a)}` : towerHoursLabel(a);
+}
+
 export function hourLabel(h: number): string {
 	const hh = ((h % 24) + 24) % 24;
 	const ampm = hh < 12 ? 'am' : 'pm';
@@ -59,4 +75,9 @@ export function hourLabel(h: number): string {
 export function hoursClosed(a: AirportConfig): number {
 	if (!a.towerHours) return 24;
 	return 24 - (a.towerHours.close - a.towerHours.open);
+}
+
+/** Hours per night we watch: closed hours at a dark airport, quiet hours at a reference one. */
+export function hoursTracked(a: AirportConfig): number {
+	return hoursClosed(a);
 }

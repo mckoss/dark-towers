@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { hourLabel, isReference } from '$lib/airports';
 	import type { AirportListRow } from '$lib/server/queries';
 	import type { AirportStatus } from '$lib/types';
 	import type { ActionData, PageData } from './$types';
@@ -8,11 +9,17 @@
 
 	const statusLabel: Record<AirportStatus, string> = { tracking: 'Tracking', requested: 'Requested' };
 	const statusClass: Record<AirportStatus, string> = { tracking: 'pill-accent', requested: 'pill-ghost' };
+	/** Reference airports carry their own pill, whatever their tracking status. */
+	const pillLabel = (a: AirportListRow) => (isReference(a) ? 'Reference' : statusLabel[a.status]);
+	const pillClass = (a: AirportListRow) => (isReference(a) ? 'pill-ghost' : statusClass[a.status]);
 
 	const incidents = (a: AirportListRow) => (a.stats ? String(a.stats.incidents) : '—');
 	const flights = (a: AirportListRow) => (a.stats ? String(a.stats.flights) : '—');
 	const hasIncidents = (a: AirportListRow) => (a.stats?.incidents ?? 0) > 0;
 	const candidate = $derived(form?.candidate ?? data.candidate);
+	/** A 24-hour tower can only join as a reference airport, and only with quiet hours and a reason. */
+	const isReferenceCandidate = $derived(candidate?.track === 'reference');
+	const hourOptions = Array.from({ length: 25 }, (_, h) => ({ value: h, label: hourLabel(h) }));
 	const matches = $derived(form?.matches ?? []);
 	const requestError = $derived(form?.error ?? data.requestError);
 	const signInHref = $derived(candidate ? `/auth/google?next=${encodeURIComponent(`/airports?request=${candidate.id}#request-airport`)}` : '');
@@ -28,13 +35,16 @@
 		<h1 class="page-headline">Airports tracked</h1>
 		<p class="body intro">
 			We track airports with regular passenger service <strong>and</strong> part-time or no-time control tower
-			service: a tower that closes while those flights are still arriving and leaving, or no tower at all.
+			service: a tower that closes while those flights are still arriving and leaving, or no tower at all. A few
+			airports with a 24-hour tower are listed as <strong>reference airports</strong>, watched during their own
+			quiet hours so those nights can be compared.
 		</p>
 	</div>
 	<div class="stat-grid">
 		<div class="stat">
 			<div class="big-stat">{data.stats.tracked}</div>
 			<div class="stat-label">Airports tracked</div>
+			{#if data.stats.reference}<div class="stat-aside">+{data.stats.reference} reference</div>{/if}
 		</div>
 		<div class="stat">
 			<div class="big-stat accent">{data.stats.incidents}</div>
@@ -74,10 +84,10 @@
 						<div class="code">{a.code}</div>
 						<div class="name">{a.name}</div>
 						<div class="dim city">{a.city}, {a.state}<span class="m-hours"> · {a.towerLabel}</span></div>
-						<div class="dim hours">{a.towerLabel}</div>
+						<div class="dim hours">{a.towerLabel}{#if isReference(a)}<span class="ref-mark" title="Reference airport">†</span>{/if}</div>
 						<div class="tabular num">{flights(a)}</div>
 						<div class="inc tabular" class:accent={hasIncidents(a)} class:muted={!hasIncidents(a)}>{incidents(a)}</div>
-						<div><span class="pill {statusClass[a.status]}">{statusLabel[a.status]}</span></div>
+						<div><span class="pill {pillClass(a)}">{pillLabel(a)}</span></div>
 						<div class="arrow">→</div>
 					</a>
 				{:else}
@@ -85,16 +95,24 @@
 						<div class="code">{a.code}</div>
 						<div class="name">{a.name}</div>
 						<div class="dim city">{a.city}, {a.state}<span class="m-hours"> · {a.towerLabel}</span></div>
-						<div class="dim hours">{a.towerLabel}</div>
+						<div class="dim hours">{a.towerLabel}{#if isReference(a)}<span class="ref-mark" title="Reference airport">†</span>{/if}</div>
 						<div class="tabular num">{flights(a)}</div>
 						<div class="inc tabular" class:accent={hasIncidents(a)} class:muted={!hasIncidents(a)}>{incidents(a)}</div>
-						<div><span class="pill {statusClass[a.status]}">{statusLabel[a.status]}</span></div>
+						<div><span class="pill {pillClass(a)}">{pillLabel(a)}</span></div>
 						<div class="arrow"></div>
 					</div>
 				{/if}
 			{/each}
 		</div>
 	</div>
+	{#if data.airports.some(isReference)}
+		<p class="table-note" id="reference-note" data-testid="reference-note">
+			<strong>† Reference airport.</strong> The tower here is staffed 24 hours. The hours shown are the airport's own
+			published quiet hours, when the passenger airlines have agreed not to schedule flights — a voluntary agreement,
+			not a federal rule. We watch these nights for comparison with airports whose tower is closed, and they are not
+			counted in the totals above.
+		</p>
+	{/if}
 </section>
 
 <section class="section field split request" id="request-airport">
@@ -115,13 +133,38 @@
 					<dt>Tower</dt><dd>{candidate.towerLabel}</dd>
 					<dt>Passenger service</dt><dd>FAA Part 139 air-carrier airport</dd>
 				</dl>
-				<p class="candidate-note">This airport is not already listed and meets the tower and passenger-service checks. Confirm the record above to continue; these airport details cannot be edited.</p>
+				{#if isReferenceCandidate}
+					<p class="candidate-note">
+						The tower here is staffed 24 hours, so this is not a dark airport. It can still be listed as a
+						<strong>reference airport</strong>: we watch the hours the passenger airlines have agreed not to fly, so those
+						nights can be compared with airports whose tower is closed. Tell us those quiet hours and why this airport is
+						worth comparing. Reference airports are marked as such and are not counted in the site's totals.
+					</p>
+				{:else}
+					<p class="candidate-note">This airport is not already listed and meets the tower and passenger-service checks. Confirm the record above to continue; these airport details cannot be edited.</p>
+				{/if}
 				{#if data.user}
 					<form method="POST" action="?/submit" use:enhance>
 						<input type="hidden" name="code" value={candidate.id} />
 						<label>Your name <input type="text" name="name" value={data.user.name ?? ''} maxlength="120" autocomplete="name" required /></label>
 						<label>Verified email <output>{data.user.email}</output></label>
-						<label>Comment (optional) <textarea name="comment" maxlength="2000" rows="4" placeholder="Tell us anything useful about passenger service or tower hours"></textarea></label>
+						{#if isReferenceCandidate}
+							<div class="quiet-hours">
+								<label>Quiet hours start
+									<select name="quiet_start" required data-testid="quiet-start">
+										{#each hourOptions as o (o.value)}<option value={o.value} selected={o.value === 22}>{o.label}</option>{/each}
+									</select>
+								</label>
+								<label>Quiet hours end
+									<select name="quiet_end" required data-testid="quiet-end">
+										{#each hourOptions as o (o.value)}<option value={o.value} selected={o.value === 7}>{o.label}</option>{/each}
+									</select>
+								</label>
+							</div>
+							<label>Why this airport, and where do these hours come from? <textarea name="comment" maxlength="2000" rows="4" required placeholder="For example: the airport authority publishes a voluntary curfew from 10 pm to 7 am, so these hours show what flies when airlines have agreed not to."></textarea></label>
+						{:else}
+							<label>Comment (optional) <textarea name="comment" maxlength="2000" rows="4" placeholder="Tell us anything useful about passenger service or tower hours"></textarea></label>
+						{/if}
 						<button type="submit" class="btn btn-ink">Submit airport request</button>
 					</form>
 				{:else if data.googleConfigured}
@@ -188,6 +231,24 @@
 	.stat .stat-label {
 		margin-top: 8px;
 		font-size: 11px;
+	}
+
+	.ref-mark {
+		margin-left: 4px;
+		color: var(--accent);
+		font-weight: 600;
+	}
+	.stat-aside {
+		margin-top: 4px;
+		font-size: 11px;
+		color: var(--ink-45);
+	}
+	.table-note {
+		max-width: 78ch;
+		padding: 18px var(--gutter) 28px;
+		font-size: 13px;
+		line-height: 1.55;
+		color: var(--ink-60);
 	}
 
 	.table-head {
@@ -313,7 +374,25 @@
 		.stat {
 			padding: 20px var(--gutter);
 		}
-		.table-head {
+		.ref-mark {
+		margin-left: 4px;
+		color: var(--accent);
+		font-weight: 600;
+	}
+	.stat-aside {
+		margin-top: 4px;
+		font-size: 11px;
+		color: var(--ink-45);
+	}
+	.table-note {
+		max-width: 78ch;
+		padding: 18px var(--gutter) 28px;
+		font-size: 13px;
+		line-height: 1.55;
+		color: var(--ink-60);
+	}
+
+	.table-head {
 			flex-direction: column;
 			gap: 6px;
 		}

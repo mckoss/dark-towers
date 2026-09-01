@@ -1,4 +1,5 @@
 import type { CoverageStatus } from '$lib/server/queries';
+import type { AirportKind } from '$lib/types';
 
 export const COVERAGE_GREY = '#737675';
 export const COVERAGE_ALERT = '#dc3e27';
@@ -30,7 +31,7 @@ export function trackingRadius(operations: number): number {
 	return Math.min(TRACKING_RADIUS_MAX, radius);
 }
 
-export function coverageMarkerStyle(status: CoverageStatus, operations: number, veryClose: boolean) {
+export function coverageMarkerStyle(status: CoverageStatus, operations: number, veryClose: boolean, kind: AirportKind = 'dark') {
 	const radius = status === 'tracking' ? trackingRadius(operations) : status === 'requested' ? 3 : 2;
 	return {
 		radius,
@@ -38,6 +39,8 @@ export function coverageMarkerStyle(status: CoverageStatus, operations: number, 
 		color: veryClose ? COVERAGE_ALERT : COVERAGE_GREY,
 		weight: status === 'tracking' ? 2 : 1,
 		opacity: status === 'tracking' ? 1 : 0.72,
-		fillOpacity: status === 'tracking' ? 0.48 : 0.3
+		// A reference airport is drawn hollow and dashed: watched, but not one of the dark towers.
+		fillOpacity: kind === 'reference' ? 0.12 : status === 'tracking' ? 0.48 : 0.3,
+		dashArray: kind === 'reference' ? '3 3' : undefined
 	};
 }
