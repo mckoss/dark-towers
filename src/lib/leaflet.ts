@@ -10,6 +10,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { destination, type LatLon } from './geo';
 import { runwayOutline } from './runways';
+import { TILE_ATTRIBUTION, TILE_PROXY_URL } from './report-maps';
 import type { Runway } from './types';
 
 export const TOKENS = {
@@ -62,8 +63,8 @@ export function createBaseMap(el: HTMLElement, center: LatLon, opts: BaseMapOpti
 		keyboard: interactive
 	});
 	if (opts.tiles !== 'off') {
-		L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-			attribution: '© OpenStreetMap contributors, © CARTO',
+		L.tileLayer(TILE_PROXY_URL, {
+			attribution: TILE_ATTRIBUTION,
 			subdomains: 'abcd',
 			maxZoom: 18,
 			opacity: 0.9

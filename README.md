@@ -21,6 +21,22 @@ npm run db:seed                      # load the test fixture (4 nights of KPAE) 
 npm run dev                          # http://localhost:5173
 ```
 
+### Base-map key (CARTO)
+
+Map tiles come from CARTO, which stamps **"API KEY REQUIRED"** across tiles requested without one —
+including every request the server makes, which is how the PDF report draws its charts. Get a free
+key (5 M tiles/month, no account needed, emailed back immediately) at
+<https://carto.com/basemaps/apikey> — ask for **raster** basemaps — and put it in `config.json`:
+
+```json
+"tile_url": "https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}.png?key=YOUR_KEY"
+```
+
+The key never reaches the browser: the map requests `/tiles/{z}/{x}/{y}.png` from us and we serve
+from `data/tiles/`, refetching a tile at most once a month. Warm an airport's charts from
+`/admin/basemap`. Without a key the site still works — the live map falls back to fetching CARTO
+directly, and reports draw their charts on plain ground.
+
 - `npm run dev` starts the hourly collector too; it will fetch any recent nights not yet stored
   (API calls). Set `"scheduler": false` in `config.json` to collect only on demand.
 - Admin console: `/admin` (Google sign-in, emails listed in `config.json` → `admins`). Without Google

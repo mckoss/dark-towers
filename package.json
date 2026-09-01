@@ -27,7 +27,8 @@
 	"dependencies": {
 		"@photostructure/tz-lookup": "^11.6.1",
 		"better-sqlite3": "^12.4.1",
-		"node-cron": "^4.2.1"
+		"node-cron": "^4.2.1",
+		"pdf-lib": "^1.17.1"
 	},
 	"devDependencies": {
 		"@playwright/test": "^1.62.1",

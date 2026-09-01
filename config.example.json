@@ -10,5 +10,6 @@
     "data_dir": "data",
     "scheduler": true,
     "history_days": 9,
-    "aeroapi_history": null
+    "aeroapi_history": null,
+    "tile_url": "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png?key=<CARTO basemap key, from https://carto.com/basemaps/apikey>"
 }
