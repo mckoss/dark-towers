@@ -43,14 +43,16 @@ export interface MapView {
 	key: string;
 	/** Half-extent of the square frame, in nautical miles. */
 	halfNm: number;
-	/** Range ring to draw, in nautical miles. */
+	/** Range ring to draw, in nautical miles; 0 for none. */
 	ring: number;
 	caption: string;
 }
 
 export const MAP_VIEWS: MapView[] = [
 	{ key: 'wide', halfNm: AIRSPACE_RADIUS_NM * 1.06, ring: AIRSPACE_RADIUS_NM, caption: `Within ${AIRSPACE_RADIUS_NM} nautical miles` },
-	{ key: 'field', halfNm: 1.15, ring: 1, caption: 'Within 1 nautical mile of the field' }
+	// No ring on the close-up: at this scale it reads as a boundary that means
+	// something, and it does not.
+	{ key: 'field', halfNm: 2, ring: 0, caption: 'Within 2 nautical miles of the field' }
 ];
 
 export const lonToTileX = (lon: number, z: number) => ((lon + 180) / 360) * 2 ** z;

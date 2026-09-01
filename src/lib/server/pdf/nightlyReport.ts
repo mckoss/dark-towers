@@ -321,7 +321,7 @@ function drawMap(page: PDFPage, fonts: Fonts, o: MapOptions) {
 	}
 
 	// The ring goes on last so it stays legible through any traffic beneath it.
-	page.drawCircle({ x: cx, y: cy, size: view.ring * pxPerNm, borderColor: INK, borderWidth: 1, borderOpacity: 0.55 });
+	if (view.ring) page.drawCircle({ x: cx, y: cy, size: view.ring * pxPerNm, borderColor: INK, borderWidth: 1, borderOpacity: 0.55 });
 
 	page.pushOperators(popGraphicsState());
 	page.drawRectangle({ x, y: bottom, width: size, height: size, borderColor: HAIRLINE, borderWidth: 1 });
