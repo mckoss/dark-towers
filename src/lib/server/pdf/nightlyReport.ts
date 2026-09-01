@@ -56,6 +56,8 @@ const COL_GAP = 24;
 /** One module width for both charts and every card column, on every page. */
 const COL_W = (CONTENT_W - COL_GAP) / 2;
 const CARD_GAP = 8;
+/** Runway dimensions are published in feet; charts work in nautical miles. */
+const FEET_PER_NM = 6076.12;
 
 /** src/app.css tokens. */
 const INK = rgb(0x20 / 255, 0x1e / 255, 0x1d / 255);
@@ -68,7 +70,6 @@ const ACCENT = rgb(0xec / 255, 0x30 / 255, 0x13 / 255);
 const ACCENT_TEXT = rgb(0xae / 255, 0x18 / 255, 0x00 / 255);
 const ACCENT_TINT = rgb(1, 0xf2 / 255, 0xef / 255);
 const MILITARY = rgb(0x1f / 255, 0x5f / 255, 0xbf / 255);
-const RUNWAY = rgb(0x6f / 255, 0x9f / 255, 0xbd / 255);
 const RUNWAY_FILL = rgb(0xa8 / 255, 0xc7 / 255, 0xda / 255);
 
 interface Fonts {
@@ -222,11 +223,39 @@ function drawFacts(page: PDFPage, fonts: Fonts, airport: AirportConfig, top: num
 	return lowest - 12;
 }
 
-/** Track colours and weights mirror FlightMap.svelte's `style()`. */
-function trackStyle(f: Flight): { color: Color; width: number; opacity: number } {
-	if (aircraftKind(f) === 'military') return { color: MILITARY, width: 1.4, opacity: 0.9 };
-	if (f.category === 'airline') return { color: ACCENT, width: 1.4, opacity: 1 };
-	return { color: INK, width: 0.9, opacity: 0.6 };
+/**
+ * Track colours mirror FlightMap.svelte's `style()`. Where a night has flagged
+ * events, the aircraft involved are drawn a little heavier and the rest of the
+ * traffic steps back — the live map does the same on hover. Most of the
+ * separation comes from holding the context back rather than from weight, so
+ * the charts stay a map with tracks on them rather than a black scribble.
+ */
+function trackStyle(f: Flight, flagged: boolean, anyFlagged: boolean): { color: Color; width: number; opacity: number } {
+	const base =
+		aircraftKind(f) === 'military'
+			? { color: MILITARY, width: 1.4, opacity: 0.9 }
+			: f.category === 'airline'
+				? { color: ACCENT, width: 1.4, opacity: 1 }
+				: { color: INK, width: 0.9, opacity: 0.6 };
+	if (!anyFlagged) return base;
+	return flagged ? { ...base, width: base.width * 1.5, opacity: 0.95 } : { ...base, opacity: base.opacity * 0.45 };
+}
+
+/** A numbered disc tying a spot on the chart to its card in the event list. */
+function drawEventMarker(page: PDFPage, fonts: Fonts, n: number, x: number, y: number) {
+	const label = String(n);
+	const size = label.length > 1 ? 6.2 : 5.4;
+	// A white rim keeps neighbouring markers apart where events cluster.
+	page.drawCircle({ x, y, size: size + 0.7, color: rgb(1, 1, 1), opacity: 0.9 });
+	page.drawCircle({ x, y, size, color: ACCENT });
+	const fontSize = 6.5;
+	text(page, label, {
+		x: x - fonts.bold.widthOfTextAtSize(label, fontSize) / 2,
+		y: y - fontSize * 0.35,
+		size: fontSize,
+		font: fonts.bold,
+		color: rgb(1, 1, 1)
+	});
 }
 
 function pathFromPoints(points: [number, number][], close: boolean): string {
@@ -281,31 +310,38 @@ function drawMap(page: PDFPage, fonts: Fonts, o: MapOptions) {
 	}
 
 	for (const runway of airport.runways ?? []) {
+		// Outlined in ink: the fill alone is a pale blue on a pale basemap, and at
+		// the close-up scale the true surface is only a point or two across.
 		page.drawSvgPath(pathFromPoints(runwayOutline(runway).map(toSvg), true), {
 			x: cx,
 			y: cy,
 			color: RUNWAY_FILL,
-			borderColor: RUNWAY,
-			borderWidth: 0.5,
-			opacity: 0.58,
-			borderOpacity: 0.55
+			borderColor: INK,
+			borderWidth: 0.4,
+			opacity: 0.9,
+			borderOpacity: 0.85
 		});
-		// True runway width is under a point on the wide chart, so keep a
-		// minimum-visible centreline the way the live map does.
-		page.drawSvgPath(pathFromPoints(runway.ends.map((end) => toSvg(end.pos)), false), {
-			x: cx,
-			y: cy,
-			borderColor: RUNWAY,
-			borderWidth: view.halfNm > 3 ? 2.5 : 1,
-			borderOpacity: 0.72
-		});
+		// Below about two points the surface stops reading as a shape at all, so
+		// stand it in with a centreline the way the live map does.
+		const widthPt = (runway.widthFt / FEET_PER_NM) * pxPerNm;
+		if (widthPt < 2) {
+			page.drawSvgPath(pathFromPoints(runway.ends.map((end) => toSvg(end.pos)), false), {
+				x: cx,
+				y: cy,
+				borderColor: INK,
+				borderWidth: 2,
+				borderOpacity: 0.6
+			});
+		}
 	}
 
-	// Private traffic first, so airline and military tracks read over it.
-	const rank = (f: Flight) => (aircraftKind(f) === 'military' ? 2 : f.category === 'airline' ? 1 : 0);
+	// Private traffic first, then airline and military, then whoever was in a
+	// flagged event — so the tracks the report is about end up on top.
+	const flagged = new Set(incidents.flatMap((i) => [i.flightA, i.flightB]));
+	const rank = (f: Flight) => (flagged.has(f.id) ? 3 : aircraftKind(f) === 'military' ? 2 : f.category === 'airline' ? 1 : 0);
 	for (const f of [...flights].sort((a, b) => rank(a) - rank(b))) {
 		if (f.positions.length < 2) continue;
-		const style = trackStyle(f);
+		const style = trackStyle(f, flagged.has(f.id), flagged.size > 0);
 		page.drawSvgPath(new Spline(f.positions.map((p) => ({ t: p.t, v: [p.lat, p.lon] }))).svgPath(toSvg), {
 			x: cx,
 			y: cy,
@@ -315,10 +351,11 @@ function drawMap(page: PDFPage, fonts: Fonts, o: MapOptions) {
 		});
 	}
 
-	for (const inc of incidents) {
+	// Numbered to match the event list, so a reader can move between the two.
+	incidents.forEach((inc, i) => {
 		const [mx, my] = toPage([(inc.posA[0] + inc.posB[0]) / 2, (inc.posA[1] + inc.posB[1]) / 2]);
-		page.drawCircle({ x: mx, y: my, size: 4.5, borderColor: ACCENT, borderWidth: 1.3 });
-	}
+		drawEventMarker(page, fonts, i + 1, mx, my);
+	});
 
 	// The ring goes on last so it stays legible through any traffic beneath it.
 	if (view.ring) page.drawCircle({ x: cx, y: cy, size: view.ring * pxPerNm, borderColor: INK, borderWidth: 1, borderOpacity: 0.55 });
@@ -344,10 +381,16 @@ function drawLegend(page: PDFPage, fonts: Fonts, airport: AirportConfig, flights
 	if (airport.runways?.length) {
 		items.push({
 			label: 'FAA runway layout',
-			swatch: (p, sx, sy) => p.drawRectangle({ x: sx, y: sy - 2, width: 14, height: 4, color: RUNWAY_FILL, borderColor: RUNWAY, borderWidth: 0.5, opacity: 0.6 })
+			swatch: (p, sx, sy) => p.drawRectangle({ x: sx, y: sy - 2, width: 14, height: 4, color: RUNWAY_FILL, borderColor: INK, borderWidth: 0.4, opacity: 0.9, borderOpacity: 0.85 })
 		});
 	}
-	items.push({ label: 'Flagged event', swatch: (p, sx, sy) => p.drawCircle({ x: sx + 7, y: sy, size: 4, borderColor: ACCENT, borderWidth: 1.3 }) });
+	items.push({
+		label: 'Flagged event, numbered below',
+		swatch: (p, sx, sy) => {
+			p.drawLine({ start: { x: sx, y: sy }, end: { x: sx + 14, y: sy }, thickness: 1.6, color: INK, opacity: 0.95 });
+			p.drawCircle({ x: sx + 7, y: sy, size: 4.2, color: ACCENT });
+		}
+	});
 	items.push({ label: 'Range ring', swatch: (p, sx, sy) => p.drawCircle({ x: sx + 7, y: sy, size: 4, borderColor: INK, borderWidth: 1, borderOpacity: 0.55 }) });
 
 	const perRow = 3;
@@ -395,6 +438,8 @@ interface CardLayout {
 	pair: string;
 	figures: [CardFigure, CardFigure];
 	captions: [string[], string[]];
+	/** Matches the numbered marker on the charts. */
+	number: number;
 }
 
 const CARD_PAD_L = 13;
@@ -403,7 +448,7 @@ const CARD_PAD_R = 10;
 const CARD_FIG_GAP = 22;
 const CAPTION_MAX = (COL_W - CARD_PAD_L - CARD_PAD_R - CARD_FIG_GAP) / 2;
 
-function layoutCard(incident: Incident, identA: string, identB: string, tz: string, fonts: Fonts): CardLayout {
+function layoutCard(incident: Incident, number: number, identA: string, identB: string, tz: string, fonts: Fonts): CardLayout {
 	const wake = incident.kind === 'wake-turbulence';
 	const figures: [CardFigure, CardFigure] = wake
 		? [
@@ -424,7 +469,8 @@ function layoutCard(incident: Incident, identA: string, identB: string, tz: stri
 		time: localTime(tz, incident.t),
 		pair: `${identA} × ${identB}`,
 		figures,
-		captions
+		captions,
+		number
 	};
 }
 
@@ -435,7 +481,8 @@ function drawCard(page: PDFPage, fonts: Fonts, card: CardLayout, x: number, yTop
 
 	const cx = x + CARD_PAD_L;
 	let y = yTop - 12;
-	text(page, card.severity.toUpperCase(), { x: cx, y, size: 7, font: fonts.bold, color: ACCENT_TEXT });
+	drawEventMarker(page, fonts, card.number, cx + 5.4, y + 2.2);
+	text(page, card.severity.toUpperCase(), { x: cx + 16, y, size: 7, font: fonts.bold, color: ACCENT_TEXT });
 	textRight(page, card.time, { right: x + COL_W - CARD_PAD_R, y, size: 7, font: fonts.regular, color: INK45 });
 	y -= 14;
 	text(page, card.pair, { x: cx, y, size: 11, font: fonts.bold, color: INK });
@@ -498,13 +545,6 @@ export async function renderNightlyReportPdf({ detail, idents, tiles = [], origi
 	let y = drawHeader(page1, fonts, airport, night, generatedAt);
 	y = drawFacts(page1, fonts, airport, y);
 
-	MAP_VIEWS.forEach((view: MapView, i: number) => {
-		const x = MARGIN + i * (COL_W + COL_GAP);
-		text(page1, view.caption.toUpperCase(), { x, y, size: 6.5, font: fonts.bold, color: INK45 });
-		drawMap(page1, fonts, { airport, flights, incidents, tiles: placed[i], view, x, yTop: y - 8, size: COL_W });
-	});
-	y = drawLegend(page1, fonts, airport, flights, y - 8 - COL_W - 12, placed.some((list) => list.length > 0));
-
 	const nightFlights = nightSummary?.flights ?? flights.length;
 	const wakeEvents = nightSummary?.wakeIncidents ?? incidents.filter((i) => i.kind === 'wake-turbulence').length;
 	const stats: StatCell[] = [
@@ -527,7 +567,15 @@ export async function renderNightlyReportPdf({ detail, idents, tiles = [], origi
 		text(page1, line, { x: MARGIN, y, size: 7.5, font: fonts.regular, color: INK60 });
 		y -= 10;
 	}
-	y -= 6;
+	y -= 12;
+
+	// The charts read after the figures they illustrate.
+	MAP_VIEWS.forEach((view: MapView, i: number) => {
+		const x = MARGIN + i * (COL_W + COL_GAP);
+		text(page1, view.caption.toUpperCase(), { x, y, size: 6.5, font: fonts.bold, color: INK45 });
+		drawMap(page1, fonts, { airport, flights, incidents, tiles: placed[i], view, x, yTop: y - 8, size: COL_W });
+	});
+	y = drawLegend(page1, fonts, airport, flights, y - 8 - COL_W - 12, placed.some((list) => list.length > 0));
 
 	// Cards flow down two columns of one width, on this page and any after it.
 	let page = page1;
@@ -553,7 +601,7 @@ export async function renderNightlyReportPdf({ detail, idents, tiles = [], origi
 	// Lay every card out first: knowing the whole list lets a page that can hold
 	// what is left balance its columns instead of filling the first one to the
 	// floor and leaving the second empty.
-	const cards = incidents.map((inc) => layoutCard(inc, idents[inc.flightA] ?? '?', idents[inc.flightB] ?? '?', airport.tz, fonts));
+	const cards = incidents.map((inc, i) => layoutCard(inc, i + 1, idents[inc.flightA] ?? '?', idents[inc.flightB] ?? '?', airport.tz, fonts));
 
 	/** How many of `cards` from `start` fit a column `height` tall. */
 	const fitCount = (start: number, height: number) => {
