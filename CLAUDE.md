@@ -1,5 +1,9 @@
 # Dark Towers — project conventions
 
+**ALWAYS read `AGENTS.md` first.** It holds the working agreements for this repo — branching and merge
+workflow, worktree naming and data, and how production deploys — and they are binding. Read it at the
+start of every session here, before any branch, commit, merge, or deploy step.
+
 Data-driven advocacy site: flights and close approaches at airports where airliners operate with no
 tower on duty. Read `DESIGN.md` for the design spec and editorial rules; `QUESTIONS.md` for open decisions;
 GitHub issues for the backlog. `README.md` is the public front door (purpose, install, deploy).
