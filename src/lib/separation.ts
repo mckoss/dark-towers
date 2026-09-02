@@ -59,7 +59,56 @@ const DUPLICATE_FRACTION = 0.8;
 const GHOST_LATERAL_NM = 0.15;
 const GHOST_VERTICAL_FT = 300;
 const GHOST_FRACTION = 0.8;
+const OPERATION_GHOST_LATERAL_NM = 0.8;
+const OPERATION_GHOST_VERTICAL_FT = 500;
+const OPERATION_GHOST_HEADING_DEG = 45;
+const OPERATION_GHOST_SPEED_KT = 80;
+const OPERATION_GHOST_EVENT_MS = 5 * 60 * 1000;
+
+function angleDiff(a: number | undefined, b: number | undefined): number {
+	if (a == null || b == null) return 0;
+	const d = Math.abs(a - b) % 360;
+	return d > 180 ? 360 - d : d;
+}
+
+function sameScheduledOperation(a: Flight, b: Flight): boolean {
+	return !!a.operator
+		&& a.operator === b.operator
+		&& a.category === b.category
+		&& a.type === b.type
+		&& a.direction === b.direction
+		&& a.otherCode === b.otherCode
+		&& Math.abs(a.eventTime - b.eventTime) <= OPERATION_GHOST_EVENT_MS;
+}
+
+function sameOperationGhost(a: TrackSpline, b: TrackSpline, origin: LatLon): boolean {
+	if (!sameScheduledOperation(a.flight, b.flight)) return false;
+	for (const [x, y] of [
+		[a, b],
+		[b, a]
+	] as const) {
+		let n = 0,
+			near = 0;
+		for (const p of x.flight.positions) {
+			if (p.t < y.spline.t0 || p.t > y.spline.t1) continue;
+			const q = y.spline.at(p.t);
+			if (!q) continue;
+			const [e, no] = toLocalNm(origin, [p.lat, p.lon]);
+			n++;
+			if (
+				Math.hypot(e - q[0], no - q[1]) < OPERATION_GHOST_LATERAL_NM
+				&& Math.abs(p.alt - q[2]) < OPERATION_GHOST_VERTICAL_FT
+				&& Math.abs((p.gs ?? 0) - (q[3] ?? 0)) < OPERATION_GHOST_SPEED_KT
+				&& angleDiff(p.hdg, y.flight.positions.reduce((best, r) => Math.abs(r.t - p.t) < Math.abs(best.t - p.t) ? r : best, y.flight.positions[0])?.hdg) < OPERATION_GHOST_HEADING_DEG
+			) near++;
+		}
+		if (n >= 3 && near / n >= GHOST_FRACTION) return true;
+	}
+	return false;
+}
+
 export function sameAircraft(a: TrackSpline, b: TrackSpline, origin: LatLon): boolean {
+	if (sameOperationGhost(a, b, origin)) return true;
 	for (const [x, y] of [
 		[a, b],
 		[b, a]
