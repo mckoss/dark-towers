@@ -14,6 +14,11 @@ const PAE: AirportConfig = {
 	pos: [47.9079, -122.2816], elevationFt: 606, towerHours: { open: 7, close: 21 }, carriers: [], status: 'tracking', tracked: true, kind: 'dark',
 	schedules: [{ id: 'PAE-2024-01-01', from: '2024-01-01', to: null, open: 7, close: 21, note: '' }]
 };
+const SEA: AirportConfig = {
+	code: 'SEA', icao: 'KSEA', name: 'Seattle-Tacoma Intl', city: 'Seattle', state: 'WA', tz: 'America/Los_Angeles',
+	pos: [47.4499, -122.3118], elevationFt: 432, towerHours: { open: 6, close: 22 }, carriers: [], status: 'tracking', tracked: true, kind: 'reference',
+	schedules: [{ id: 'SEA-2026-09-03', from: '2026-09-03', to: null, open: 6, close: 22, note: 'quiet 22-06' }]
+};
 const NIGHT = '2026-08-14';
 const LA = PAE.tz;
 
@@ -80,6 +85,12 @@ describe('normalizeFlight', () => {
 		// 22:00 local on Aug 15: the next night.
 		expect(normalizeFlight(PAE, NIGHT, rawFlight({ actual_on: '2026-08-16T05:00:00Z' }))).toBeNull();
 		expect(normalizeFlight(PAE, '2026-08-15', rawFlight({ actual_on: '2026-08-16T05:00:00Z' }))).not.toBeNull();
+	});
+	it('returns null when no effective schedule applies to the requested night', () => {
+		// 19:00 local would have been included by the old "no schedule = no tower" fallback.
+		expect(normalizeFlight(SEA, '2026-09-02', rawFlight({ actual_on: '2026-09-03T02:00:00Z' }))).toBeNull();
+		// Once the schedule applies, the quiet-hours window is close → next open: 22:00 to 06:00.
+		expect(normalizeFlight(SEA, '2026-09-03', rawFlight({ actual_on: '2026-09-04T06:30:00Z' }))).not.toBeNull();
 	});
 	it('returns null when there is no usable event time', () => {
 		expect(normalizeFlight(PAE, NIGHT, rawFlight({ actual_on: null, estimated_on: null, scheduled_on: null }))).toBeNull();
@@ -238,6 +249,11 @@ describe('clipTrack', () => {
 
 	it('returns nothing for a track on a different night', () => {
 		expect(clipTrack(PAE, '2026-08-13', pass(NIGHT_START))).toEqual([]);
+	});
+
+	it('returns nothing when no effective schedule applies to the requested night', () => {
+		const t = pass(zonedToUtc(LA, 2026, 9, 2, 19));
+		expect(clipTrack(SEA, '2026-09-02', t)).toEqual([]);
 	});
 
 	it('dedupes identical timestamps and skips malformed points', () => {

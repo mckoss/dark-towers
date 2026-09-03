@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { freshDataDir } from './helpers/server-env';
-import { scheduleOn, towerHoursOn } from '../../src/lib/airports';
+import { scheduledTowerHoursOn, scheduleOn, towerHoursOn } from '../../src/lib/airports';
 
 const seed = () => ({
 	airports: [
@@ -44,6 +44,12 @@ describe('schedule helpers', () => {
 		expect(towerHoursOn({ schedules: s }, '2026-12-01')).toEqual({ open: 6, close: 22 });
 		expect(towerHoursOn({ schedules: [{ id: 'n', from: '2024-01-01', to: null, open: null, close: null, note: '' }] }, '2026-01-01')).toBeNull();
 		expect(towerHoursOn({ schedules: [] }, '2026-01-01')).toBeNull();
+	});
+	it('scheduledTowerHoursOn distinguishes no-tower rows from schedule gaps', () => {
+		expect(scheduledTowerHoursOn({ schedules: s }, '2026-08-14')).toEqual({ open: 7, close: 21 });
+		expect(scheduledTowerHoursOn({ schedules: [{ id: 'n', from: '2024-01-01', to: null, open: null, close: null, note: '' }] }, '2026-01-01')).toBeNull();
+		expect(scheduledTowerHoursOn({ schedules: s }, '2023-12-31')).toBeUndefined();
+		expect(scheduledTowerHoursOn({ schedules: [] }, '2026-01-01')).toBeUndefined();
 	});
 });
 

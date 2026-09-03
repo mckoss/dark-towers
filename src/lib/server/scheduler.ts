@@ -8,7 +8,7 @@ import cron from 'node-cron';
 import { updateNasr } from './nasr';
 import { updateRegistry } from './registry';
 import { ensureCapability } from './capability';
-import { towerHoursOn } from '$lib/airports';
+import { scheduledTowerHoursOn } from '$lib/airports';
 import { trackedAirports } from './airports-store';
 import { addDays, nightWindow, todayKey } from '$lib/time';
 import { config } from './config';
@@ -31,7 +31,12 @@ export async function catchUp(log: (m: string) => void = console.log): Promise<v
 			const today = todayKey(a.tz, now);
 			for (let i = HISTORY_DAYS; i >= 0; i--) {
 				const night = addDays(today, -i);
-				const win = nightWindow(a.tz, towerHoursOn(a, night), night);
+				const hours = scheduledTowerHoursOn(a, night);
+				if (hours === undefined) {
+					log(`skip ${a.code} ${night}: no tower-hours schedule applies`);
+					continue;
+				}
+				const win = nightWindow(a.tz, hours, night);
 				if (win.end + SETTLE_MS > now) continue;
 				const existing = nightSummary(a.icao, night);
 				if (existing?.complete) continue;

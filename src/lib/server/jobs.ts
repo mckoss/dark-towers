@@ -1,7 +1,7 @@
 /** Background pipeline jobs started from /admin. One at a time; log kept in memory. */
 import { catchUp } from './scheduler';
 import { ingestNight } from './pipeline';
-import { towerHoursOn } from '$lib/airports';
+import { scheduledTowerHoursOn } from '$lib/airports';
 import { getAirport } from './airports-store';
 import { addDays, nightWindow, todayKey } from '$lib/time';
 import { nightSummary } from './db';
@@ -77,7 +77,12 @@ export function startBackfill(code: string, nights: number): boolean {
 			calls = 0;
 		for (let i = nights; i >= 1; i--) {
 			const night = addDays(today, -i);
-			if (nightWindow(a.tz, towerHoursOn(a, night), night).end > Date.now()) continue;
+			const hours = scheduledTowerHoursOn(a, night);
+			if (hours === undefined) {
+				log(`skip ${a.code} ${night}: no tower-hours schedule applies`);
+				continue;
+			}
+			if (nightWindow(a.tz, hours, night).end > Date.now()) continue;
 			if (nightSummary(a.icao, night)?.complete) {
 				skipped++;
 				continue;

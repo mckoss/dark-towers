@@ -42,6 +42,14 @@ export function towerHoursOn(a: { schedules: TowerSchedule[] }, night: string): 
 	return { open: s.open, close: s.close };
 }
 
+/** Undefined = no schedule applies; null = a schedule applies and the airport has no tower. */
+export function scheduledTowerHoursOn(a: { schedules: TowerSchedule[] }, night: string): TowerHours | null | undefined {
+	const s = scheduleOn(a.schedules, night);
+	if (!s) return undefined;
+	if (s.open == null || s.close == null) return null;
+	return { open: s.open, close: s.close };
+}
+
 /** Plain-language tower hours, e.g. "7:00 am – 9:00 pm" or "No tower". */
 export function towerHoursLabel(a: AirportConfig): string {
 	if (!a.towerHours) return 'No tower';

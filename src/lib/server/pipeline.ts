@@ -12,7 +12,7 @@
  * overwrites the same database rows. Use `force` to re-fetch the flight list
  * (e.g. the night was first processed before its window had ended).
  */
-import { AIRSPACE_EXIT_NM, AIRSPACE_RADIUS_NM, TRACK_GAP_MS, towerHoursOn } from '$lib/airports';
+import { AIRSPACE_EXIT_NM, AIRSPACE_RADIUS_NM, TRACK_GAP_MS, scheduledTowerHoursOn } from '$lib/airports';
 import { getAirport } from './airports-store';
 import { distanceNm, fromLocalNm, toLocalNm } from '$lib/geo';
 import { dropGhosts, findIncidents } from '$lib/separation';
@@ -57,7 +57,9 @@ export async function ingestNight(airportCode: string, night: string, opts: Inge
 }
 
 async function ingest(airport: AirportConfig, night: string, opts: IngestOptions, log: Logger): Promise<IngestResult> {
-	const win = nightWindow(airport.tz, towerHoursOn(airport, night), night);
+	const hours = scheduledTowerHoursOn(airport, night);
+	if (hours === undefined) throw new Error(`No tower-hours schedule applies to ${airport.code} on ${night}.`);
+	const win = nightWindow(airport.tz, hours, night);
 	let apiCalls = 0;
 	const counting: Logger = (m) => {
 		if (m.startsWith('GET ')) apiCalls++;
@@ -185,7 +187,9 @@ export function normalizeFlight(airport: AirportConfig, night: string, f: RawFli
 	if (eventTime == null) return null;
 	// Keep the flight on the night it was queried for; the API window already
 	// bounds it, but guard against stragglers just outside the window.
-	const n = nightOf(airport.tz, towerHoursOn(airport, night), eventTime);
+	const hours = scheduledTowerHoursOn(airport, night);
+	if (hours === undefined) return null;
+	const n = nightOf(airport.tz, hours, eventTime);
 	if (n !== night) return null;
 	const other = f._source === 'arrival' ? f.origin : f.destination;
 	// Position-only endpoints come back as "L 45.81 -119.07": no real airport.
@@ -226,7 +230,8 @@ export function normalizeFlight(airport: AirportConfig, night: string, f: RawFli
  * ADS-B reported — nothing inside is thinned.
  */
 export function clipTrack(airport: AirportConfig, night: string, track: RawTrack, radiusNm = AIRSPACE_RADIUS_NM, exitNm = Math.max(radiusNm, AIRSPACE_EXIT_NM * (radiusNm / AIRSPACE_RADIUS_NM))): Position[] {
-	const hours = towerHoursOn(airport, night);
+	const hours = scheduledTowerHoursOn(airport, night);
+	if (hours === undefined) return [];
 	const pts: Position[] = [];
 	for (const p of track.positions ?? []) {
 		const t = Date.parse(p.timestamp);
