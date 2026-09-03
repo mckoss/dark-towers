@@ -11,7 +11,7 @@ import type { AirportConfig, AirportKind, Flight, Incident, NightSummary } from 
 import * as db from './db';
 import { nasrData } from './nasr';
 import { qualifyingAirports, towerHoursText } from '$lib/nasr';
-import { airportHoursLabel, isReference, scheduledTowerHoursOn } from '$lib/airports';
+import { airportHoursLabel, isReference } from '$lib/airports';
 import { DEFAULT_CLOSE_APPROACH_SORT, isCloseApproachSort, sortCloseApproaches, sortNightIncidents, type CloseApproachSort } from '$lib/close-approach-sort';
 import { lookupTail } from './registry';
 import { registryKey, type RegistryEntry } from '$lib/registry';
@@ -90,72 +90,17 @@ export interface CoverageAirport {
 	veryClose: boolean;
 }
 
-function scheduleApplies(airport: Pick<AirportConfig, 'schedules'>, night: string): boolean {
-	return scheduledTowerHoursOn(airport, night) !== undefined;
-}
-
-function scheduledNightsForAirport(airport: AirportConfig, fromNight: string, toNight: string): NightSummary[] {
-	return db.nightsForAirport(airport.icao, fromNight, toNight).filter((night) => scheduleApplies(airport, night.night));
-}
-
-function totalsFromNights(nights: NightSummary[]): db.Totals | null {
-	if (!nights.length) return null;
-	const totals = nights.reduce(
-		(acc, night) => ({
-			flights: acc.flights + night.flights,
-			airline: acc.airline + night.airline,
-			private: acc.private + night.private,
-			incidents: acc.incidents + night.incidents,
-			wakeIncidents: acc.wakeIncidents + (night.wakeIncidents ?? 0),
-			nights: acc.nights + 1,
-			airlineIncidents: acc.airlineIncidents,
-			airlineWakeIncidents: acc.airlineWakeIncidents
-		}),
-		{ flights: 0, airline: 0, private: 0, incidents: 0, wakeIncidents: 0, nights: 0, airlineIncidents: 0, airlineWakeIncidents: 0 }
-	);
-	for (const night of nights) {
-		for (const incident of db.incidentsForNight(night.airport, night.night)) {
-			if (!incident.airlineInvolved) continue;
-			if (incident.kind === 'wake-turbulence') totals.airlineWakeIncidents++;
-			else totals.airlineIncidents++;
-		}
-	}
-	return totals;
-}
-
-function totalsFromAirports(airports: AirportConfig[], period: Period): db.Totals {
-	const totals: db.Totals = { flights: 0, airline: 0, private: 0, incidents: 0, wakeIncidents: 0, nights: 0, airlineIncidents: 0, airlineWakeIncidents: 0 };
-	const coveredNights = new Set<string>();
-	for (const airport of airports) {
-		const nights = scheduledNightsForAirport(airport, period.from, period.to);
-		for (const night of nights) {
-			totals.flights += night.flights;
-			totals.airline += night.airline;
-			totals.private += night.private;
-			totals.incidents += night.incidents;
-			totals.wakeIncidents += night.wakeIncidents ?? 0;
-			coveredNights.add(night.night);
-			for (const incident of db.incidentsForNight(night.airport, night.night)) {
-				if (!incident.airlineInvolved) continue;
-				if (incident.kind === 'wake-turbulence') totals.airlineWakeIncidents++;
-				else totals.airlineIncidents++;
-			}
-		}
-	}
-	totals.nights = coveredNights.size;
-	return totals;
-}
-
 export function airportsWithStats(period = currentPeriod()): AirportWithStats[] {
-	return listAirports().map((a) => ({ ...a, stats: totalsFromNights(scheduledNightsForAirport(a, period.from, period.to)) }));
+	const by = db.totalsByAirport(period.from, period.to);
+	return listAirports().map((a) => ({ ...a, stats: by[a.icao] ?? null }));
 }
 
 export function homeData() {
 	const period = currentPeriod();
-	const airports = airportCoverage(period);
 	// Reference airports are watched for comparison only; they never swell the site's totals.
-	const totals = totalsFromAirports(listAirports().filter((a) => a.tracked && !isReference(a)), period);
-	return { period, totals, airports };
+	const reference = listAirports().filter(isReference).map((a) => a.icao);
+	const totals = db.totalsAll(period.from, period.to, reference);
+	return { period, totals, airports: airportCoverage(period) };
 }
 
 /** All FAA-qualifying fields, overlaid with provisional requests and tracked application rows. */
@@ -254,11 +199,12 @@ export function airportDetail(code: string, night?: string | null, month?: strin
 	const storedAirport = getAirport(code);
 	if (!storedAirport) return null;
 	const airport = withRunways(storedAirport);
-	const validHistory = scheduledNightsForAirport(airport, '0000-00-00', '9999-99-99');
-	const firstNight = validHistory[0]?.night ?? null;
-	const lastNight = validHistory[validHistory.length - 1]?.night ?? null;
-	const firstMonth = firstNight?.slice(0, 7) ?? null;
-	const lastMonth = lastNight?.slice(0, 7) ?? null;
+	const range = db
+		.db()
+		.prepare(`SELECT MIN(night) first, MAX(night) last FROM nights WHERE airport = ?`)
+		.get(airport.icao) as { first: string | null; last: string | null };
+	const firstMonth = range.first?.slice(0, 7) ?? null;
+	const lastMonth = range.last?.slice(0, 7) ?? null;
 	const rolling = currentPeriod();
 	// A deep-linked night outside the default window implies its month.
 	if (!month && night && /^\d{4}-\d{2}-\d{2}$/.test(night) && (night < rolling.from || night > rolling.to)) month = night.slice(0, 7);
@@ -279,8 +225,8 @@ export function airportDetail(code: string, night?: string | null, month?: strin
 			return cand > rolling.to.slice(0, 7) ? null : cand;
 		})()
 	};
-	const nights = scheduledNightsForAirport(airport, period.from, period.to);
-	const totals = totalsFromNights(nights) ?? { flights: 0, airline: 0, private: 0, incidents: 0, wakeIncidents: 0, nights: 0, airlineIncidents: 0, airlineWakeIncidents: 0 };
+	const totals = db.totalsForAirport(airport.icao, period.from, period.to);
+	const nights = db.nightsForAirport(airport.icao, period.from, period.to);
 	const byNight = new Map(nights.map((n) => [n.night, n]));
 	const calendar: AirportDetail['calendar'] = [];
 	for (let d = period.from; d <= period.to; d = addDays(d, 1)) calendar.push({ night: d, summary: byNight.get(d) ?? null });
@@ -292,7 +238,7 @@ export function airportDetail(code: string, night?: string | null, month?: strin
 	const cardIncidents = sortNightIncidents(incidents);
 	const nightAirlineIncidents = incidents.filter((i) => i.airlineInvolved && i.kind !== 'wake-turbulence').length;
 	return {
-		airport, period, nav, hasAnyData: !!firstNight, totals, calendar, selectedNight, flights, incidents, cardIncidents, nightAirlineIncidents,
+		airport, period, nav, hasAnyData: !!range.first, totals, calendar, selectedNight, flights, incidents, cardIncidents, nightAirlineIncidents,
 		nightSummary: selectedNight ? (byNight.get(selectedNight) ?? null) : null
 	};
 }
@@ -431,15 +377,12 @@ export function closeApproachesData(airportCode?: string | null, night?: string 
 		: month && /^\d{4}-\d{2}$/.test(month)
 			? monthPeriod(month)
 			: currentPeriod();
-	const airports = new Map(listAirports().map((a) => [a.icao, a]));
-	const incidents = db.separationIncidents(period.from, period.to, airport?.icao).filter((incident) => {
-		const found = airports.get(incident.airport);
-		return found ? scheduleApplies(found, incident.night) : false;
-	});
+	const incidents = db.separationIncidents(period.from, period.to, airport?.icao);
 	const identities: Record<string, AircraftIdentityData> = {};
 	for (const incident of incidents) {
 		for (const id of [incident.flightA, incident.flightB]) if (!identities[id]) identities[id] = identityFor(id);
 	}
+	const airports = new Map(listAirports().map((a) => [a.icao, a]));
 	const rows: ListedCloseApproach[] = incidents.flatMap((incident) => {
 		const found = airports.get(incident.airport);
 		return found
