@@ -10,6 +10,7 @@
 import { getAirport as airportByCode } from '../src/lib/server/airports-store';
 import { ingestNight } from '../src/lib/server/pipeline';
 import { catchUp } from '../src/lib/server/scheduler';
+import { scheduledTowerHoursOn } from '../src/lib/airports';
 import { addDays, nightWindow, todayKey } from '../src/lib/time';
 import { nightSummary } from '../src/lib/server/db';
 
@@ -39,7 +40,12 @@ async function main() {
 		let calls = 0;
 		for (let i = n; i >= 1; i--) {
 			const night = addDays(today, -i);
-			if (nightWindow(a.tz, a.towerHours, night).end > Date.now()) continue;
+			const hours = scheduledTowerHoursOn(a, night);
+			if (hours === undefined) {
+				log(`skip ${a.code} ${night}: no tower-hours schedule applies`);
+				continue;
+			}
+			if (nightWindow(a.tz, hours, night).end > Date.now()) continue;
 			if (nightSummary(a.icao, night)?.complete) continue;
 			calls += (await ingestNight(a.code, night, { log })).apiCalls;
 		}
