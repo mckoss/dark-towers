@@ -85,6 +85,7 @@
 
 {#if form?.error}<p class="flash error" role="alert">{form.error}</p>{/if}
 {#if form?.started}<p class="flash">Started {form.started}.</p>{/if}
+{#if form?.deletedNightData}<p class="flash">{form.deletedNightData}</p>{/if}
 {#if form?.deleted}<p class="flash">Request #{form.deleted} deleted.</p>{/if}
 {#if form?.accepted}<p class="flash">Added {form.accepted} to the airport list and hourly polling schedule.</p>{/if}
 
@@ -120,6 +121,19 @@
 			<span class="hint">Oldest first; skips complete nights; stops on the first API error. Use when an airport is newly approved.</span>
 		</form>
 		<p class="hint">Cached nights cost no API calls. {#if !data.historyEnabled}Nights older than 10 days need extended history, which this key does not have (Standard tier or above); until then they are recorded as misses and retried automatically once a key with extended history is in place.{/if}</p>
+		<h3 class="sub">Delete derived night data</h3>
+		<form method="POST" action="?/deleteNightData" use:enhance class="row ingest repair">
+			<label>Airport
+				<select name="airport">
+					{#each data.airports as a (a.code)}<option value={a.code}>{a.code} · {a.name}</option>{/each}
+				</select>
+			</label>
+			<label>From <input name="from" type="date" required /></label>
+			<label>To <input name="to" type="date" required /></label>
+			<label>Confirm <input name="confirm" type="text" autocomplete="off" placeholder="DELETE" required /></label>
+			<button class="btn btn-ink" type="submit" disabled={running}>Delete nights</button>
+			<span class="hint">Removes only SQLite summaries, flights, and incidents for the selected airport dates. Raw cached API files stay on disk so ingest/backfill can recompute them.</span>
+		</form>
 	</div>
 	<div class="cell">
 		<h2 class="section-heading">Current job</h2>
@@ -226,7 +240,7 @@
 	.row { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 16px; }
 	.ingest label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-60); }
 	.ingest label.check { flex-direction: row; align-items: center; text-transform: none; letter-spacing: 0; }
-	.ingest select, .ingest input[type='date'] { padding: 10px 12px; border: 2px solid var(--ink); background: #fff; font: inherit; font-size: 14px; }
+	.ingest select, .ingest input[type='date'], .ingest input[type='number'], .ingest input[type='text'], .ingest input:not([type]) { padding: 10px 12px; border: 2px solid var(--ink); background: #fff; font: inherit; font-size: 14px; }
 	.hint { margin-top: 10px; font-size: 13px; color: var(--ink-45); max-width: 60ch; }
 	.log { margin-top: 12px; padding: 12px; background: var(--ground-alt); font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; max-height: 320px; overflow: auto; }
 	.muted-text { color: var(--ink-45); }

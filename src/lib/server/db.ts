@@ -130,6 +130,25 @@ export function deleteFlightsExcept(airport: string, night: string, keepIds: str
 	for (const r of rows) if (!keep.has(r.id)) del.run(r.id);
 }
 
+export interface DeletedNightData {
+	airport: string;
+	night: string;
+	nights: number;
+	flights: number;
+	incidents: number;
+}
+
+/** Delete derived SQLite data for one airport/night while leaving the raw API cache untouched. */
+export function deleteNightData(airport: string, night: string): DeletedNightData {
+	const d = db();
+	return d.transaction(() => {
+		const incidents = d.prepare(`DELETE FROM incidents WHERE airport = ? AND night = ?`).run(airport, night).changes;
+		const flights = d.prepare(`DELETE FROM flights WHERE airport = ? AND night = ?`).run(airport, night).changes;
+		const nights = d.prepare(`DELETE FROM nights WHERE airport = ? AND night = ?`).run(airport, night).changes;
+		return { airport, night, nights, flights, incidents };
+	})();
+}
+
 export function upsertFlight(f: Flight) {
 	db()
 		.prepare(

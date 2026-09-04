@@ -1,5 +1,6 @@
-import { listAirports } from '$lib/server/airports-store';
-import { altimeterCheck, deleteRequest, getRequest, incompleteNights, listRequests, nightCounts, recentProblems, runActivity } from '$lib/server/db';
+import { addDays } from '$lib/time';
+import { getAirport, listAirports } from '$lib/server/airports-store';
+import { altimeterCheck, deleteNightData as deleteDerivedNightData, deleteRequest, getRequest, incompleteNights, listRequests, nightCounts, recentProblems, runActivity } from '$lib/server/db';
 import { airportCandidate, confirmAirport, type QuietHours } from '$lib/server/airport-onboarding';
 import { pressureOffsetFt } from '$lib/altimeter';
 import { cachedCapability, extendedHistoryAllowed, probeCapability } from '$lib/server/capability';
@@ -41,6 +42,17 @@ function dbBytes(dbPath: string): number {
 function median(xs: number[]): number {
 	const s = [...xs].sort((a, b) => a - b);
 	return s[Math.floor(s.length / 2)];
+}
+
+function nightRange(from: string, to: string): string[] {
+	if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) throw new Error('Dates must be YYYY-MM-DD.');
+	if (from > to) throw new Error('From date must be on or before to date.');
+	const nights: string[] = [];
+	for (let n = from; n <= to; n = addDays(n, 1)) {
+		nights.push(n);
+		if (nights.length > 31) throw new Error('Delete at most 31 nights at a time.');
+	}
+	return nights;
 }
 
 export const load: PageServerLoad = ({ locals }) => {
@@ -130,6 +142,32 @@ export const actions: Actions = {
 		if (!listAirports().some((a) => a.code === code)) return fail(400, { error: 'Unknown airport.' });
 		if (!startBackfill(code, nights)) return fail(409, { error: 'A job is already running.' });
 		return { started: `backfill ${code} × ${nights} nights` };
+	},
+	deleteNightData: async ({ request }) => {
+		const f = await request.formData();
+		const code = String(f.get('airport') ?? '').toUpperCase();
+		const from = String(f.get('from') ?? '');
+		const to = String(f.get('to') ?? '');
+		const confirm = String(f.get('confirm') ?? '');
+		const airport = getAirport(code);
+		if (!airport) return fail(400, { error: 'Unknown airport.' });
+		if (confirm !== 'DELETE') return fail(400, { error: 'Type DELETE to remove derived night data.' });
+		const job = currentJob();
+		if (job && !job.finishedAt) return fail(409, { error: 'A job is already running.' });
+		try {
+			const deleted = nightRange(from, to).map((night) => deleteDerivedNightData(airport.icao, night));
+			const totals = deleted.reduce(
+				(acc, row) => ({
+					nights: acc.nights + row.nights,
+					flights: acc.flights + row.flights,
+					incidents: acc.incidents + row.incidents
+				}),
+				{ nights: 0, flights: 0, incidents: 0 }
+			);
+			return { deletedNightData: `${airport.code} ${from}${from === to ? '' : `–${to}`}: removed ${totals.nights} night row(s), ${totals.flights} flight(s), ${totals.incidents} incident(s). Raw API cache was left intact.` };
+		} catch (e) {
+			return fail(400, { error: e instanceof Error ? e.message : String(e) });
+		}
 	},
 	deleteRequest: async ({ request }) => {
 		const f = await request.formData();

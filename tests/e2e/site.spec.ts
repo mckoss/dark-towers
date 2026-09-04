@@ -672,6 +672,8 @@ test.describe('admin', () => {
 		await expect(page.getByRole('heading', { name: 'Pipeline console' })).toBeVisible();
 		await expect(page.getByText(/Open mode/)).toBeVisible();
 		await expect(page.getByRole('button', { name: 'Catch up now' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Delete derived night data' })).toBeVisible();
+		await expect(page.getByText('Raw cached API files stay on disk')).toBeVisible();
 		// Data on hand reflects the sample database.
 		await expect(page.getByText('KPAE').first()).toBeVisible();
 		// Nothing in the public chrome links to /admin.

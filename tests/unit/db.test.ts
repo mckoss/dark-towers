@@ -5,7 +5,7 @@ import { freshDataDir } from './helpers/server-env';
 freshDataDir('db');
 const dbm = await import('$lib/server/db');
 const {
-	openMemoryDb, upsertFlight, replaceIncidents, upsertNight, totalsForAirport, latestNight, flightById, flightsForNight,
+	openMemoryDb, upsertFlight, replaceIncidents, upsertNight, deleteNightData, totalsForAirport, latestNight, flightById, flightsForNight,
 	incidentsForNight, incidentById, incidentsForAirport, separationIncidents, nightSummary, nightsForAirport, totalsAll, totalsByAirport, veryCloseAirports,
 	recordRunStart, recordRunEnd, insertRequest, listRequests, requestExists, requestedAirportCodes
 } = dbm;
@@ -203,6 +203,23 @@ describe('nights', () => {
 		upsertNight(night('2026-08-16', { complete: true }));
 		expect(latestNight('KPAE')).toBe('2026-08-16');
 		expect(latestNight('KBLI')).toBeNull();
+	});
+	it('deletes derived data for one airport night only', () => {
+		for (const id of ['a', 'b']) upsertFlight(flight(id));
+		upsertFlight(flight('other-night', { night: '2026-08-15' }));
+		upsertFlight(flight('other-airport', { airport: 'KBLI' }));
+		replaceIncidents('KPAE', '2026-08-14', [incident('i1', 'a', 'b')]);
+		upsertNight(night('2026-08-14', { flights: 2, incidents: 1 }));
+		upsertNight(night('2026-08-15', { flights: 1 }));
+		upsertNight(night('2026-08-14', { airport: 'KBLI', flights: 1 }));
+
+		expect(deleteNightData('KPAE', '2026-08-14')).toEqual({ airport: 'KPAE', night: '2026-08-14', nights: 1, flights: 2, incidents: 1 });
+		expect(nightSummary('KPAE', '2026-08-14')).toBeNull();
+		expect(flightsForNight('KPAE', '2026-08-14')).toEqual([]);
+		expect(incidentsForNight('KPAE', '2026-08-14')).toEqual([]);
+		expect(nightSummary('KPAE', '2026-08-15')).not.toBeNull();
+		expect(nightSummary('KBLI', '2026-08-14')).not.toBeNull();
+		expect(flightsForNight('KBLI', '2026-08-14')).toHaveLength(1);
 	});
 });
 
