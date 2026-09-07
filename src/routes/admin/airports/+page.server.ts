@@ -93,8 +93,9 @@ export const actions: Actions = {
 		const open = hour(f.get('open')),
 			close = hour(f.get('close'));
 		if (Number.isNaN(open) || Number.isNaN(close)) return fail(400, { error: 'Hours must be whole numbers 0–24.' });
-		if ((open == null) !== (close == null)) return fail(400, { error: 'Give both open and close, or leave both blank for "no tower".' });
-		if (open != null && close != null && close <= open) return fail(400, { error: 'Close must be after open (overnight closures are the gap until the next open).' });
+		if ((open == null) !== (close == null)) return fail(400, { error: 'Give both watch-from and watch-to, or leave both blank for "no tower".' });
+		if (open != null && close != null && close === open) return fail(400, { error: 'Watch-from and watch-to must be different hours.' });
+		if (a.kind !== 'reference' && open != null && close != null && close <= open) return fail(400, { error: 'Dark-airport watch windows must start in the evening and end the next morning.' });
 		const id = String(f.get('id') ?? '').trim() || `${a.id}-${from}`;
 		const s: TowerSchedule = { id, from, to, open, close, note: String(f.get('note') ?? '').trim() };
 		upsertSchedule(a.id, s, locals.user!.email);

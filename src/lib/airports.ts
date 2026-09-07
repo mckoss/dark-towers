@@ -79,10 +79,13 @@ export function hourLabel(h: number): string {
 	return `${h12}:00 ${ampm}`;
 }
 
-/** Hours per day the tower is closed. */
+/** Hours per night we watch: closed hours for dark airports, quiet hours for references. */
 export function hoursClosed(a: AirportConfig): number {
 	if (!a.towerHours) return 24;
-	return 24 - (a.towerHours.close - a.towerHours.open);
+	const watched = a.towerHours.close <= a.towerHours.open
+		? a.towerHours.open - a.towerHours.close
+		: 24 - (a.towerHours.close - a.towerHours.open);
+	return watched;
 }
 
 /** Hours per night we watch: closed hours at a dark airport, quiet hours at a reference one. */

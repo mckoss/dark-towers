@@ -48,16 +48,16 @@
 			<form method="POST" action="?/save" use:enhance class="contents" data-testid="operator-{o.icao}">
 				<input type="hidden" name="icao" value={o.icao} />
 				<div class="code">{o.icao}</div>
-				<input name="name" value={o.name} required />
-				<input name="short" value={o.short} />
+				<label class="grid-field"><span>Full name</span><input name="name" value={o.name} required /></label>
+				<label class="grid-field"><span>Short name</span><input name="short" value={o.short} /></label>
 				<span class="rowbtns"><button class="link-btn" type="submit">save</button>
 					<button class="link-btn danger" type="submit" formaction="?/delete" onclick={(e) => { if (!confirm(`Delete ${o.icao}?`)) e.preventDefault(); }}>delete</button></span>
 			</form>
 		{/each}
 		<form method="POST" action="?/save" use:enhance class="contents new">
-			<input name="icao" placeholder="ICAO" maxlength="4" required />
-			<input name="name" placeholder="Full name" required />
-			<input name="short" placeholder="Short name" />
+			<label class="grid-field"><span>Code</span><input name="icao" placeholder="ICAO" maxlength="4" required /></label>
+			<label class="grid-field"><span>Full name</span><input name="name" placeholder="Full name" required /></label>
+			<label class="grid-field"><span>Short name</span><input name="short" placeholder="Short name" /></label>
 			<span class="rowbtns"><button class="link-btn" type="submit">add</button></span>
 		</form>
 	</div>
@@ -74,11 +74,35 @@
 	.flash.error { color: var(--accent-text); font-weight: 700; }
 	.grid { display: grid; grid-template-columns: 80px 1fr 1fr 110px; gap: 6px 16px; align-items: center; margin-top: 14px; }
 	.contents { display: contents; }
+	.grid-field { display: contents; }
+	.grid-field span { display: none; }
 	.code { font-weight: 800; }
 	.grid input { padding: 8px 10px; border: 2px solid var(--hairline); background: #fff; font: inherit; font-size: 14px; }
 	.grid input:focus { border-color: var(--ink); }
 	.rowbtns { display: flex; gap: 10px; }
 	.link-btn { background: none; border: none; padding: 0; color: var(--accent-text); font: inherit; font-size: 13px; cursor: pointer; text-decoration: underline; }
 	.link-btn.danger { color: var(--ink-45); }
-	@media (max-width: 760px) { .grid { grid-template-columns: 1fr 1fr; } }
+	@media (max-width: 760px) {
+		.grid { display: block; }
+		.grid > .table-header, .grid > div:empty { display: none; }
+		.contents {
+			display: grid;
+			grid-template-columns: 1fr;
+			gap: 10px;
+			padding: 12px 0;
+			border-bottom: var(--row-rule);
+		}
+		.grid-field {
+			display: flex;
+			flex-direction: column;
+			gap: 4px;
+			font-size: 11px;
+			font-weight: 700;
+			letter-spacing: 0.1em;
+			text-transform: uppercase;
+			color: var(--ink-60);
+		}
+		.grid-field span { display: inline; }
+		.grid input { width: 100%; min-width: 0; }
+	}
 </style>

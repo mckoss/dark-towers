@@ -40,10 +40,14 @@ describe('airport onboarding', () => {
 		const ready = candidateFromNasr(fixture, 'SEA', { start: 22, end: 7 });
 		expect(ready).toMatchObject({ kind: 'reference', needsQuietHours: false, schedule: { open: 7, close: 22 } });
 		expect(ready.schedule!.note).toMatch(/10:00 pm to 7:00 am/);
+
+		const early = candidateFromNasr(fixture, 'SEA', { start: 1, end: 4 });
+		expect(early).toMatchObject({ kind: 'reference', needsQuietHours: false, schedule: { open: 4, close: 1 } });
+		expect(early.schedule!.note).toMatch(/1:00 am to 4:00 am/);
 	});
 
-	it('insists that quiet hours run overnight, and only for a 24-hour tower', () => {
-		expect(() => candidateFromNasr(fixture, 'SEA', { start: 7, end: 22 })).toThrow(/overnight/);
+	it('validates quiet hours and only accepts them for a 24-hour tower', () => {
+		expect(() => candidateFromNasr(fixture, 'SEA', { start: 7, end: 7 })).toThrow(/different/);
 		expect(() => candidateFromNasr(fixture, 'SEA', { start: 22, end: 25 })).toThrow(/whole hours/);
 		expect(() => candidateFromNasr(fixture, 'STS', { start: 22, end: 7 })).toThrow(/tower that closes/);
 	});

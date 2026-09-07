@@ -92,7 +92,7 @@ export const actions: Actions = {
 		if (a.track === 'reference') {
 			const start = hour(form.get('quiet_start')),
 				end = hour(form.get('quiet_end'));
-			if (start == null || end == null) return fail(400, { error: 'Give the quiet hours this airport keeps — when they start in the evening and end in the morning.', candidate: a });
+			if (start == null || end == null) return fail(400, { error: 'Give the quiet hours this airport keeps.', candidate: a });
 			try {
 				validateQuietHours({ start, end });
 			} catch (e) {

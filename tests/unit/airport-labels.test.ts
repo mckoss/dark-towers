@@ -25,6 +25,11 @@ describe('airport hours labels', () => {
 		expect(airportHoursLabel(reference)).toBe('24 hours · quiet 10:00 pm – 7:00 am');
 	});
 
+	it('reads a same-morning reference window plainly', () => {
+		expect(quietHoursLabel({ ...reference, towerHours: { open: 4, close: 1 } })).toBe('1:00 am – 4:00 am');
+		expect(hoursClosed({ ...reference, towerHours: { open: 4, close: 1 } })).toBe(3);
+	});
+
 	it('falls back to plain language when there is no schedule at all', () => {
 		expect(towerHoursLabel({ ...base, towerHours: null })).toBe('No tower');
 		expect(quietHoursLabel({ ...reference, towerHours: null })).toBe('All hours');

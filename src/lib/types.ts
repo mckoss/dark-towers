@@ -15,17 +15,17 @@ export type AirportStatus = 'tracking' | 'requested';
 export type AirportKind = 'dark' | 'reference';
 
 export interface TowerHours {
-	/** Local hour the tower opens (0–23). */
+	/** Local hour the watched window ends; for dark airports, the tower opens. */
 	open: number;
-	/** Local hour the tower closes (1–24). */
+	/** Local hour the watched window starts; for dark airports, the tower closes. */
 	close: number;
 }
 
 /**
  * An effective-dated tower-hours row. open/close null = no tower during this period.
- * open/close always bound the hours we do NOT collect: for a 'dark' airport those are the
- * staffed hours; for a 'reference' airport they are the hours outside the quiet window.
- * Either way the night runs from `close` to the next day's `open`.
+ * For dark airports, open/close are tower hours and the watch window is the overnight
+ * gap from `close` to `open`. For reference airports, they are the quiet-hours end
+ * and start; same-morning windows such as 01:00–04:00 are allowed.
  */
 export interface TowerSchedule {
 	id: string;

@@ -9,7 +9,7 @@
 	const toggle = (id: string) => (open[id] = !open[id]);
 	const when = (ms: number | null) => (ms ? new Date(ms).toLocaleString('en-US', { hour12: false }) : '—');
 	const hoursText = (o: number | null, c: number | null) => (o == null || c == null ? 'No tower' : `${hourLabel(o)} – ${hourLabel(c)}`);
-	/** The nightly window we collect: from close to the next day's open. */
+	/** The nightly window we collect: from close to open. If close <= open, it is a same-morning window. */
 	const watchText = (o: number | null, c: number | null) => (o == null || c == null ? 'all night' : `${hourLabel(c)} – ${hourLabel(o)}`);
 	const hourOptions = Array.from({ length: 25 }, (_, h) => h);
 </script>
@@ -115,25 +115,29 @@
 						</form>
 
 						<h3 class="sub">Tower hours</h3>
-						<p class="hint">Effective-dated rows; the latest "from" wins on overlap. Leave open/close blank for a period with no tower. Open/close bound the hours we do <em>not</em> collect, so the night runs from close to the next open — at a reference airport that means open = the morning end of the quiet hours and close = the evening start. Cite the FAA Chart Supplement (and its effective date) in the note.</p>
+						<p class="hint">Usually there is one open-ended current row. Add more rows only when published hours change by date; the latest "from" wins on overlap. Watch from/to are local whole hours, 0 through 24. Leave both hour fields blank for no tower. Same-morning reference windows like 1:00 am–4:00 am are allowed. Cite the FAA Chart Supplement or quiet-hours source in the note.</p>
 						<div class="sched">
-							<div class="table-header">From</div><div class="table-header">To</div><div class="table-header">Open</div><div class="table-header">Close</div><div class="table-header">Note</div><div></div>
+							<div class="table-header">From</div><div class="table-header">To</div><div class="table-header">Watch from</div><div class="table-header">Watch to</div><div class="table-header">Note</div><div></div>
 							{#each a.schedules as s (s.id)}
 								<form method="POST" action="?/schedule" use:enhance class="contents">
 									<input type="hidden" name="airport" value={a.id} /><input type="hidden" name="id" value={s.id} />
-									<input name="from" value={s.from} size="10" /><input name="to" value={s.to ?? ''} size="10" placeholder="open-ended" />
-									<input name="open" value={s.open ?? ''} size="3" /><input name="close" value={s.close ?? ''} size="3" />
-									<input name="note" value={s.note} />
-									<span class="rowbtns"><button class="link-btn" type="submit">save</button>
-										<button class="link-btn danger" type="submit" formaction="?/deleteSchedule" onclick={(e) => { if (!confirm(`Delete schedule ${s.id}?`)) e.preventDefault(); }}>delete</button></span>
+									<label class="sched-field"><span>From</span><input name="from" value={s.from} size="10" /></label>
+									<label class="sched-field"><span>To</span><input name="to" value={s.to ?? ''} size="10" placeholder="open-ended" /></label>
+									<label class="sched-field"><span>Watch from</span><input name="close" value={s.close ?? ''} size="3" /></label>
+									<label class="sched-field"><span>Watch to</span><input name="open" value={s.open ?? ''} size="3" /></label>
+									<label class="sched-field note-field"><span>Note</span><input name="note" value={s.note} /></label>
+									<span class="rowbtns"><button class="mini-btn" type="submit">Save row</button>
+										<button class="mini-btn danger" type="submit" formaction="?/deleteSchedule" onclick={(e) => { if (!confirm(`Delete schedule ${s.id}?`)) e.preventDefault(); }}>Delete row</button></span>
 								</form>
 							{/each}
 							<form method="POST" action="?/schedule" use:enhance class="contents new">
 								<input type="hidden" name="airport" value={a.id} />
-								<input name="from" placeholder="YYYY-MM-DD" size="10" required /><input name="to" placeholder="open-ended" size="10" />
-								<input name="open" placeholder="7" size="3" /><input name="close" placeholder="21" size="3" />
-								<input name="note" placeholder="Chart Supplement NW, eff. 2026-09-04" />
-								<span class="rowbtns"><button class="link-btn" type="submit">add</button></span>
+								<label class="sched-field"><span>From</span><input name="from" placeholder="YYYY-MM-DD" size="10" required /></label>
+								<label class="sched-field"><span>To</span><input name="to" placeholder="open-ended" size="10" /></label>
+								<label class="sched-field"><span>Watch from</span><input name="close" placeholder={a.kind === 'reference' ? '1' : '21'} size="3" /></label>
+								<label class="sched-field"><span>Watch to</span><input name="open" placeholder={a.kind === 'reference' ? '4' : '7'} size="3" /></label>
+								<label class="sched-field note-field"><span>Note</span><input name="note" placeholder="Chart Supplement NW, eff. 2026-09-04" /></label>
+								<span class="rowbtns"><button class="mini-btn" type="submit">Add row</button></span>
 							</form>
 						</div>
 					</div>
@@ -228,15 +232,42 @@
 	.sub { margin-top: 28px; font-size: 16px; font-weight: 800; }
 	.sched { display: grid; grid-template-columns: 120px 120px 64px 64px 1fr 110px; gap: 6px 10px; align-items: center; margin-top: 10px; }
 	.contents { display: contents; }
+	.sched-field { display: contents; }
+	.sched-field span { display: none; }
 	.rowbtns { display: flex; gap: 10px; }
+	.mini-btn { padding: 6px 8px; border: 1px solid var(--ink); background: #fff; color: var(--ink); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+	.mini-btn:hover { background: var(--ground-alt); }
+	.mini-btn.danger { border-color: var(--hairline); color: var(--accent-text); }
 	.link-btn { background: none; border: none; padding: 0; color: var(--accent-text); font: inherit; font-size: 13px; cursor: pointer; text-decoration: underline; }
-	.link-btn.danger { color: var(--ink-45); }
 	@media (max-width: 760px) {
 		.head { grid-template-columns: 60px 1fr 20px; }
 		.head .pill, .head .dim { display: none; }
 		.detail { padding-left: 0; }
 		.grid-form { grid-template-columns: 1fr; }
+		.grid-form label.check { grid-column: 1; }
+		.grid-form input, .grid-form select, .grid-form output { width: 100%; min-width: 0; }
 		.candidate { grid-template-columns: 1fr; }
-		.sched { grid-template-columns: 1fr 1fr; }
+		.sched { display: block; }
+		.sched > .table-header, .sched > div:empty { display: none; }
+		.sched .contents {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 10px 12px;
+			padding: 12px 0;
+			border-bottom: var(--row-rule);
+		}
+		.sched-field {
+			display: flex;
+			flex-direction: column;
+			gap: 4px;
+			font-size: 11px;
+			font-weight: 700;
+			letter-spacing: 0.1em;
+			text-transform: uppercase;
+			color: var(--ink-60);
+		}
+		.sched-field span { display: inline; }
+		.sched .note-field, .sched .rowbtns { grid-column: 1 / -1; }
+		.sched input { width: 100%; min-width: 0; }
 	}
 </style>

@@ -6,7 +6,7 @@ import { createAirport, getAirport, upsertSchedule } from './airports-store';
 import { db, deleteRequest } from './db';
 import { nasrData } from './nasr';
 
-/** The hours passenger airlines have agreed not to fly, as local whole hours (22 → 7). */
+/** The hours passenger airlines have agreed not to fly, as local whole hours (22 → 7, or 1 → 4). */
 export interface QuietHours {
 	start: number;
 	end: number;
@@ -42,11 +42,10 @@ function pollingHours(raw: string): { open: number; close: number } | null {
 	};
 }
 
-/** Quiet hours must run overnight, so the stored window (open = end, close = start) is a real gap. */
 export function validateQuietHours(quiet: QuietHours): void {
 	const { start, end } = quiet;
 	for (const h of [start, end]) if (!Number.isInteger(h) || h < 0 || h > 24) throw new Error('Quiet hours must be whole hours between 0 and 24.');
-	if (end >= start) throw new Error('Quiet hours must run overnight — the start (evening) must be later than the end (morning).');
+	if (end === start) throw new Error('Quiet hours must have different start and end hours.');
 }
 
 export function candidateFromNasr(data: NasrData, code: string, quiet?: QuietHours | null): AirportCandidate {

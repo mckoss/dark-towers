@@ -68,6 +68,12 @@ describe('nightWindow', () => {
 		expect(w.end).toBe(zonedToUtc(LA, 2026, 8, 15, 0));
 		expect((w.end - w.start) / 3_600_000).toBe(24);
 	});
+	it('assigns a same-morning reference window to the preceding night', () => {
+		const w = nightWindow(LA, { open: 4, close: 1 }, '2026-08-14');
+		expect(w.start).toBe(zonedToUtc(LA, 2026, 8, 15, 1));
+		expect(w.end).toBe(zonedToUtc(LA, 2026, 8, 15, 4));
+		expect((w.end - w.start) / 3_600_000).toBe(3);
+	});
 	it('with no tower spans 25 hours on the fall-back day', () => {
 		const w = nightWindow(LA, null, '2026-11-01');
 		expect((w.end - w.start) / 3_600_000).toBe(25);
@@ -83,6 +89,10 @@ describe('nightOf', () => {
 	});
 	it('maps 12:00 local (tower open) to null', () => {
 		expect(nightOf(LA, PAE_TOWER, zonedToUtc(LA, 2026, 8, 14, 12, 0))).toBeNull();
+	});
+	it('maps a same-morning reference window to the previous night', () => {
+		expect(nightOf(LA, { open: 4, close: 1 }, zonedToUtc(LA, 2026, 8, 15, 2, 0))).toBe('2026-08-14');
+		expect(nightOf(LA, { open: 4, close: 1 }, zonedToUtc(LA, 2026, 8, 14, 22, 0))).toBeNull();
 	});
 	it('is consistent with nightWindow at the boundaries', () => {
 		const w = nightWindow(LA, PAE_TOWER, '2026-08-14');

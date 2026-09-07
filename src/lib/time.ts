@@ -86,7 +86,9 @@ export interface NightWindow {
 /**
  * The UTC window during which the tower is closed for the night beginning on
  * local date `night`. With tower hours {open:7, close:21} that is 21:00 on
- * `night` to 07:00 the next day. With no tower, it's the full local day.
+ * `night` to 07:00 the next day. A same-morning reference window such as
+ * {open:4, close:1} belongs to the preceding night: 01:00 to 04:00 the next day.
+ * With no tower, it's the full local day.
  */
 export function nightWindow(tz: string, tower: { open: number; close: number } | null, night: string): NightWindow {
 	const [y, m, d] = parseDateKey(night);
@@ -94,6 +96,9 @@ export function nightWindow(tz: string, tower: { open: number; close: number } |
 		return { night, start: zonedToUtc(tz, y, m, d, 0), end: zonedToUtc(tz, y, m, d, 24) };
 	}
 	const [ny, nm, nd] = parseDateKey(addDays(night, 1));
+	if (tower.close <= tower.open) {
+		return { night, start: zonedToUtc(tz, ny, nm, nd, tower.close), end: zonedToUtc(tz, ny, nm, nd, tower.open) };
+	}
 	return { night, start: zonedToUtc(tz, y, m, d, tower.close), end: zonedToUtc(tz, ny, nm, nd, tower.open) };
 }
 
@@ -102,6 +107,7 @@ export function nightOf(tz: string, tower: { open: number; close: number } | nul
 	const p = localParts(tz, utcMs);
 	const key = dateKey(p.year, p.month, p.day);
 	if (!tower) return key;
+	if (tower.close <= tower.open) return p.hour >= tower.close && p.hour < tower.open ? addDays(key, -1) : null;
 	if (p.hour >= tower.close) return key;
 	if (p.hour < tower.open) return addDays(key, -1);
 	return null;
