@@ -23,7 +23,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const adminPath = event.url.pathname === '/admin' || event.url.pathname.startsWith('/admin/');
 	if (adminPath && !openMode()) {
 		if (!event.locals.user) redirect(303, `/auth/google?next=${encodeURIComponent(event.url.pathname + event.url.search)}`);
-		if (!isAdmin(event.locals.user.email)) error(403, 'This account is not authorised for admin.');
+		if (!isAdmin(event.locals.user.email)) {
+			// Hook errors bypass Svelte error pages; render recovery on a public auth route.
+			if (event.request.method === 'GET') redirect(303, '/auth/denied');
+			error(403, 'This account is not authorized for admin.');
+		}
 	}
 	const response = await resolve(event);
 	if (event.url.pathname.startsWith('/admin') || event.url.pathname.startsWith('/auth')) {

@@ -84,6 +84,7 @@ describe('google oauth', () => {
 		expect(url.searchParams.get('state')).toBe('st8');
 		expect(url.searchParams.get('redirect_uri')).toBe('http://localhost:5173/auth/google/callback');
 		expect(url.searchParams.get('scope')).toContain('email');
+		expect(url.searchParams.get('prompt')).toBe('select_account');
 	});
 
 	it('public_origin overrides the callback origin', async () => {
