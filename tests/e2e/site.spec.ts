@@ -264,7 +264,7 @@ test.describe('airports', () => {
 		await reason.fill('The airport publishes a voluntary late-night curfew, so these hours are comparable.');
 		await candidate.getByRole('button', { name: 'Submit airport request' }).click();
 		await expect(page.getByTestId('request-ok')).toContainText(`request for ${code}`);
-		await page.goto('/admin');
+		await page.goto('/admin/requests');
 		await expect(page.getByText('reference · quiet 22:00–7:00').first()).toBeVisible();
 	});
 
@@ -293,7 +293,7 @@ test.describe('airports', () => {
 		await expect(requestedRow).toContainText('Requested');
 		await page.goto('/');
 		await expect(page.locator(`.coverage-marker[data-code="${code}"]`)).toHaveAttribute('data-status', 'requested');
-		await page.goto('/admin');
+		await page.goto('/admin/requests');
 		await expect(page.getByText(comment)).toBeVisible();
 		const text = await page.locator('main').textContent();
 		expect(text).not.toMatch(/we will review|within \d+ (days|hours)/i);
@@ -669,13 +669,28 @@ test.describe('admin', () => {
 		// The e2e server runs with DTW_NO_AUTH=1 so the console is reachable.
 		const res = await page.goto('/admin');
 		expect(res?.headers()['x-robots-tag']).toContain('noindex');
-		await expect(page.getByRole('heading', { name: 'Pipeline console' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Admin overview' })).toBeVisible();
 		await expect(page.getByText(/Open mode/)).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Catch up now' })).toHaveCount(0);
+		await expect(page.getByRole('heading', { name: 'Storage', exact: true })).toHaveCount(0);
+		const nav = page.getByRole('navigation', { name: 'Admin', exact: true });
+		await nav.getByRole('link', { name: 'Airports', exact: true }).click();
+		await expect(page).toHaveURL(/\/admin\/airports$/);
+		await expect(nav.getByRole('link', { name: 'Airports', exact: true })).toHaveAttribute('aria-current', 'page');
+		await nav.getByRole('link', { name: 'Pipeline', exact: true }).click();
 		await expect(page.getByRole('button', { name: 'Catch up now' })).toBeVisible();
 		await expect(page.getByRole('heading', { name: 'Delete derived night data' })).toBeVisible();
 		await expect(page.getByText('Raw cached API files stay on disk')).toBeVisible();
+		await nav.getByRole('link', { name: 'Data & diagnostics', exact: true }).click();
+		await expect(page.getByRole('heading', { name: 'Storage', exact: true })).toBeVisible();
 		// Data on hand reflects the sample database.
 		await expect(page.getByText('KPAE').first()).toBeVisible();
+		await nav.getByRole('link', { name: 'Requests', exact: true }).click();
+		await expect(page.getByRole('heading', { name: 'Airport requests', exact: true })).toBeVisible();
+		await nav.getByRole('link', { name: 'Configuration', exact: true }).click();
+		await expect(page.getByRole('button', { name: 're-check', exact: true })).toBeVisible();
+		await nav.getByRole('link', { name: 'Overview', exact: true }).click();
+		await expect(page.getByRole('heading', { name: 'Admin overview' })).toBeVisible();
 		// Nothing in the public chrome links to /admin.
 		await page.goto('/');
 		expect(await page.locator('a[href^="/admin"]').count()).toBe(0);
@@ -686,6 +701,22 @@ test.describe('admin', () => {
 	test('sign-in endpoint refuses when Google is not configured', async ({ request }) => {
 		const res = await request.get('/auth/google', { maxRedirects: 0 });
 		expect([302, 503]).toContain(res.status());
+	});
+
+	test('moved pipeline and request actions retain validation', async ({ page, request }) => {
+		await page.goto('/admin/pipeline');
+		const repair = page.locator('form[action="?/deleteNightData"]');
+		await repair.locator('input[name="from"]').fill('2026-08-14');
+		await repair.locator('input[name="to"]').fill('2026-08-14');
+		await repair.locator('input[name="confirm"]').fill('KEEP');
+		await repair.getByRole('button', { name: 'Delete nights' }).click();
+		await expect(page.getByRole('alert')).toContainText('Type DELETE');
+		const response = await request.post('/admin/requests?/acceptRequest', {
+			form: { id: '-1' }, headers: { origin: new URL(page.url()).origin, accept: 'application/json' }
+		});
+		const result = await response.json();
+		expect(result).toMatchObject({ type: 'failure', status: 404 });
+		expect(result.data).toContain('Request not found.');
 	});
 });
 

@@ -242,4 +242,9 @@ describe('runs and requests', () => {
 		expect(requestExists('NOPE')).toBe(false);
 		expect(requestedAirportCodes()).toEqual(['ABC', 'KXYZ']);
 	});
+	it('counts all pending requests beyond the review list limit', () => {
+		for (let i = 0; i < 205; i++) insertRequest(`TEST${i}`, null);
+		expect(listRequests()).toHaveLength(200);
+		expect(dbm.requestCount()).toBe(205);
+	});
 });
