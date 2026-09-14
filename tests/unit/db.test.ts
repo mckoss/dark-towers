@@ -223,6 +223,46 @@ describe('nights', () => {
 	});
 });
 
+describe('airport data removal', () => {
+	beforeEach(() => {
+		for (const date of ['2026-07-01', '2026-08-14', '2026-08-15']) {
+			upsertNight(night(date));
+			upsertFlight(flight(date, { night: date }));
+		}
+		upsertFlight(flight('b'));
+		replaceIncidents('KPAE', '2026-08-14', [incident('i1', '2026-08-14', 'b')]);
+		upsertNight(night('2026-08-14', { airport: 'KSEA' }));
+		upsertFlight(flight('sea', { airport: 'KSEA' }));
+	});
+	it('previews without mutation and removes only the inclusive range', () => {
+		const target = { airport: 'KPAE', from: '2026-08-14', to: '2026-08-14' };
+		expect(dbm.airportDataCounts(target)).toEqual({ nights: 1, flights: 2, incidents: 1 });
+		expect(nightSummary('KPAE', '2026-08-14')).not.toBeNull();
+		expect(dbm.deleteAirportData(target)).toEqual({ nights: 1, flights: 2, incidents: 1 });
+		expect(nightSummary('KPAE', '2026-08-15')).not.toBeNull();
+		expect(nightSummary('KSEA', '2026-08-14')).not.toBeNull();
+	});
+	it('removes all nights beyond 31 days and leaves other airports intact', () => {
+		const target = { airport: 'KPAE', from: null, to: null };
+		expect(dbm.deleteAirportData(target)).toEqual({ nights: 3, flights: 4, incidents: 1 });
+		expect(dbm.airportDataCounts(target)).toEqual({ nights: 0, flights: 0, incidents: 0 });
+		expect(flightById('sea')).not.toBeNull();
+		expect(nightSummary('KSEA', '2026-08-14')).not.toBeNull();
+	});
+	it('rejects partial, impossible, and reversed dates before deletion', () => {
+		for (const [from, to] of [[null, '2026-08-14'], ['2026-02-30', '2026-03-01'], ['2026-08-15', '2026-08-14']]) {
+			expect(() => dbm.deleteAirportData({ airport: 'KPAE', from, to })).toThrow(/valid date range/);
+		}
+		expect(nightSummary('KPAE', '2026-08-14')).not.toBeNull();
+	});
+	it('rolls back the whole removal if any table deletion fails', () => {
+		dbm.db().exec("CREATE TRIGGER block_delete BEFORE DELETE ON flights BEGIN SELECT RAISE(ABORT, 'test failure'); END;");
+		expect(() => dbm.deleteAirportData({ airport: 'KPAE', from: null, to: null })).toThrow('test failure');
+		expect(incidentsForNight('KPAE', '2026-08-14')).toHaveLength(1);
+		expect(nightSummary('KPAE', '2026-08-14')).not.toBeNull();
+	});
+});
+
 describe('runs and requests', () => {
 	it('records a run start and end', () => {
 		const id = recordRunStart('KPAE', '2026-08-14');

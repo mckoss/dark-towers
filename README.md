@@ -44,6 +44,9 @@ directly, and reports draw their charts on plain ground.
   The overview shows collection status and summary counts. Shared admin navigation opens Airports,
   Requests (`/admin/requests`), Pipeline (`/admin/pipeline`), Data & diagnostics (`/admin/data`),
   airline names, aircraft, base maps, and Configuration (`/admin/configuration`).
+  From Data & diagnostics, **Remove collected airport data** previews and removes a date range or
+  all nights for one airport. Confirm by typing its code. Raw responses and airport settings stay
+  intact; correct collection hours or turn tracking off first to prevent unwanted recollection.
 - Tests: `npm test` (unit, vitest) and `npm run test:e2e` (Playwright, desktop + mobile).
 - Collect data by hand: `npm run ingest -- PAE 2026-08-22`, `npm run ingest -- PAE --backfill 30`,
   `npm run ingest -- --catch-up`. Reprocess everything cached: `npm run db:rebuild`.
