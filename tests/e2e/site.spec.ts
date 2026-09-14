@@ -721,6 +721,25 @@ test.describe('admin', () => {
 });
 
 test.describe('admin airports', () => {
+	test('previews airport data removal and requires matching confirmation', async ({ page }) => {
+		await page.goto('/admin/data');
+		await page.getByRole('link', { name: 'KPAE', exact: true }).click();
+		await expect(page.getByRole('combobox', { name: 'Airport', exact: true })).toHaveValue('PAE');
+		await page.getByLabel('Nights to remove').selectOption('all');
+		await page.getByRole('button', { name: 'Preview removal' }).click();
+		const preview = page.getByRole('region', { name: 'Removal preview' });
+		await expect(preview).toContainText('All collected nights');
+		await preview.getByLabel('Type PAE to confirm').fill('WRONG');
+		await preview.getByRole('button', { name: 'Remove PAE data' }).click();
+		await expect(page.getByRole('alert')).toContainText('Type PAE to confirm');
+		await page.getByLabel('Nights to remove').selectOption('range');
+		await page.getByLabel('First night').fill('1900-01-01');
+		await page.getByLabel('Last night').fill('1900-01-02');
+		await page.getByRole('button', { name: 'Preview removal' }).click();
+		await expect(preview).toContainText('There is no data to remove');
+		await expect(preview.getByRole('button', { name: 'Remove PAE data' })).toHaveCount(0);
+	});
+
 	test('looks up a three-letter code and shows FAA data before confirmation', async ({ page }) => {
 		await page.goto('/admin/airports');
 		await page.getByLabel('Airport code').fill('STS');

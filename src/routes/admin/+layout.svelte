@@ -22,7 +22,7 @@
  </div>
  <nav class="admin-nav" aria-label="Admin">
   {#each links as [href, label]}
-   <a {href} aria-current={page.url.pathname === href ? 'page' : undefined}>{label}</a>
+   <a {href} aria-current={page.url.pathname === href || (href !== '/admin' && page.url.pathname.startsWith(href + '/')) ? 'page' : undefined}>{label}</a>
   {/each}
  </nav>
  {@render children()}

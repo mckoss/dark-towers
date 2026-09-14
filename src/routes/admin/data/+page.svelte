@@ -18,10 +18,11 @@
 
 <section class="section cell">
 	<h2 class="section-heading">Data on hand</h2>
+	<p class="hint"><a href="/admin/data/remove">Remove collected airport data →</a></p>
 	<div class="grid counts">
 		<div class="table-header">Airport</div><div class="table-header">Nights</div><div class="table-header">Complete</div><div class="table-header">First</div><div class="table-header">Last</div>
 		{#each data.counts as c (c.airport)}
-			<div>{c.airport}</div><div class="tabular">{c.nights}</div><div class="tabular">{c.complete}</div><div>{c.first}</div><div>{c.last}</div>
+			<div><a href="/admin/data/remove?airport={c.airport}" title="Remove collected data for {c.airport}">{c.airport}</a></div><div class="tabular">{c.nights}</div><div class="tabular">{c.complete}</div><div>{c.first}</div><div>{c.last}</div>
 		{/each}
 	</div>
 	<h3 class="sub">Storage</h3>

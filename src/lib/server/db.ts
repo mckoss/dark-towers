@@ -149,6 +149,43 @@ export function deleteNightData(airport: string, night: string): DeletedNightDat
 	})();
 }
 
+export interface AirportDataSelection {
+	airport: string;
+	from: string | null;
+	to: string | null;
+}
+
+function airportDataFilter({ airport, from, to }: AirportDataSelection) {
+	if (!airport) throw new Error('Choose an airport.');
+	const validDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value)
+		&& Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
+	if ((from === null) !== (to === null) || (from !== null && to !== null && (!validDate(from) || !validDate(to) || from > to))) {
+		throw new Error('Choose a valid date range, with the first night on or before the last.');
+	}
+	return from === null ? { sql: 'airport = ?', args: [airport] }
+		: { sql: 'airport = ? AND night >= ? AND night <= ?', args: [airport, from, to!] };
+}
+
+/** Count precisely the same rows the removal transaction will delete. */
+export function airportDataCounts(selection: AirportDataSelection) {
+	const { sql, args } = airportDataFilter(selection);
+	const count = (table: 'nights' | 'flights' | 'incidents') =>
+		(db().prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE ${sql}`).get(...args) as { n: number }).n;
+	return { nights: count('nights'), flights: count('flights'), incidents: count('incidents') };
+}
+
+/** Remove one airport's published data atomically; retain its configuration and raw cache. */
+export function deleteAirportData(selection: AirportDataSelection) {
+	const { sql, args } = airportDataFilter(selection);
+	const d = db();
+	return d.transaction(() => {
+		const incidents = d.prepare(`DELETE FROM incidents WHERE ${sql}`).run(...args).changes;
+		const flights = d.prepare(`DELETE FROM flights WHERE ${sql}`).run(...args).changes;
+		const nights = d.prepare(`DELETE FROM nights WHERE ${sql}`).run(...args).changes;
+		return { nights, flights, incidents };
+	})();
+}
+
 export function upsertFlight(f: Flight) {
 	db()
 		.prepare(
