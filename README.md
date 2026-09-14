@@ -41,6 +41,9 @@ directly, and reports draw their charts on plain ground.
   (API calls). Set `"scheduler": false` in `config.json` to collect only on demand.
 - Admin console: `/admin` (Google sign-in, emails listed in `config.json` → `admins`). Without Google
   credentials: `DTW_NO_AUTH=1 npm run dev`.
+  The overview shows collection status and summary counts. Shared admin navigation opens Airports,
+  Requests (`/admin/requests`), Pipeline (`/admin/pipeline`), Data & diagnostics (`/admin/data`),
+  airline names, aircraft, base maps, and Configuration (`/admin/configuration`).
 - Tests: `npm test` (unit, vitest) and `npm run test:e2e` (Playwright, desktop + mobile).
 - Collect data by hand: `npm run ingest -- PAE 2026-08-22`, `npm run ingest -- PAE --backfill 30`,
   `npm run ingest -- --catch-up`. Reprocess everything cached: `npm run db:rebuild`.
@@ -60,7 +63,7 @@ FlightAware responses; `data/db/darktowers.sqlite` is derived from it.
   `/flights/{id}/track` for ADS-B positions. Personal tier: 10 queries/minute, live data only
   (10 days). Whether the key allows *extended history* (the `/history/` endpoints, Standard tier
   and above) is probed with one call at startup and cached per key (`npm run aeroapi:probe`,
-  or "re-check" on `/admin`); `"aeroapi_history": true|false` in config forces it if needed.
+  or "re-check" on `/admin/configuration`); `"aeroapi_history": true|false` in config forces it if needed.
 - **Tower hours:** FAA Chart Supplement (entered by hand, effective-dated, editable in
   `/admin/airports`; seeded from `airports.json`).
 - **Quiet hours (reference airports):** a few airports with a 24-hour tower are tracked over their
@@ -90,7 +93,7 @@ The app is a single Node service with a persistent volume.
 4. In Google Cloud Console, add `https://<your domain>/auth/google/callback` to the OAuth client's
    authorised redirect URIs.
 5. Deploy. On first start the airports table is seeded from `airports.json`; the hourly job then
-   collects each tracked airport's nights. To load history, use `/admin` → Backfill (or copy an
+   collects each tracked airport's nights. To load history, use `/admin/pipeline` → Backfill (or copy an
    existing `data/raw` tree onto the volume and run `npm run db:rebuild`).
 
 Deploys are intended to trigger on CI passing on `main` (`.github/workflows/ci.yml`: check, unit,

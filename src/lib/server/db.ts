@@ -462,6 +462,9 @@ export interface RequestRow {
 export function listRequests(limit = 200): RequestRow[] {
 	return db().prepare(`SELECT * FROM requests ORDER BY id DESC LIMIT ?`).all(limit) as RequestRow[];
 }
+export function requestCount(): number {
+	return (db().prepare('SELECT COUNT(*) AS n FROM requests').get() as { n: number }).n;
+}
 export function getRequest(id: number): RequestRow | undefined {
 	return db().prepare(`SELECT * FROM requests WHERE id = ?`).get(id) as RequestRow | undefined;
 }
