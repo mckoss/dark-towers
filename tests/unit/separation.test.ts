@@ -1,6 +1,7 @@
+import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { fromLocalNm, toLocalNm, type LatLon } from '$lib/geo';
-import { closestApproach, buildTrackSpline, dropGhosts, findIncidents, incidentId, sameAircraft, severityOf } from '$lib/separation';
+import { closestApproach, buildTrackSpline, dropGhosts, findIncidents, incidentId, radarTrack, sameAircraft, severityOf } from '$lib/separation';
 import type { Flight, Position } from '$lib/types';
 
 const ORIGIN: LatLon = [47.9079, -122.2816];
@@ -188,7 +189,7 @@ describe('sameAircraft (ghost records)', () => {
 		expect(ids).toContain('OTHER+REAL');
 	});
 
-	it('treats coarse same-operation airline records as one aircraft', () => {
+	it('a coarse radar copy of an airline arrival is the same aircraft', () => {
 		const origin: [number, number] = [59.64554861, -151.47659472];
 		const mk = (id: string, ident: string, tail: string | null, positions: Position[]): Flight => ({
 			id, airport: 'PAHO', night: '2026-08-16', ident, tail, type: 'SB20', category: 'airline', operator: 'SRY', operatorName: null, operatorShort: null,
@@ -239,6 +240,115 @@ describe('sameAircraft (ghost records)', () => {
 			return { ...p, lat, lon };
 		}));
 		expect(sameAircraft(buildTrackSpline(origin, real)!, buildTrackSpline(origin, other)!, origin)).toBe(false);
+	});
+});
+
+describe('radar copies (sparse ghost records)', () => {
+	// A Southwest departure climbing out north-west at 220 kt, ADS-B every 4 s.
+	const origin: LatLon = [47.9079, -122.2816];
+	const HDG = 330;
+	const KT = 220;
+	const rad = (HDG * Math.PI) / 180;
+	const at = (s: number, abeamNm = 0): [number, number, number] => {
+		const along = (KT / 3600) * s;
+		return [Math.sin(rad) * along + Math.cos(rad) * abeamNm, Math.cos(rad) * along - Math.sin(rad) * abeamNm, 1500 + s * 15];
+	};
+	// Radar cuts positions toward zero on the arc-minute grid.
+	const cut = (deg: number) => Math.trunc(deg * 60) / 60;
+	const pos = (t: number, [e, n, alt]: [number, number, number], grid = false): Position => {
+		let [lat, lon] = fromLocalNm(origin, [e, n]);
+		if (grid) [lat, lon] = [cut(lat), cut(lon)];
+		return { t: T0 + t * 1000, lat, lon, alt: Math.round(alt / 100) * 100, gs: KT, hdg: HDG, dist: Math.hypot(e, n) };
+	};
+	const mk = (id: string, ident: string, tail: string | null, type: string | null, positions: Position[]): Flight => ({
+		id, airport: ICAO, night: NIGHT, ident, tail, type, category: tail ? 'airline' : 'private', operator: tail ? 'SWA' : null, operatorName: null, operatorShort: null,
+		direction: 'departure', eventTime: T0, otherCode: tail ? 'LAS' : null, otherName: null, otherCity: null, positions
+	});
+	const real = mk('SWA1234-1-airline-1p', 'SWA1234', 'N8501V', 'B38M', Array.from({ length: 76 }, (_, i) => pos(i * 4, at(i * 4))));
+	const minutes = [10, 70, 130, 190, 250];
+
+	it('a lagging radar copy on the arc-minute grid is the same aircraft', () => {
+		// The same transponder seen by radar under an ad-hoc ident: one report a
+		// minute, cut to whole arc-minutes, about 8 s behind the ADS-B track.
+		const shadow = mk('OV1234-2-adhoc-1p', 'OV1234', null, null, minutes.map((s) => pos(s, at(s - 8), true)));
+		expect(radarTrack(shadow)).toBe(true);
+		const T = (f: Flight) => buildTrackSpline(origin, f)!;
+		expect(sameAircraft(T(real), T(shadow), origin)).toBe(true);
+		expect(findIncidents(origin, ICAO, NIGHT, [real, shadow])).toEqual([]);
+		expect(dropGhosts(origin, [shadow, real]).dropped.map((f) => f.id)).toEqual(['OV1234-2-adhoc-1p']);
+	});
+
+	it('a lagging radar copy off the grid is the same aircraft', () => {
+		// 10 s behind: 0.6 NM back along the track at the same instant.
+		const shadow = mk('OV2345-5-adhoc-1p', 'OV2345', null, null, minutes.map((s) => pos(s, at(s - 10, 0.05))));
+		expect(findIncidents(origin, ICAO, NIGHT, [real, shadow])).toEqual([]);
+	});
+
+	it('a sparse untyped aircraft 0.5 NM abeam is still a close approach', () => {
+		const abeam = mk('OV5678-3-adhoc-1p', 'OV5678', null, null, minutes.map((s) => pos(s, at(s, 0.5))));
+		expect(radarTrack(abeam)).toBe(true);
+		expect(sameAircraft(buildTrackSpline(origin, real)!, buildTrackSpline(origin, abeam)!, origin)).toBe(false);
+		expect(findIncidents(origin, ICAO, NIGHT, [real, abeam])).toHaveLength(1);
+	});
+
+	it('a sparse untyped aircraft 1.5 NM abeam on the grid is still a close approach', () => {
+		const abeam = mk('OV6789-6-adhoc-1p', 'OV6789', null, null, minutes.map((s) => pos(s, at(s, 1.5), true)));
+		expect(radarTrack(abeam)).toBe(true);
+		expect(findIncidents(origin, ICAO, NIGHT, [real, abeam])).toHaveLength(1);
+	});
+
+	it('the ADS-B record itself is not a radar track', () => {
+		expect(radarTrack(real)).toBe(false);
+		// Mirror image: the ADS-B record is never loosely matched to a sparse neighbour.
+		const typed = mk('N12345-4-adhoc-1p', 'N12345', 'N12345', 'C172', minutes.map((s) => pos(s, at(s, 0.5))));
+		expect(findIncidents(origin, ICAO, NIGHT, [real, typed])).toHaveLength(1);
+	});
+
+	it('recorded case: OV3542 on radar is the Lufthansa departure it rode on', () => {
+		// PAE 2026-10-02: a Boeing delivery flight and its radar copy, published
+		// as a 0.00 NM / 22 ft close approach before radar copies were matched.
+		const c = JSON.parse(fs.readFileSync('tests/fixtures/ghosts/PAE-20261002-jpmz8.json', 'utf8')) as { origin: LatLon; night: string; flights: Flight[] };
+		const [dlh, ov] = c.flights;
+		expect(radarTrack(ov)).toBe(true);
+		expect(radarTrack(dlh)).toBe(false);
+		expect(sameAircraft(buildTrackSpline(c.origin, dlh)!, buildTrackSpline(c.origin, ov)!, c.origin)).toBe(true);
+		expect(findIncidents(c.origin, ICAO, c.night, [dlh, ov])).toEqual([]);
+		expect(dropGhosts(c.origin, [ov, dlh]).dropped.map((f) => f.ident)).toEqual(['OV3542']);
+	});
+
+	it('a formation flight is two aircraft, however alike their operator and route', () => {
+		// Two of one company's aircraft, related flight numbers, both on ADS-B,
+		// 0.3 NM apart the whole way.
+		const lead = mk('SRY681-7-airline-1p', 'SRY681', 'N681SA', 'C208', Array.from({ length: 76 }, (_, i) => pos(i * 4, at(i * 4))));
+		const wing = mk('SRY682-8-airline-1p', 'SRY682', 'N682SA', 'C208', Array.from({ length: 76 }, (_, i) => pos(i * 4 + 2, at(i * 4 + 2, 0.3))));
+		for (const f of [lead, wing]) Object.assign(f, { operator: 'SRY', category: 'airline', otherCode: 'ANC' });
+		expect(radarTrack(wing)).toBe(false);
+		expect(sameAircraft(buildTrackSpline(origin, lead)!, buildTrackSpline(origin, wing)!, origin)).toBe(false);
+		expect(dropGhosts(origin, [lead, wing]).dropped).toEqual([]);
+		expect(findIncidents(origin, ICAO, NIGHT, [lead, wing])).toHaveLength(1);
+	});
+
+	it('recorded case: N49KJ on radar is N749KJ on ADS-B, not a neighbour', () => {
+		// PAE 2024-06-20: one aircraft filed twice, the radar copy under a
+		// one-digit-off tail. Before, it was a "close approach" at 0.00 NM.
+		const recorded = (file: string, tail: string): Flight => {
+			const raw = JSON.parse(fs.readFileSync(`tests/fixtures/raw/KPAE/tracks/${file}.json`, 'utf8')) as { positions: { timestamp: string; latitude: number; longitude: number; altitude: number; groundspeed: number; heading: number }[] };
+			return {
+				id: file, airport: ICAO, night: '2024-06-20', ident: tail, tail, type: 'C172', category: 'private', operator: null, operatorName: null, operatorShort: null,
+				direction: 'departure', eventTime: 0, otherCode: null, otherName: null, otherCity: null,
+				positions: raw.positions
+					.map((p) => ({ t: Date.parse(p.timestamp), lat: p.latitude, lon: p.longitude, alt: p.altitude * 100, gs: p.groundspeed, hdg: p.heading, dist: Math.hypot(...toLocalNm(ORIGIN, [p.latitude, p.longitude])) }))
+					.filter((p) => p.dist <= 20) // as the pipeline clips
+			};
+		};
+		const T = (f: Flight) => buildTrackSpline(ORIGIN, f)!;
+		const radar = recorded('N49KJ-1718938261-adhoc-314p', 'N49KJ');
+		const adsb = recorded('N749KJ-1718937361-adhoc-270p', 'N749KJ');
+		const neighbour = recorded('N248JW-1718942118-adhoc-553p', 'N248JW');
+		expect(radarTrack(radar)).toBe(true);
+		expect(radarTrack(adsb)).toBe(false);
+		expect(sameAircraft(T(radar), T(adsb), ORIGIN)).toBe(true);
+		expect(sameAircraft(T(radar), T(neighbour), ORIGIN)).toBe(false);
 	});
 });
 
