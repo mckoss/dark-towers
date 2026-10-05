@@ -59,11 +59,27 @@ const DUPLICATE_FRACTION = 0.8;
 const GHOST_LATERAL_NM = 0.15;
 const GHOST_VERTICAL_FT = 300;
 const GHOST_FRACTION = 0.8;
-const OPERATION_GHOST_LATERAL_NM = 0.8;
-const OPERATION_GHOST_VERTICAL_FT = 500;
-const OPERATION_GHOST_HEADING_DEG = 45;
-const OPERATION_GHOST_SPEED_KT = 80;
-const OPERATION_GHOST_EVENT_MS = 5 * 60 * 1000;
+
+/**
+ * Coarse same-aircraft test, for radar copies of an ADS-B track: a report
+ * about once a minute, up to ~10 s behind, often cut to whole arc-minutes.
+ * Each report may match the other track at any moment within COARSE_LAG_MS,
+ * with altitude, speed and heading agreeing: a report on the arc-minute grid
+ * must have the other track inside the grid cell it was cut from, any other
+ * report must be within RADAR_LATERAL_NM. Two ADS-B records are never matched
+ * this loosely, however alike their operator and route: a company's formation
+ * flights (two aircraft, related flight numbers, close together for miles)
+ * are two aircraft.
+ */
+const COARSE_VERTICAL_FT = 500;
+const COARSE_HEADING_DEG = 45;
+const COARSE_SPEED_KT = 80;
+const COARSE_LAG_MS = 15_000;
+const RADAR_LATERAL_NM = 0.25;
+/** Arc-minutes of slack around a grid cell. */
+const GRID_SLACK_MIN = 0.15;
+/** Radar copies report about once a minute; ADS-B near the field every 16-30 s. */
+const SPARSE_INTERVAL_MS = 45_000;
 
 function angleDiff(a: number | undefined, b: number | undefined): number {
 	if (a == null || b == null) return 0;
@@ -71,44 +87,80 @@ function angleDiff(a: number | undefined, b: number | undefined): number {
 	return d > 180 ? 360 - d : d;
 }
 
-function sameScheduledOperation(a: Flight, b: Flight): boolean {
-	return !!a.operator
-		&& a.operator === b.operator
-		&& a.category === b.category
-		&& a.type === b.type
-		&& a.direction === b.direction
-		&& a.otherCode === b.otherCode
-		&& Math.abs(a.eventTime - b.eventTime) <= OPERATION_GHOST_EVENT_MS;
+/** On the whole-arc-minute grid, as en-route radar positions are reported. */
+function onMinuteGrid(p: Position): boolean {
+	const off = (deg: number) => Math.abs(deg * 60 - Math.round(deg * 60));
+	return off(p.lat) < 0.002 && off(p.lon) < 0.002;
 }
 
-function sameOperationGhost(a: TrackSpline, b: TrackSpline, origin: LatLon): boolean {
-	if (!sameScheduledOperation(a.flight, b.flight)) return false;
-	for (const [x, y] of [
-		[a, b],
-		[b, a]
-	] as const) {
-		let n = 0,
-			near = 0;
-		for (const p of x.flight.positions) {
-			if (p.t < y.spline.t0 || p.t > y.spline.t1) continue;
-			const q = y.spline.at(p.t);
-			if (!q) continue;
-			const [e, no] = toLocalNm(origin, [p.lat, p.lon]);
-			n++;
-			if (
-				Math.hypot(e - q[0], no - q[1]) < OPERATION_GHOST_LATERAL_NM
-				&& Math.abs(p.alt - q[2]) < OPERATION_GHOST_VERTICAL_FT
-				&& Math.abs((p.gs ?? 0) - (q[3] ?? 0)) < OPERATION_GHOST_SPEED_KT
-				&& angleDiff(p.hdg, y.flight.positions.reduce((best, r) => Math.abs(r.t - p.t) < Math.abs(best.t - p.t) ? r : best, y.flight.positions[0])?.hdg) < OPERATION_GHOST_HEADING_DEG
-			) near++;
-		}
-		if (n >= 3 && near / n >= GHOST_FRACTION) return true;
+/**
+ * Is [lat, lon] in the arc-minute cell that grid report p was cut from?
+ * Radar cuts toward zero: the aircraft lies up to a minute further from the
+ * equator (and the meridian) than the report says.
+ */
+function inGridCell(p: Position, [lat, lon]: LatLon): boolean {
+	const away = (d: number, ref: number) => (d - ref) * 60 * Math.sign(ref || 1);
+	const ok = (m: number) => m >= -GRID_SLACK_MIN && m <= 1 + GRID_SLACK_MIN;
+	return ok(away(lat, p.lat)) && ok(away(lon, p.lon));
+}
+
+/**
+ * Reports about a minute apart, as radar delivers them (ADS-B arrives every
+ * few seconds). FlightAware sometimes files radar's copy of an aircraft as a
+ * second flight, under an ad-hoc ident such as "OV3510" or a mistyped tail,
+ * beside the ADS-B record, and its lag and coarse positions defeat the
+ * same-instant test. Only such a record gets the coarse test against others.
+ */
+export function radarTrack(f: Flight): boolean {
+	const ts = f.positions.map((p) => p.t).sort((x, y) => x - y);
+	if (ts.length < 3) return false;
+	const gaps = ts.slice(1).map((t, i) => t - ts[i]).sort((x, y) => x - y);
+	return gaps[Math.floor(gaps.length / 2)] >= SPARSE_INTERVAL_MS;
+}
+
+/** Heading of the report in `ps` (sorted by time) nearest to t. */
+function headingNear(ps: Position[], t: number): number | undefined {
+	let lo = 0,
+		hi = ps.length - 1;
+	while (lo < hi) {
+		const mid = (lo + hi) >> 1;
+		if (ps[mid].t < t) lo = mid + 1;
+		else hi = mid;
 	}
-	return false;
+	const p = lo > 0 && Math.abs(ps[lo - 1].t - t) < Math.abs(ps[lo].t - t) ? ps[lo - 1] : ps[lo];
+	return p?.hdg;
+}
+
+/** Most of x's reports sit (coarsely) on y's track within a few seconds. */
+function coarseMatch(x: TrackSpline, y: TrackSpline, origin: LatLon): boolean {
+	const yps = y.flight.positions.slice().sort((p, q) => p.t - q.t);
+	let n = 0,
+		near = 0;
+	for (const p of x.flight.positions) {
+		if (p.t < y.spline.t0 || p.t > y.spline.t1) continue;
+		const [e, no] = toLocalNm(origin, [p.lat, p.lon]);
+		const grid = onMinuteGrid(p);
+		n++;
+		for (let dt = -COARSE_LAG_MS; dt <= COARSE_LAG_MS; dt += 1000) {
+			const t = p.t + dt;
+			if (t < y.spline.t0 || t > y.spline.t1) continue;
+			const q = y.spline.at(t);
+			if (
+				q
+				&& (grid ? inGridCell(p, fromLocalNm(origin, [q[0], q[1]])) : Math.hypot(e - q[0], no - q[1]) < RADAR_LATERAL_NM)
+				&& Math.abs(p.alt - q[2]) < COARSE_VERTICAL_FT
+				&& Math.abs((p.gs ?? 0) - (q[3] ?? 0)) < COARSE_SPEED_KT
+				&& angleDiff(p.hdg, headingNear(yps, t)) < COARSE_HEADING_DEG
+			) {
+				near++;
+				break;
+			}
+		}
+	}
+	return n >= 3 && near / n >= GHOST_FRACTION;
 }
 
 export function sameAircraft(a: TrackSpline, b: TrackSpline, origin: LatLon): boolean {
-	if (sameOperationGhost(a, b, origin)) return true;
 	for (const [x, y] of [
 		[a, b],
 		[b, a]
@@ -125,7 +177,7 @@ export function sameAircraft(a: TrackSpline, b: TrackSpline, origin: LatLon): bo
 		}
 		if (n >= 3 && near / n >= GHOST_FRACTION) return true;
 	}
-	return false;
+	return (radarTrack(a.flight) && coarseMatch(a, b, origin)) || (radarTrack(b.flight) && coarseMatch(b, a, origin));
 }
 
 function onGround(p: number[], elevationFt: number | undefined, offsetFt: number): boolean {

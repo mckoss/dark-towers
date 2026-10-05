@@ -36,7 +36,7 @@
 		{ k: 'Side to side', v: 'Less than 3.00 nautical miles apart, measured over the ground.' },
 		{ k: 'Vertically', v: 'Less than 1,000 feet apart, using the altitudes the aircraft reported. Both conditions must be true at the same instant; being inside one of them alone is normal and is not counted.' },
 		{ k: 'Both flying', v: 'Each aircraft was more than 150 feet above the field (after the pressure correction) and moving faster than 40 knots. An aircraft on the runway, taxiing, or rolling out after landing does not count.' },
-		{ k: 'Two aircraft', v: 'Two records of the same aircraft never count: the same tail number, or two tracks that ride on top of each other for most of their length (a callsign and a registration for one flight).' },
+		{ k: 'Two aircraft', v: 'Two records of the same aircraft never count: the same tail number, or two tracks that ride on top of each other for most of their length (a callsign and a registration for one flight), including a once-a-minute radar copy that trails a few seconds behind the same aircraft.' },
 		{ k: 'Same clock', v: 'Positions are reported a few seconds apart, at different moments for each aircraft. Each path is smoothed through its reported points and both are read at the same instant, every second, so the distance is between where the aircraft actually were, not between their nearest reports.' },
 		{ k: 'Counted once', v: 'Each pair of flights is counted at most once per night, at the moment they were closest. “Very close” means under 1 nautical mile and under 500 feet at that moment.' }
 	];
